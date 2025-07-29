@@ -1,0 +1,81 @@
+# Dependabot configuration for Kotbusta
+# Updates dependencies automatically and creates pull requests
+
+version: 2
+updates:
+  # Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Heapy"
+    assignees:
+      - "Heapy"
+    commit-message:
+      prefix: "gradle"
+      prefix-development: "gradle"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "gradle"
+    
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Heapy"
+    assignees:
+      - "Heapy"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+      
+  # Python dependencies (for conversion service)
+  - package-ecosystem: "pip"
+    directory: "/conversion-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Heapy"
+    assignees:
+      - "Heapy"
+    commit-message:
+      prefix: "pip"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+      
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Heapy"
+    assignees:
+      - "Heapy"
+    commit-message:
+      prefix: "actions"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
