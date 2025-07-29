@@ -42,9 +42,10 @@ fun Application.configureRouting() {
         // Authentication routes
         get("/login") {
             if (oauthConfigured) {
+                call.application.environment.log.info("Login requested, redirecting to OAuth")
                 call.respondRedirect("/oauth/google")
             } else {
-                call.respond(HttpStatusCode.ServiceUnavailable, "OAuth not configured")
+                call.respond(HttpStatusCode.ServiceUnavailable, "OAuth not configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables.")
             }
         }
         
@@ -55,11 +56,17 @@ fun Application.configureRouting() {
                 }
                 
                 get("/callback") {
+                    // The OAuth plugin handles the callback and sets the principal
                     val principal = call.principal<OAuthAccessTokenResponse.OAuth2>()
                     if (principal != null) {
-                        val userSession = handleGoogleCallback(principal)
-                        call.sessions.set(userSession)
-                        call.respondRedirect("/")
+                        try {
+                            val userSession = handleGoogleCallback(principal)
+                            call.sessions.set(userSession)
+                            call.respondRedirect("/")
+                        } catch (e: Exception) {
+                            call.application.environment.log.error("Error handling OAuth callback", e)
+                            call.respond(HttpStatusCode.InternalServerError, "Error processing authentication")
+                        }
                     } else {
                         call.respond(HttpStatusCode.Unauthorized, "Authentication failed")
                     }
@@ -72,100 +79,117 @@ fun Application.configureRouting() {
             call.respondRedirect("/")
         }
         
-        // API routes
+        // API routes - all require authentication
         route("/api") {
-            // Public routes
-            get("/books") {
-                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
-                val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
-                val user = call.sessions.get<UserSession>()
-                
-                val result = bookService.getBooks(limit, offset, user?.userId)
-                call.respond(ApiResponse(success = true, data = result))
-            }
-            
-            get("/books/search") {
-                val query = call.request.queryParameters["q"] ?: ""
-                val genre = call.request.queryParameters["genre"]
-                val language = call.request.queryParameters["language"]
-                val author = call.request.queryParameters["author"]
-                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
-                val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
-                val user = call.sessions.get<UserSession>()
-                
-                val searchQuery = SearchQuery(query, genre, language, author, limit, offset)
-                val result = bookService.searchBooks(searchQuery, user?.userId)
-                call.respond(ApiResponse(success = true, data = result))
-            }
-            
-            get("/books/{id}") {
-                val bookId = call.parameters["id"]?.toLongOrNull()
-                if (bookId == null) {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid book ID"))
-                    return@get
-                }
-                
-                val user = call.sessions.get<UserSession>()
-                val book = bookService.getBookById(bookId, user?.userId)
-                
-                if (book != null) {
-                    call.respond(ApiResponse(success = true, data = book))
-                } else {
-                    call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Book not found"))
-                }
-            }
-            
-            get("/books/{id}/similar") {
-                val bookId = call.parameters["id"]?.toLongOrNull()
-                if (bookId == null) {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid book ID"))
-                    return@get
-                }
-                
-                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
-                val user = call.sessions.get<UserSession>()
-                val books = bookService.getSimilarBooks(bookId, limit, user?.userId)
-                
-                call.respond(ApiResponse(success = true, data = books))
-            }
-            
-            get("/books/{id}/cover") {
-                val bookId = call.parameters["id"]?.toLongOrNull()
-                if (bookId == null) {
-                    call.respond(HttpStatusCode.BadRequest)
-                    return@get
-                }
-                
-                val coverImage = bookService.getBookCover(bookId)
-                if (coverImage != null) {
-                    call.respondBytes(coverImage, ContentType.Image.JPEG)
-                } else {
-                    call.respond(HttpStatusCode.NotFound)
-                }
-            }
-            
-            get("/books/{id}/comments") {
-                val bookId = call.parameters["id"]?.toLongOrNull()
-                if (bookId == null) {
-                    call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid book ID"))
-                    return@get
-                }
-                
-                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
-                val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
-                val comments = userService.getBookComments(bookId, limit, offset)
-                
-                call.respond(ApiResponse(success = true, data = comments))
-            }
-            
-            get("/activity") {
-                val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
-                val activity = userService.getRecentActivity(limit)
-                call.respond(ApiResponse(success = true, data = activity))
-            }
-            
-            // Protected routes (require authentication)
+            // Check user session for all API routes
             authenticate("auth-session") {
+                get("/user/info") {
+                    val user = call.sessions.get<UserSession>()
+                    if (user != null) {
+                        call.respond(ApiResponse(success = true, data = user))
+                    } else {
+                        call.respond(HttpStatusCode.Unauthorized, ApiResponse<Unit>(success = false, error = "Not authenticated"))
+                    }
+                }
+                
+                get("/books") {
+                    val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
+                    val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+                    val user = call.sessions.get<UserSession>()!!
+                    
+                    val result = bookService.getBooks(limit, offset, user.userId)
+                    call.respond(ApiResponse(success = true, data = result))
+                }
+                
+                get("/books/search") {
+                    val query = call.request.queryParameters["q"] ?: ""
+                    val genre = call.request.queryParameters["genre"]
+                    val language = call.request.queryParameters["language"]
+                    val author = call.request.queryParameters["author"]
+                    val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
+                    val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+                    val user = call.sessions.get<UserSession>()!!
+                    
+                    val searchQuery = SearchQuery(query, genre, language, author, limit, offset)
+                    val result = bookService.searchBooks(searchQuery, user.userId)
+                    call.respond(ApiResponse(success = true, data = result))
+                }
+                
+                get("/books/{id}") {
+                    val bookId = call.parameters["id"]?.toLongOrNull()
+                    if (bookId == null) {
+                        call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid book ID"))
+                        return@get
+                    }
+                    
+                    val user = call.sessions.get<UserSession>()!!
+                    val book = bookService.getBookById(bookId, user.userId)
+                    
+                    if (book != null) {
+                        call.respond(ApiResponse(success = true, data = book))
+                    } else {
+                        call.respond(HttpStatusCode.NotFound, ApiResponse<Unit>(success = false, error = "Book not found"))
+                    }
+                }
+                
+                get("/books/{id}/similar") {
+                    val bookId = call.parameters["id"]?.toLongOrNull()
+                    if (bookId == null) {
+                        call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid book ID"))
+                        return@get
+                    }
+                    
+                    val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
+                    val user = call.sessions.get<UserSession>()!!
+                    val books = bookService.getSimilarBooks(bookId, limit, user.userId)
+                    
+                    call.respond(ApiResponse(success = true, data = books))
+                }
+                
+                get("/books/{id}/cover") {
+                    val bookId = call.parameters["id"]?.toLongOrNull()
+                    if (bookId == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@get
+                    }
+                    
+                    val coverImage = bookService.getBookCover(bookId)
+                    if (coverImage != null) {
+                        call.respondBytes(coverImage, ContentType.Image.JPEG)
+                    } else {
+                        call.respond(HttpStatusCode.NotFound)
+                    }
+                }
+                
+                get("/books/{id}/comments") {
+                    val bookId = call.parameters["id"]?.toLongOrNull()
+                    if (bookId == null) {
+                        call.respond(HttpStatusCode.BadRequest, ApiResponse<Unit>(success = false, error = "Invalid book ID"))
+                        return@get
+                    }
+                    
+                    val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
+                    val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+                    val comments = userService.getBookComments(bookId, limit, offset)
+                    
+                    call.respond(ApiResponse(success = true, data = comments))
+                }
+                
+                get("/activity") {
+                    val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
+                    val activity = userService.getRecentActivity(limit)
+                    call.respond(ApiResponse(success = true, data = activity))
+                }
+                
+                get("/books/starred") {
+                    val user = call.sessions.get<UserSession>()!!
+                    val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
+                    val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+                    
+                    val result = bookService.getStarredBooks(user.userId, limit, offset)
+                    call.respond(ApiResponse(success = true, data = result))
+                }
+                
                 post("/books/{id}/star") {
                     val bookId = call.parameters["id"]?.toLongOrNull()
                     val user = call.sessions.get<UserSession>()
@@ -190,15 +214,6 @@ fun Application.configureRouting() {
                     
                     val success = bookService.unstarBook(user.userId, bookId)
                     call.respond(ApiResponse(success = success, data = success))
-                }
-                
-                get("/books/starred") {
-                    val user = call.sessions.get<UserSession>()!!
-                    val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
-                    val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
-                    
-                    val result = bookService.getStarredBooks(user.userId, limit, offset)
-                    call.respond(ApiResponse(success = true, data = result))
                 }
                 
                 post("/books/{id}/comments") {

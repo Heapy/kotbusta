@@ -1,7 +1,15 @@
 [versions]
 kotlin = "2.2.0"
+komok = "1.0.13"
+logback = "1.5.18"
+sqlite-jdbc = "3.50.3.0"
+kotlinx-serialization = "1.9.0"
 
 [libraries]
+komok-tech-logging = { module = "io.heapy.komok:komok-tech-logging", version.ref = "komok"  }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback"}
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

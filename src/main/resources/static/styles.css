@@ -613,3 +613,34 @@ body {
 .hidden {
     display: none;
 }
+
+/* Login prompt */
+.login-prompt {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin: 2rem 0;
+}
+
+.login-prompt h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+}
+
+.login-prompt p {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.btn-large {
+    font-size: 1rem;
+    padding: 0.875rem 2rem;
+}

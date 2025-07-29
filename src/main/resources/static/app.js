@@ -384,6 +384,61 @@ function BookDetail({ bookId, user, onNavigate }) {
     ]);
 }
 
+// Starred books page component
+function StarredPage({ user, onNavigate }) {
+    const [starredBooks, setStarredBooks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    useEffect(() => {
+        loadStarredBooks();
+    }, []);
+    
+    const loadStarredBooks = async () => {
+        try {
+            const response = await api.get('/api/books/starred');
+            setStarredBooks(response.data.books);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const handleStar = async (bookId, starred) => {
+        if (!user) return;
+        
+        try {
+            if (starred) {
+                await api.post(`/api/books/${bookId}/star`);
+            } else {
+                await api.delete(`/api/books/${bookId}/star`);
+                // Remove from starred list when unstarred
+                setStarredBooks(starredBooks.filter(book => book.id !== bookId));
+            }
+            
+            // Update book in the list
+            setStarredBooks(starredBooks.map(book => 
+                book.id === bookId ? { ...book, isStarred: starred } : book
+            ));
+        } catch (err) {
+            console.error('Failed to toggle star:', err);
+        }
+    };
+    
+    return h('div', null, [
+        h('h1', { className: 'page-title' }, 'Starred Books'),
+        BooksGrid({ 
+            books: starredBooks, 
+            loading, 
+            error, 
+            onStar: handleStar, 
+            user, 
+            onNavigate 
+        })
+    ]);
+}
+
 // Activity page component
 function ActivityPage() {
     const [activity, setActivity] = useState(null);
@@ -448,10 +503,36 @@ function App() {
     const [filters, setFilters] = useState({});
     
     useEffect(() => {
-        loadBooks();
-    }, [searchQuery, filters]);
+        checkAuth();
+    }, []);
+    
+    useEffect(() => {
+        if (user) {
+            loadBooks();
+        }
+    }, [searchQuery, filters, user]);
+    
+    const checkAuth = async () => {
+        try {
+            const response = await api.get('/api/user/info');
+            if (response.success) {
+                setUser(response.data);
+            }
+        } catch (err) {
+            // User is not authenticated
+            setUser(null);
+        } finally {
+            setLoading(false);
+        }
+    };
     
     const loadBooks = async () => {
+        if (!user) {
+            setBooks([]);
+            setLoading(false);
+            return;
+        }
+        
         try {
             setLoading(true);
             setError(null);
@@ -512,24 +593,56 @@ function App() {
         Header({ user, onNavigate: navigate }),
         
         route === '/' && [
-            SearchBar({ onSearch: handleSearch, filters, onFilterChange: setFilters }),
+            user && SearchBar({ onSearch: handleSearch, filters, onFilterChange: setFilters }),
             h('main', { className: 'main' },
                 h('div', { className: 'container' }, [
-                    h('h1', { className: 'page-title' }, 'Books'),
-                    BooksGrid({ books, loading, error, onStar: handleStar, user, onNavigate: navigate })
+                    user ? [
+                        h('h1', { className: 'page-title' }, 'Books'),
+                        BooksGrid({ books, loading, error, onStar: handleStar, user, onNavigate: navigate })
+                    ] : [
+                        h('div', { className: 'login-prompt' }, [
+                            h('h1', null, 'Welcome to Kotbusta'),
+                            h('p', null, 'Please log in with Google to access your digital library'),
+                            h('a', { href: '/login', className: 'btn btn-primary btn-large' }, 'Login with Google')
+                        ])
+                    ]
                 ])
             )
         ],
         
         bookId && h('main', { className: 'main' },
             h('div', { className: 'container' },
-                BookDetail({ bookId, user, onNavigate: navigate })
+                user ? BookDetail({ bookId, user, onNavigate: navigate }) : [
+                    h('div', { className: 'login-prompt' }, [
+                        h('h1', null, 'Authentication Required'),
+                        h('p', null, 'Please log in to view book details'),
+                        h('a', { href: '/login', className: 'btn btn-primary' }, 'Login with Google')
+                    ])
+                ]
+            )
+        ),
+        
+        route === '/starred' && h('main', { className: 'main' },
+            h('div', { className: 'container' },
+                user ? StarredPage({ user, onNavigate: navigate }) : [
+                    h('div', { className: 'login-prompt' }, [
+                        h('h1', null, 'Authentication Required'),
+                        h('p', null, 'Please log in to view starred books'),
+                        h('a', { href: '/login', className: 'btn btn-primary' }, 'Login with Google')
+                    ])
+                ]
             )
         ),
         
         route === '/activity' && h('main', { className: 'main' },
             h('div', { className: 'container' },
-                ActivityPage()
+                user ? ActivityPage() : [
+                    h('div', { className: 'login-prompt' }, [
+                        h('h1', null, 'Authentication Required'),
+                        h('p', null, 'Please log in to view activity'),
+                        h('a', { href: '/login', className: 'btn btn-primary' }, 'Login with Google')
+                    ])
+                ]
             )
         )
     ]);

@@ -73,6 +73,7 @@ fun Application.configureAuthentication() {
         
         // Only install OAuth if credentials are configured
         if (googleClientId != null && googleClientSecret != null) {
+            println("Configuring Google OAuth with client ID: ${googleClientId.take(10)}...")
             oauth("google-oauth") {
                 urlProvider = { "http://localhost:8080/callback" }
                 providerLookup = {
@@ -83,7 +84,9 @@ fun Application.configureAuthentication() {
                         requestMethod = HttpMethod.Post,
                         clientId = googleClientId,
                         clientSecret = googleClientSecret,
-                        defaultScopes = listOf("profile", "email")
+                        defaultScopes = listOf("profile", "email"),
+                        // Add response type for better compatibility
+                        extraAuthParameters = listOf("access_type" to "online")
                     )
                 }
                 client = httpClient

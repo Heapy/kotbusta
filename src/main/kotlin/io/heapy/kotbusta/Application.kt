@@ -6,7 +6,7 @@ import io.heapy.kotbusta.config.configureRouting
 import io.heapy.kotbusta.config.configureSerialization
 import io.heapy.kotbusta.database.DatabaseInitializer
 import io.ktor.server.application.*
-import io.ktor.server.netty.*
+import io.ktor.server.cio.*
 
 fun main() {
     EngineMain.main(arrayOf())

@@ -11,7 +11,7 @@ build
 .kotlin
 
 # Data
-data/kotbusta.db
+data/
 
 # Configuration
 .env
