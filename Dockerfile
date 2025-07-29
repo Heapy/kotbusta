@@ -1,37 +1,30 @@
-FROM gradle:8.5-jdk21 AS build
+# Use Ubuntu-based image instead of Alpine to avoid musl libc issues with SQLite JDBC
+FROM bellsoft/liberica-openjre-debian:24.0.2
 
+# Install curl and update system
+RUN apt-get update && \
+    apt-get install -y curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the application
+COPY /build/install/kotbusta /kotbusta
+
+# Create application user for security
+RUN useradd --create-home --shell /bin/bash kotbusta && \
+    chown -R kotbusta:kotbusta /kotbusta
+
+# Create data directory with proper permissions
+RUN mkdir -p /app/data && chown -R kotbusta:kotbusta /app/data
+
+# Switch to non-root user
+USER kotbusta
+
+# Set working directory
 WORKDIR /app
 
-# Copy gradle files first for better caching
-COPY build.gradle.kts gradle.properties settings.gradle.kts ./
-COPY gradle/ gradle/
-
-# Download dependencies
-RUN gradle dependencies --no-daemon
-
-# Copy source code
-COPY src/ src/
-
-# Build the application
-RUN gradle build --no-daemon -x test
-
-# Runtime stage
-FROM openjdk:21-jre-slim
-
-WORKDIR /app
-
-# Create app user
-RUN groupadd -r app && useradd -r -g app app
-
-# Create directories
-RUN mkdir -p data/books && chown -R app:app data/
-
-# Copy built jar
-COPY --from=build /app/build/libs/*.jar app.jar
-
-# Switch to app user
-USER app
-
+# Expose port
 EXPOSE 8080
 
-CMD ["java", "-jar", "app.jar"]
+# Run the application
+ENTRYPOINT ["/kotbusta/bin/kotbusta"]

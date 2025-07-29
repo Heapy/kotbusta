@@ -30,7 +30,16 @@ dependencies {
 }
 
 application {
+    applicationName = "kotbusta"
     mainClass.set("io.heapy.kotbusta.ApplicationKt")
+}
+
+tasks.distTar {
+    archiveFileName.set("kotbusta.tar")
+}
+
+tasks.distZip {
+    enabled = false
 }
 
 kotlin {
