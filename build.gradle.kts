@@ -32,6 +32,9 @@ dependencies {
 application {
     applicationName = "kotbusta"
     mainClass.set("io.heapy.kotbusta.ApplicationKt")
+    applicationDefaultJvmArgs = listOf(
+        "--enable-native-access=ALL-UNNAMED",
+    )
 }
 
 tasks.distTar {
