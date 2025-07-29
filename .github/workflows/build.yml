@@ -38,6 +38,7 @@ jobs:
           path: "build/distributions/"
       - name: "Untar files"
         run: mkdir -p build/install && tar -xvf build/distributions/kotbusta.tar -C $_
+      - run: ls -lRa
       - name: "Set up Docker Buildx"
         uses: docker/setup-buildx-action@v3
       - name: "Login to GHCR"
