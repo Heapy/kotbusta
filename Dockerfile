@@ -3,7 +3,7 @@ FROM bellsoft/liberica-openjre-debian:24.0.2
 
 # Install calibre
 RUN apt-get update && \
-    apt-get install -y calibre && \
+    apt-get install -y calibre-bin && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
