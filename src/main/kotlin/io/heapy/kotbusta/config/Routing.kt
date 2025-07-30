@@ -5,11 +5,11 @@ import io.heapy.kotbusta.config.routes.admin.adminRoutes
 import io.heapy.kotbusta.config.routes.auth.googleOauthRoutes
 import io.heapy.kotbusta.config.routes.auth.loginRoute
 import io.heapy.kotbusta.config.routes.auth.logoutRoute
+import io.heapy.kotbusta.config.routes.books.bookSearchRoute
 import io.heapy.kotbusta.config.routes.books.getBooksRoute
 import io.heapy.kotbusta.config.routes.staticFilesRoute
 import io.heapy.kotbusta.config.routes.user.userInfoRoute
 import io.heapy.kotbusta.model.ApiResponse
-import io.heapy.kotbusta.model.SearchQuery
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -52,32 +52,7 @@ fun Application.configureRouting() {
                 adminRoutes()
                 userInfoRoute()
                 getBooksRoute()
-
-                get("/books/search") {
-                    val query = call.request.queryParameters["q"] ?: ""
-                    val genre = call.request.queryParameters["genre"]
-                    val language = call.request.queryParameters["language"]
-                    val author = call.request.queryParameters["author"]
-                    val limit =
-                        call.request.queryParameters["limit"]?.toIntOrNull()
-                            ?: 20
-                    val offset =
-                        call.request.queryParameters["offset"]?.toIntOrNull()
-                            ?: 0
-                    val user = call.sessions.get<UserSession>()!!
-
-                    val searchQuery = SearchQuery(
-                        query,
-                        genre,
-                        language,
-                        author,
-                        limit,
-                        offset,
-                    )
-                    val result =
-                        bookService.searchBooks(searchQuery, user.userId)
-                    call.respond(ApiResponse(success = true, data = result))
-                }
+                bookSearchRoute()
 
                 get("/books/{id}") {
                     val bookId = call.parameters["id"]?.toLongOrNull()
