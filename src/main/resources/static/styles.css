@@ -644,3 +644,153 @@ body {
     font-size: 1rem;
     padding: 0.875rem 2rem;
 }
+
+/* Admin styles */
+.admin-link {
+    background: var(--warning-color) !important;
+    color: white !important;
+    border-radius: var(--radius-md);
+    padding: 0.5rem 1rem !important;
+    font-weight: 600;
+}
+
+.admin-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group label {
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-group input[type="number"] {
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    max-width: 120px;
+}
+
+.form-group input[type="checkbox"] {
+    transform: scale(1.2);
+}
+
+.jobs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.job-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+}
+
+.job-item.job-running {
+    border-left: 4px solid var(--primary-color);
+}
+
+.job-item.job-completed {
+    border-left: 4px solid var(--success-color);
+}
+
+.job-item.job-failed {
+    border-left: 4px solid var(--danger-color);
+}
+
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.job-type {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.job-status {
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.job-status-running {
+    background: var(--primary-color);
+    color: white;
+}
+
+.job-status-completed {
+    background: var(--success-color);
+    color: white;
+}
+
+.job-status-failed {
+    background: var(--danger-color);
+    color: white;
+}
+
+.job-time {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.job-progress {
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.job-error {
+    color: var(--danger-color);
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.job-duration {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.access-denied {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-top: 2rem;
+}
+
+.access-denied h1 {
+    color: var(--danger-color);
+    margin-bottom: 1rem;
+}

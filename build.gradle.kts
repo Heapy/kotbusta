@@ -13,7 +13,6 @@ dependencies {
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.serialization.kotlinx.json)
     implementation(libs.kotlinx.serialization.json)
-    implementation(ktorLibs.server.cors)
     implementation(ktorLibs.server.auth)
     implementation(ktorLibs.server.sessions)
     implementation(ktorLibs.server.statusPages)
@@ -21,6 +20,8 @@ dependencies {
     implementation(ktorLibs.client.contentNegotiation)
 
     implementation(libs.sqlite.jdbc)
+    implementation(libs.komok.tech.config.dotenv)
+    implementation(libs.komok.tech.to.be.injected)
     implementation(libs.komok.tech.logging)
     implementation(libs.logback.classic)
 
@@ -47,6 +48,10 @@ tasks.distZip {
 
 kotlin {
     jvmToolchain(24)
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xcontext-parameters")
+    }
 }
 
 testing {

@@ -1,6 +1,8 @@
 package io.heapy.kotbusta.parser
 
+import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.database.DatabaseInitializer
+import io.heapy.kotbusta.database.QueryExecutor
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -10,23 +12,22 @@ import java.util.zip.ZipFile
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 
-class Fb2Parser {
-    
-    fun extractBookCovers(archivePath: String) {
-        println("Extracting covers from: $archivePath")
-        
-        val connection = DatabaseInitializer.getConnection()
-        connection.use { conn ->
+class Fb2Parser(
+    private val queryExecutor: QueryExecutor,
+) {
+    suspend fun extractBookCovers(archivePath: String) {
+        log.info("Extracting covers from: $archivePath")
+        queryExecutor.execute { conn ->
             conn.autoCommit = false
-            
+
             ZipFile(archivePath).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".fb2") }
                     .take(100) // Process first 100 for testing
                     .toList()
-                
-                println("Processing ${entries.size} FB2 files for cover extraction")
-                
+
+                log.info("Processing ${entries.size} FB2 files for cover extraction")
+
                 entries.forEachIndexed { index, entry ->
                     try {
                         val bookId = entry.name.removeSuffix(".fb2").toLongOrNull()
@@ -36,56 +37,56 @@ class Fb2Parser {
                                 val coverImage = extractCoverFromFb2(cleanedInputStream)
                                 if (coverImage != null) {
                                     updateBookCover(conn, bookId, coverImage)
-                                    println("✅ Extracted cover for book $bookId")
+                                    log.info("✅ Extracted cover for book $bookId")
                                 } else {
-                                    println("⚠️  No cover found for book $bookId")
+                                    log.info("⚠️  No cover found for book $bookId")
                                 }
                             }
                         }
                     } catch (e: Exception) {
-                        println("❌ Error processing ${entry.name}: ${e.message}")
+                        log.warn("❌ Error processing ${entry.name}: ${e.message}", e)
                         // Continue with next file
                     }
-                    
+
                     if ((index + 1) % 50 == 0) {
                         conn.commit()
-                        println("Committed cover batch ${index + 1}")
+                        log.info("Committed cover batch ${index + 1}")
                     }
                 }
-                
+
                 conn.commit()
-                println("Cover extraction completed")
+                log.info("Cover extraction completed")
             }
         }
     }
-    
+
     fun extractBookMetadata(archivePath: String, bookId: Long): BookMetadata? {
         ZipFile(archivePath).use { zipFile ->
             val entry = zipFile.getEntry("$bookId.fb2") ?: return null
-            
+
             zipFile.getInputStream(entry).use { rawInputStream ->
                 val cleanedInputStream = cleanInputStream(rawInputStream)
                 return parseBookMetadata(cleanedInputStream)
             }
         }
     }
-    
+
     private fun extractCoverFromFb2(inputStream: InputStream): ByteArray? {
         val xmlInputFactory = XMLInputFactory.newInstance()
         xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
         xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
         xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
         xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
-        
+
         try {
             // Try to auto-detect encoding instead of forcing UTF-8
             val reader = xmlInputFactory.createXMLStreamReader(inputStream)
-            
+
             var inBinary = false
             var binaryId: String? = null
             var coverImageId: String? = null
             val binaryData = mutableMapOf<String, ByteArray>()
-            
+
             while (reader.hasNext()) {
                 when (reader.next()) {
                     XMLStreamConstants.START_ELEMENT -> {
@@ -131,9 +132,9 @@ class Fb2Parser {
                     }
                 }
             }
-            
+
             reader.close()
-            
+
             // Return cover image if found
             return if (coverImageId != null && binaryData.containsKey(coverImageId)) {
                 binaryData[coverImageId]
@@ -141,18 +142,18 @@ class Fb2Parser {
                 // Try to find any image
                 binaryData.values.firstOrNull()
             }
-            
+
         } catch (e: Exception) {
-            System.err.println("Error extracting cover: ${e.message}")
+            log.error("Error extracting cover: ${e.message}", e)
             return null
         }
     }
-    
+
     private fun cleanInputStream(inputStream: InputStream): InputStream {
         return try {
             // Read all bytes first
             val bytes = inputStream.readAllBytes()
-            
+
             // Try to detect and fix encoding issues
             val content = when {
                 // Try UTF-8 first
@@ -160,18 +161,18 @@ class Fb2Parser {
                 // Fall back to Windows-1251 (common in Russian texts)
                 else -> String(bytes, Charset.forName("windows-1251"))
             }
-            
+
             // Clean up any invalid XML characters
             val cleanContent = content
                 .replace(Regex("[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]"), "") // Remove control characters
-            
+
             ByteArrayInputStream(cleanContent.toByteArray(Charsets.UTF_8))
         } catch (e: Exception) {
             // If cleaning fails, return original stream
             inputStream
         }
     }
-    
+
     private fun isValidUtf8(bytes: ByteArray): Boolean {
         return try {
             val decoder = Charsets.UTF_8.newDecoder()
@@ -181,23 +182,23 @@ class Fb2Parser {
             false
         }
     }
-    
+
     private fun parseBookMetadata(inputStream: InputStream): BookMetadata? {
         val xmlInputFactory = XMLInputFactory.newInstance()
         xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
         xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
         xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
         xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
-        
+
         try {
             // Try to auto-detect encoding instead of forcing UTF-8
             val reader = xmlInputFactory.createXMLStreamReader(inputStream)
-            
+
             var title: String? = null
             var annotation: String? = null
             var inAnnotation = false
             val annotationBuilder = StringBuilder()
-            
+
             while (reader.hasNext()) {
                 when (reader.next()) {
                     XMLStreamConstants.START_ELEMENT -> {
@@ -233,19 +234,19 @@ class Fb2Parser {
                     }
                 }
             }
-            
+
             reader.close()
-            
+
             return if (title != null) {
                 BookMetadata(title, annotation)
             } else null
-            
+
         } catch (e: Exception) {
-            System.err.println("Error parsing book metadata: ${e.message}")
+            log.error("Error parsing book metadata: ${e.message}", e)
             return null
         }
     }
-    
+
     private fun updateBookCover(connection: Connection, bookId: Long, coverImage: ByteArray) {
         val sql = "UPDATE books SET cover_image = ? WHERE id = ?"
         connection.prepareStatement(sql).use { stmt ->
@@ -254,7 +255,7 @@ class Fb2Parser {
             stmt.executeUpdate()
         }
     }
-    
+
     private fun updateBookAnnotation(connection: Connection, bookId: Long, annotation: String) {
         val sql = "UPDATE books SET annotation = ? WHERE id = ?"
         connection.prepareStatement(sql).use { stmt ->
@@ -263,6 +264,8 @@ class Fb2Parser {
             stmt.executeUpdate()
         }
     }
+
+    private companion object : Logger()
 }
 
 data class BookMetadata(

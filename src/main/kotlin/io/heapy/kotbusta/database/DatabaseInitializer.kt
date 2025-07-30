@@ -2,27 +2,23 @@ package io.heapy.kotbusta.database
 
 import java.io.File
 import java.sql.Connection
-import java.sql.DriverManager
 
-object DatabaseInitializer {
-    private const val DB_PATH = "data/kotbusta.db"
-    
-    fun initialize() {
-        File("data").mkdirs()
-        
-        getConnection().use { connection ->
+class DatabaseInitializer(
+    private val queryExecutor: QueryExecutor,
+    private val databasePath: String,
+) {
+    suspend fun initialize() {
+        File(databasePath).mkdirs()
+        queryExecutor.execute { connection ->
             createTables(connection)
         }
     }
-    
-    fun getConnection(): Connection {
-        return DriverManager.getConnection("jdbc:sqlite:$DB_PATH")
-    }
-    
+
     private fun createTables(connection: Connection) {
         connection.createStatement().use { statement ->
             // Users table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     google_id TEXT UNIQUE NOT NULL,
@@ -32,10 +28,12 @@ object DatabaseInitializer {
                     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
                     updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
                 )
-            """)
-            
+                """,
+            )
+
             // Authors table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS authors (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     first_name TEXT,
@@ -43,19 +41,23 @@ object DatabaseInitializer {
                     full_name TEXT NOT NULL,
                     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
                 )
-            """)
-            
+                """,
+            )
+
             // Series table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS series (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
                 )
-            """)
-            
+                """,
+            )
+
             // Books table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS books (
                     id INTEGER PRIMARY KEY,
                     title TEXT NOT NULL,
@@ -72,10 +74,12 @@ object DatabaseInitializer {
                     created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
                     FOREIGN KEY (series_id) REFERENCES series(id)
                 )
-            """)
-            
+                """,
+            )
+
             // Book authors junction table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS book_authors (
                     book_id INTEGER NOT NULL,
                     author_id INTEGER NOT NULL,
@@ -83,10 +87,12 @@ object DatabaseInitializer {
                     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
                     FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE
                 )
-            """)
-            
+                """,
+            )
+
             // User stars table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS user_stars (
                     user_id INTEGER NOT NULL,
                     book_id INTEGER NOT NULL,
@@ -95,10 +101,12 @@ object DatabaseInitializer {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
                 )
-            """)
-            
+                """,
+            )
+
             // User comments table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS user_comments (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -109,10 +117,12 @@ object DatabaseInitializer {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
                 )
-            """)
-            
+                """,
+            )
+
             // User notes table
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS user_notes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -124,10 +134,12 @@ object DatabaseInitializer {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
                 )
-            """)
-            
+                """,
+            )
+
             // Downloads table for tracking
-            statement.execute("""
+            statement.execute(
+                """
                 CREATE TABLE IF NOT EXISTS downloads (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id INTEGER NOT NULL,
@@ -137,8 +149,9 @@ object DatabaseInitializer {
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
                 )
-            """)
-            
+                """,
+            )
+
             // Create indexes for performance
             statement.execute("CREATE INDEX IF NOT EXISTS idx_books_title ON books(title)")
             statement.execute("CREATE INDEX IF NOT EXISTS idx_books_genre ON books(genre)")

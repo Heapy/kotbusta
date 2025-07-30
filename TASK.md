@@ -1,21 +1,21 @@
 # This document describes requirements used to vibe-code this website
 
-You're building kotbusta – a UI for viewing, searching and downloading books 
+You're building kotbusta – a UI for viewing, searching and downloading books
 that obtained from flibusta torrent.
 
-Flibusta torrent consists of files listed in `all-files.txt` (result if ls -l 
+Flibusta torrent consists of files listed in `all-files.txt` (result if ls -l
 in root folder)
-It seems that most of the files zip archives with books in fb2 format 
-(example in project folder: `fb2-168103-172702.zip`, I also unpack it into 
+It seems that most of the files zip archives with books in fb2 format
+(example in project folder: `fb2-168103-172702.zip`, I also unpack it into
 `fb2-168103-172702` folder).
-One archive is named `flibusta_fb2_local.inpx`, it's basically a zip archive  
-with a bunch of files, see `flibusta_fb2_local.inpx.txt` for a list of files. I 
+One archive is named `flibusta_fb2_local.inpx`, it's basically a zip archive
+with a bunch of files, see `flibusta_fb2_local.inpx.txt` for a list of files. I
 also unpack it into `flibusta_fb2_local` folder.
 
 ## Task 1
 
-Analyze mentioned files and folders, what useful information kotbusta could 
-present to the user for each book? 
+Analyze mentioned files and folders, what useful information kotbusta could
+present to the user for each book?
 
 ### Answer
 
@@ -77,9 +77,9 @@ Infra:
 - docker (or docker compose if multiple containers are needed)
 
 Backend:
-- kotlin, ktor version 3.2.2 for backend
+- kotlin, ktor version 3.2.3 for backend
 - package io.heapy.kotbusta
-- anything self-hosted most reliable for fb2 to epub/mobi conversion 
+- anything self-hosted most reliable for fb2 to epub/mobi conversion
   (ideally java/kotlin, but any language will do in separate container)
 - sqlite for db (one anything embedded, really)
 - for database access use plain jdbc or jooq
@@ -87,7 +87,7 @@ Backend:
 Frontend:
 - no bundler, just plain html/css/js
 - preact (version 10.27.0)
-- css/js/html with the latest features (no compatibility requirements, just make 
+- css/js/html with the latest features (no compatibility requirements, just make
   sure it works in the latest firefox)
 - use existing ktor server for serving static files
 
@@ -97,7 +97,7 @@ Kotbusta Implementation Plan
 
 ### System Architecture
 
-- Main App: Kotlin + Ktor 3.2.2 server with embedded SQLite
+- Main App: Kotlin + Ktor 3.2.3 server with embedded SQLite
 - Conversion Service: Separate container for FB2→EPUB/MOBI conversion
 - Frontend: Preact 10.27.0 with modern HTML/CSS/JS served by Ktor
 - Infrastructure: Docker Compose setup

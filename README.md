@@ -15,7 +15,7 @@ A modern web application for browsing, searching, and downloading books from Fli
 ## Technology Stack
 
 **Backend:**
-- Kotlin + Ktor 3.2.2
+- Kotlin + Ktor 3.2.3
 - SQLite database with JDBC
 - Google OAuth authentication
 - RESTful API design
@@ -78,7 +78,7 @@ A modern web application for browsing, searching, and downloading books from Fli
    ```bash
    # Access the main container
    docker-compose exec kotbusta-app /bin/bash
-   
+
    # Run the INPX parser (one-time setup)
    java -cp app.jar io.heapy.kotbusta.parser.InpxParserKt \
      /app/books-data/flibusta_fb2_local.inpx \
@@ -147,7 +147,6 @@ kotbusta/
 ├── src/main/resources/
 │   ├── static/                # Frontend files
 │   └── application.conf       # Configuration
-├── conversion-service/        # Python conversion service
 └── docker-compose.yml        # Docker setup
 ```
 
@@ -173,19 +172,12 @@ Edit `src/main/resources/application.conf` for advanced configuration:
 
 ### Production Deployment
 
-1. **Secure Configuration**
-   ```bash
-   # Use secure cookie settings
-   # Set proper CORS origins
-   # Use HTTPS with reverse proxy
-   ```
-
 2. **Docker Production**
    ```bash
    # Use production environment file
    cp .env.example .env.prod
    # Set production values
-   
+
    # Deploy
    docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
@@ -195,7 +187,7 @@ Edit `src/main/resources/application.conf` for advanced configuration:
    server {
        listen 443 ssl;
        server_name your-domain.com;
-       
+
        location / {
            proxy_pass http://localhost:8080;
            proxy_set_header Host $host;

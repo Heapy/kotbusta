@@ -35,14 +35,18 @@ function useRouter() {
     const [route, setRoute] = useState(window.location.pathname);
     
     useEffect(() => {
-        const handlePopState = () => setRoute(window.location.pathname);
+        const handlePopState = () => {
+            setRoute(window.location.pathname);
+        };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, []);
     
     const navigate = (path) => {
-        window.history.pushState({}, '', path);
-        setRoute(path);
+        if (path !== route) {
+            window.history.pushState({}, '', path);
+            setRoute(path);
+        }
     };
     
     return [route, navigate];
@@ -61,7 +65,7 @@ function ErrorMessage({ message }) {
 }
 
 // Header component
-function Header({ user, onNavigate }) {
+function Header({ user, isAdmin, onNavigate }) {
     return h('header', { className: 'header' },
         h('div', { className: 'container' },
             h('div', { className: 'header-content' },
@@ -85,7 +89,12 @@ function Header({ user, onNavigate }) {
                         href: '/activity', 
                         className: 'nav-link',
                         onClick: (e) => { e.preventDefault(); onNavigate('/activity'); }
-                    }, 'Activity')
+                    }, 'Activity'),
+                    isAdmin && h('a', { 
+                        href: '/admin', 
+                        className: 'nav-link admin-link',
+                        onClick: (e) => { e.preventDefault(); onNavigate('/admin'); }
+                    }, 'Admin')
                 ),
                 h('div', { className: 'user-menu' },
                     user ? [
@@ -492,10 +501,188 @@ function ActivityPage() {
     ]);
 }
 
+// Admin page component
+function AdminPage({ user, isAdmin }) {
+    const [jobs, setJobs] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [importForm, setImportForm] = useState({
+        extractCovers: false,
+        maxCoverArchives: 3
+    });
+    const [coverForm, setCoverForm] = useState({
+        maxArchives: 10
+    });
+    
+    useEffect(() => {
+        if (isAdmin && user) {
+            loadJobs();
+            const interval = setInterval(loadJobs, 2000); // Poll every 2 seconds
+            return () => clearInterval(interval);
+        }
+    }, [isAdmin, user]);
+    
+    const loadJobs = async () => {
+        try {
+            const response = await api.get('/api/admin/jobs');
+            setJobs(response.data);
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+    
+    const handleStartImport = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+        
+        try {
+            await api.post('/api/admin/import', importForm);
+            await loadJobs();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    const handleStartCoverExtraction = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+        
+        try {
+            await api.post('/api/admin/extract-covers', coverForm);
+            await loadJobs();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    if (!user) {
+        return h('div', { className: 'login-prompt' }, [
+            h('h1', null, 'Authentication Required'),
+            h('p', null, 'Please log in to access the admin panel'),
+            h('a', { href: '/login', className: 'btn btn-primary' }, 'Login with Google')
+        ]);
+    }
+    
+    if (!isAdmin) {
+        return h('div', { className: 'access-denied' }, [
+            h('h1', null, 'Access Denied'),
+            h('p', null, 'You do not have admin privileges')
+        ]);
+    }
+    
+    return h('div', null, [
+        h('h1', { className: 'page-title' }, 'Admin Panel'),
+        
+        error && ErrorMessage({ message: error }),
+        
+        // Data Import Section
+        h('section', { className: 'admin-section' }, [
+            h('h2', { className: 'section-title' }, 'Data Import'),
+            h('form', { className: 'admin-form', onSubmit: handleStartImport }, [
+                h('div', { className: 'form-group' }, [
+                    h('label', null, [
+                        h('input', {
+                            type: 'checkbox',
+                            checked: importForm.extractCovers,
+                            onChange: (e) => setImportForm({
+                                ...importForm,
+                                extractCovers: e.target.checked
+                            })
+                        }),
+                        ' Extract book covers during import'
+                    ])
+                ]),
+                importForm.extractCovers && h('div', { className: 'form-group' }, [
+                    h('label', null, 'Max cover archives to process:'),
+                    h('input', {
+                        type: 'number',
+                        min: 1,
+                        max: 50,
+                        value: importForm.maxCoverArchives,
+                        onChange: (e) => setImportForm({
+                            ...importForm,
+                            maxCoverArchives: parseInt(e.target.value) || 3
+                        })
+                    })
+                ]),
+                h('button', {
+                    type: 'submit',
+                    className: 'btn btn-primary',
+                    disabled: loading
+                }, loading ? 'Starting...' : 'Start Data Import')
+            ])
+        ]),
+        
+        // Cover Extraction Section
+        h('section', { className: 'admin-section' }, [
+            h('h2', { className: 'section-title' }, 'Cover Extraction'),
+            h('form', { className: 'admin-form', onSubmit: handleStartCoverExtraction }, [
+                h('div', { className: 'form-group' }, [
+                    h('label', null, 'Max archives to process:'),
+                    h('input', {
+                        type: 'number',
+                        min: 1,
+                        max: 100,
+                        value: coverForm.maxArchives,
+                        onChange: (e) => setCoverForm({
+                            ...coverForm,
+                            maxArchives: parseInt(e.target.value) || 10
+                        })
+                    })
+                ]),
+                h('button', {
+                    type: 'submit',
+                    className: 'btn btn-primary',
+                    disabled: loading
+                }, loading ? 'Starting...' : 'Start Cover Extraction')
+            ])
+        ]),
+        
+        // Jobs Status Section
+        h('section', { className: 'admin-section' }, [
+            h('h2', { className: 'section-title' }, 'Job Status'),
+            jobs.length === 0 ? 
+                h('p', null, 'No jobs found') :
+                h('div', { className: 'jobs-list' },
+                    jobs.map(job =>
+                        h('div', { 
+                            className: `job-item job-${job.status}`,
+                            key: job.id 
+                        }, [
+                            h('div', { className: 'job-header' }, [
+                                h('span', { className: 'job-type' }, 
+                                    job.type === 'data_import' ? 'Data Import' : 'Cover Extraction'
+                                ),
+                                h('span', { className: `job-status job-status-${job.status}` }, 
+                                    job.status.charAt(0).toUpperCase() + job.status.slice(1)
+                                ),
+                                h('span', { className: 'job-time' },
+                                    new Date(job.startTime).toLocaleString()
+                                )
+                            ]),
+                            h('div', { className: 'job-progress' }, job.progress),
+                            job.errorMessage && h('div', { className: 'job-error' }, job.errorMessage),
+                            job.endTime && h('div', { className: 'job-duration' }, 
+                                `Duration: ${Math.round((job.endTime - job.startTime) / 1000)}s`
+                            )
+                        ])
+                    )
+                )
+        ])
+    ]);
+}
+
 // Main app component
 function App() {
     const [route, navigate] = useRouter();
     const [user, setUser] = useState(null);
+    const [isAdmin, setIsAdmin] = useState(false);
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -507,20 +694,38 @@ function App() {
     }, []);
     
     useEffect(() => {
-        if (user) {
+        // Handle route changes
+        if (route === '/admin' && user && !isAdmin) {
+            checkAuth();
+        }
+        // Clear any previous errors when route changes
+        setError(null);
+    }, [route]);
+    
+    useEffect(() => {
+        if (user && route === '/') {
             loadBooks();
         }
-    }, [searchQuery, filters, user]);
+    }, [searchQuery, filters, user, route]);
     
     const checkAuth = async () => {
         try {
             const response = await api.get('/api/user/info');
             if (response.success) {
                 setUser(response.data);
+                
+                // Check admin status
+                try {
+                    const adminResponse = await api.get('/api/admin/status');
+                    setIsAdmin(adminResponse.success);
+                } catch (adminErr) {
+                    setIsAdmin(false);
+                }
             }
         } catch (err) {
             // User is not authenticated
             setUser(null);
+            setIsAdmin(false);
         } finally {
             setLoading(false);
         }
@@ -556,6 +761,7 @@ function App() {
             setBooks(response.data.books);
         } catch (err) {
             setError(err.message);
+            setBooks([]);
         } finally {
             setLoading(false);
         }
@@ -590,7 +796,7 @@ function App() {
     const bookId = bookMatch ? parseInt(bookMatch[1]) : null;
     
     return h('div', null, [
-        Header({ user, onNavigate: navigate }),
+        Header({ user, isAdmin, onNavigate: navigate }),
         
         route === '/' && [
             user && SearchBar({ onSearch: handleSearch, filters, onFilterChange: setFilters }),
@@ -643,6 +849,12 @@ function App() {
                         h('a', { href: '/login', className: 'btn btn-primary' }, 'Login with Google')
                     ])
                 ]
+            )
+        ),
+        
+        route === '/admin' && h('main', { className: 'main' },
+            h('div', { className: 'container' },
+                AdminPage({ user, isAdmin })
             )
         )
     ]);

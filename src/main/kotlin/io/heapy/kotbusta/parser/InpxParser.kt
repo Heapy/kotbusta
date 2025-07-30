@@ -1,10 +1,9 @@
 package io.heapy.kotbusta.parser
 
-import io.heapy.kotbusta.database.DatabaseInitializer
+import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.database.QueryExecutor
 import io.heapy.kotbusta.model.Author
-import io.heapy.kotbusta.model.Book
 import io.heapy.kotbusta.model.Series
-import java.io.File
 import java.nio.file.Path
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -12,50 +11,50 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipFile
 
-class InpxParser {
-    
-    fun parseAndImport(booksDataPath: Path) {
+class InpxParser(
+    private val queryExecutor: QueryExecutor,
+) {
+    suspend fun parseAndImport(booksDataPath: Path) {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
-        println("Starting INPX parsing from: $inpxFilePath")
-        
-        val connection = DatabaseInitializer.getConnection()
-        connection.use { conn ->
+        log.info("Starting INPX parsing from: $inpxFilePath")
+
+        queryExecutor.execute { conn ->
             conn.autoCommit = false
-            
+
             ZipFile(inpxFilePath.toString()).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".inp") }
                     .toList()
-                
-                println("Found ${entries.size} .inp files to process")
-                
+
+                log.info("Found ${entries.size} .inp files to process")
+
                 entries.forEachIndexed { index, entry ->
-                    println("Processing ${entry.name} (${index + 1}/${entries.size})")
-                    
+                    log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
+
                     zipFile.getInputStream(entry).bufferedReader(Charsets.UTF_8).use { reader ->
                         reader.lineSequence().forEach { line ->
                             parseBookLine(line, conn, booksDataPath)
                         }
                     }
-                    
+
                     if ((index + 1) % 10 == 0) {
                         conn.commit()
-                        println("Committed batch ${index + 1}")
+                        log.info("Committed batch ${index + 1}")
                     }
                 }
-                
+
                 conn.commit()
-                println("INPX parsing completed successfully")
+                log.info("INPX parsing completed successfully")
             }
         }
     }
-    
+
     private fun parseBookLine(line: String, connection: Connection,
                               booksDataPath: Path) {
         try {
             val parts = line.split('\u0004') // Field separator in INP files
             if (parts.size < 8) return
-            
+
             val authorPart = parts[0]
             val genre = parts[1]
             val title = parts[2]
@@ -69,23 +68,23 @@ class InpxParser {
             val dateAdded = parts.getOrNull(10)
             val language = parts.getOrNull(11) ?: "ru"
             val keywords = parts.getOrNull(12)
-            
+
             if (deleted == "1") return // Skip deleted books
-            
+
             // Parse authors
             val authors = parseAuthors(authorPart)
             if (authors.isEmpty()) return
-            
+
             // Parse series
             val series = if (seriesPart.isNotBlank()) {
                 Series(0, seriesPart.trim())
             } else null
-            
+
             // Determine file paths
             val archiveName = determineArchiveName(bookId)
             val archivePath = booksDataPath.resolve(archiveName)
             val filePath = "${bookId}.fb2"
-            
+
             // Insert book into database
             insertBook(
                 connection = connection,
@@ -101,24 +100,23 @@ class InpxParser {
                 fileSize = fileSize,
                 dateAdded = parseDateAdded(dateAdded)
             )
-            
+
         } catch (e: Exception) {
-            System.err.println("Error parsing line: $line")
-            e.printStackTrace()
+            log.error("Error parsing line: $line", e)
         }
     }
-    
+
     private fun parseAuthors(authorPart: String): List<Author> {
         if (authorPart.isBlank()) return emptyList()
-        
+
         return authorPart.split(':').mapNotNull { authorStr ->
             val parts = authorStr.split(',').map { it.trim() }
             if (parts.isEmpty() || parts[0].isBlank()) return@mapNotNull null
-            
+
             val lastName = parts[0]
             val firstName = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
             val middleName = parts.getOrNull(2)?.takeIf { it.isNotBlank() }
-            
+
             val fullName = buildString {
                 append(lastName)
                 if (firstName != null) {
@@ -128,16 +126,16 @@ class InpxParser {
                     }
                 }
             }
-            
+
             Author(0, firstName, lastName, fullName)
         }
     }
-    
+
     private fun determineArchiveName(bookId: Long): String {
         // Based on the file naming pattern observed in all-files.txt
         return when {
             bookId < 30560 -> "fb2-000024-030559.zip"
-            bookId < 60424 -> "fb2-030560-060423.zip" 
+            bookId < 60424 -> "fb2-030560-060423.zip"
             bookId < 74392 -> "fb2-060424-074391.zip"
             bookId < 91841 -> "fb2-074392-091839.zip"
             bookId < 104215 -> "fb2-091841-104214.zip"
@@ -161,19 +159,20 @@ class InpxParser {
             }
         }
     }
-    
+
     private fun parseDateAdded(dateStr: String?): Long {
         if (dateStr.isNullOrBlank()) return System.currentTimeMillis() / 1000
-        
+
         return try {
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             val date = LocalDate.parse(dateStr, formatter)
             date.toEpochDay() * 24 * 60 * 60 // Convert to seconds
         } catch (e: Exception) {
+            log.error("Error parsing date: $dateStr", e)
             System.currentTimeMillis() / 1000
         }
     }
-    
+
     private fun insertBook(
         connection: Connection,
         bookId: Long,
@@ -190,17 +189,17 @@ class InpxParser {
     ) {
         // Insert or get series
         val seriesId = series?.let { insertOrGetSeries(connection, it.name) }
-        
+
         // Insert or get authors
         val authorIds = authors.map { insertOrGetAuthor(connection, it) }
-        
+
         // Insert book
         val bookSql = """
-            INSERT OR REPLACE INTO books 
+            INSERT OR REPLACE INTO books
             (id, title, genre, language, series_id, series_number, file_path, archive_path, file_size, date_added)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
-        
+
         connection.prepareStatement(bookSql).use { stmt ->
             stmt.setLong(1, bookId)
             stmt.setString(2, title)
@@ -214,7 +213,7 @@ class InpxParser {
             stmt.setLong(10, dateAdded)
             stmt.executeUpdate()
         }
-        
+
         // Insert book-author relationships
         val bookAuthorSql = "INSERT OR REPLACE INTO book_authors (book_id, author_id) VALUES (?, ?)"
         connection.prepareStatement(bookAuthorSql).use { stmt ->
@@ -225,7 +224,7 @@ class InpxParser {
             }
         }
     }
-    
+
     private fun insertOrGetSeries(connection: Connection, name: String): Long {
         // Try to get existing series
         val selectSql = "SELECT id FROM series WHERE name = ?"
@@ -236,22 +235,22 @@ class InpxParser {
                 return rs.getLong("id")
             }
         }
-        
+
         // Insert new series
         val insertSql = "INSERT INTO series (name) VALUES (?)"
         connection.prepareStatement(insertSql, PreparedStatement.RETURN_GENERATED_KEYS).use { stmt ->
             stmt.setString(1, name)
             stmt.executeUpdate()
-            
+
             val keys = stmt.generatedKeys
             if (keys.next()) {
                 return keys.getLong(1)
             }
         }
-        
+
         throw RuntimeException("Failed to insert series: $name")
     }
-    
+
     private fun insertOrGetAuthor(connection: Connection, author: Author): Long {
         // Try to get existing author
         val selectSql = "SELECT id FROM authors WHERE full_name = ?"
@@ -262,7 +261,7 @@ class InpxParser {
                 return rs.getLong("id")
             }
         }
-        
+
         // Insert new author
         val insertSql = "INSERT INTO authors (first_name, last_name, full_name) VALUES (?, ?, ?)"
         connection.prepareStatement(insertSql, PreparedStatement.RETURN_GENERATED_KEYS).use { stmt ->
@@ -270,13 +269,15 @@ class InpxParser {
             stmt.setString(2, author.lastName)
             stmt.setString(3, author.fullName)
             stmt.executeUpdate()
-            
+
             val keys = stmt.generatedKeys
             if (keys.next()) {
                 return keys.getLong(1)
             }
         }
-        
+
         throw RuntimeException("Failed to insert author: ${author.fullName}")
     }
+
+    private companion object : Logger()
 }

@@ -1,22 +1,19 @@
 package io.heapy.kotbusta.config
 
-import io.heapy.kotbusta.database.DatabaseInitializer
+import io.heapy.komok.tech.logging.logger
+import io.heapy.kotbusta.ApplicationFactory
 import io.heapy.kotbusta.model.User
-import io.ktor.client.*
 import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.sessions.*
+import io.ktor.util.hex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import java.sql.PreparedStatement
+import kotlin.time.Duration.Companion.days
 
 @Serializable
 data class UserSession(
@@ -33,36 +30,41 @@ data class GoogleUserInfo(
     @SerialName("picture") val avatarUrl: String?
 )
 
+data class SessionConfig(
+    val secretEncryptKey: String,
+    val secretSignKey: String,
+)
+
+context(applicationFactory: ApplicationFactory)
 fun Application.configureAuthentication() {
-    val googleClientId = environment.config.propertyOrNull("kotbusta.google.clientId")?.getString()
-    val googleClientSecret = environment.config.propertyOrNull("kotbusta.google.clientSecret")?.getString()
-    
+    val googleOauthConfig = applicationFactory.googleOauthConfig.value
+    val httpClient = applicationFactory.httpClient.value
+    val queryExecutor = applicationFactory.queryExecutor.value
+    val sessionConfig = applicationFactory.sessionConfig.value
+
     install(Sessions) {
         cookie<UserSession>("user_session") {
             cookie.path = "/"
-            cookie.maxAgeInSeconds = 86400 * 30 // 30 days
+            cookie.maxAgeInSeconds = 365.days.inWholeSeconds
             cookie.httpOnly = true
-            cookie.secure = false // Set to true in production with HTTPS
+            cookie.secure = googleOauthConfig.redirectUri.startsWith("https")
+            transform(
+                SessionTransportTransformerEncrypt(
+                    encryptionKey = hex(sessionConfig.secretEncryptKey),
+                    signKey = hex(sessionConfig.secretEncryptKey),
+                )
+            )
         }
     }
-    
-    val httpClient = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-            })
-        }
-    }
-    
+
     install(Authentication) {
         // Always install session authentication
         session<UserSession>("auth-session") {
             validate { session ->
                 // Validate session by checking if user exists in database
-                val connection = DatabaseInitializer.getConnection()
-                connection.use { conn ->
+                queryExecutor.execute(readOnly = true) { connection ->
                     val sql = "SELECT id FROM users WHERE id = ?"
-                    conn.prepareStatement(sql).use { stmt ->
+                    connection.prepareStatement(sql).use { stmt ->
                         stmt.setLong(1, session.userId)
                         val rs = stmt.executeQuery()
                         if (rs.next()) session else null
@@ -70,71 +72,63 @@ fun Application.configureAuthentication() {
                 }
             }
         }
-        
-        // Only install OAuth if credentials are configured
-        if (googleClientId != null && googleClientSecret != null) {
-            println("Configuring Google OAuth with client ID: ${googleClientId.take(10)}...")
-            oauth("google-oauth") {
-                urlProvider = { "http://localhost:8080/callback" }
-                providerLookup = {
-                    OAuthServerSettings.OAuth2ServerSettings(
-                        name = "google",
-                        authorizeUrl = "https://accounts.google.com/o/oauth2/auth",
-                        accessTokenUrl = "https://oauth2.googleapis.com/token",
-                        requestMethod = HttpMethod.Post,
-                        clientId = googleClientId,
-                        clientSecret = googleClientSecret,
-                        defaultScopes = listOf("profile", "email"),
-                        // Add response type for better compatibility
-                        extraAuthParameters = listOf("access_type" to "online")
-                    )
-                }
-                client = httpClient
+
+        logger {}
+            .info("Configuring Google OAuth with client ID: ${googleOauthConfig.clientId.take(10)}...")
+        oauth("google-oauth") {
+            urlProvider = { googleOauthConfig.redirectUri }
+            providerLookup = {
+                OAuthServerSettings.OAuth2ServerSettings(
+                    name = "google",
+                    authorizeUrl = "https://accounts.google.com/o/oauth2/auth",
+                    accessTokenUrl = "https://oauth2.googleapis.com/token",
+                    requestMethod = HttpMethod.Post,
+                    clientId = googleOauthConfig.clientId,
+                    clientSecret = googleOauthConfig.clientSecret,
+                    defaultScopes = listOf("profile", "email"),
+                    extraAuthParameters = listOf("access_type" to "online")
+                )
             }
-        } else {
-            println("Warning: Google OAuth credentials not configured - OAuth login will not be available")
+            client = httpClient
         }
     }
 }
 
-suspend fun handleGoogleCallback(principal: OAuthAccessTokenResponse.OAuth2): UserSession {
-    val httpClient = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-            })
-        }
-    }
-    
-    try {
-        val userInfo: GoogleUserInfo = httpClient.get("https://www.googleapis.com/oauth2/v1/userinfo") {
+context(applicationFactory: ApplicationFactory)
+suspend fun handleGoogleCallback(
+    principal: OAuthAccessTokenResponse.OAuth2,
+): UserSession {
+    val httpClient = applicationFactory.httpClient.value
+
+    val userInfo: GoogleUserInfo = httpClient
+        .get("https://www.googleapis.com/oauth2/v1/userinfo") {
             headers {
                 append(HttpHeaders.Authorization, "Bearer ${principal.accessToken}")
             }
-        }.body()
-        
-        // Insert or update user in database
-        val user = insertOrUpdateUser(userInfo)
-        
-        return UserSession(
-            userId = user.id,
-            email = user.email,
-            name = user.name
-        )
-    } finally {
-        httpClient.close()
-    }
+        }
+        .body()
+
+    // Insert or update user in database
+    val user = insertOrUpdateUser(userInfo)
+
+    return UserSession(
+        userId = user.id,
+        email = user.email,
+        name = user.name
+    )
 }
 
-private fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
-    val connection = DatabaseInitializer.getConnection()
-    connection.use { conn ->
+context(applicationFactory: ApplicationFactory)
+private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
+    val queryExecutor = applicationFactory.queryExecutor.value
+
+    return queryExecutor.execute { conn ->
         // Try to find existing user
         val selectSql = "SELECT id, email, name, avatar_url, created_at, updated_at FROM users WHERE google_id = ?"
         conn.prepareStatement(selectSql).use { stmt ->
             stmt.setString(1, userInfo.id)
             val rs = stmt.executeQuery()
-            
+
             if (rs.next()) {
                 // Update existing user
                 val userId = rs.getLong("id")
@@ -146,8 +140,8 @@ private fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
                     updateStmt.setLong(4, userId)
                     updateStmt.executeUpdate()
                 }
-                
-                return User(
+
+                User(
                     id = userId,
                     googleId = userInfo.id,
                     email = userInfo.email,
@@ -165,13 +159,13 @@ private fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
                     insertStmt.setString(3, userInfo.name)
                     insertStmt.setString(4, userInfo.avatarUrl)
                     insertStmt.executeUpdate()
-                    
+
                     val keys = insertStmt.generatedKeys
                     if (keys.next()) {
                         val userId = keys.getLong(1)
                         val now = System.currentTimeMillis() / 1000
-                        
-                        return User(
+
+                        User(
                             id = userId,
                             googleId = userInfo.id,
                             email = userInfo.email,
@@ -180,11 +174,11 @@ private fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
                             createdAt = now,
                             updatedAt = now
                         )
+                    } else {
+                        throw RuntimeException("Failed to insert/update user")
                     }
                 }
             }
         }
     }
-    
-    throw RuntimeException("Failed to insert/update user")
 }
