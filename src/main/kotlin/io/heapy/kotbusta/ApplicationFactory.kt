@@ -1,12 +1,19 @@
 package io.heapy.kotbusta
 
+import Configuration.pgDatabase
+import Configuration.pgHost
+import Configuration.pgPassword
+import Configuration.pgPort
+import Configuration.pgUser
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.heapy.komok.tech.config.dotenv.dotenv
 import io.heapy.komok.tech.di.delegate.bean
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.config.GoogleOauthConfig
 import io.heapy.kotbusta.config.SessionConfig
-import io.heapy.kotbusta.database.DatabaseInitializer
-import io.heapy.kotbusta.database.QueryExecutor
+import io.heapy.kotbusta.coroutines.DispatchersModule
+import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.AdminService
@@ -16,15 +23,18 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
+import org.postgresql.ds.PGSimpleDataSource
+import runMigrations
 import java.security.SecureRandom
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
 
-class ApplicationFactory {
+class ApplicationFactory(
+    val dispatchersModule: DispatchersModule,
+) {
     val dotenv by bean {
         dotenv {}
     }
@@ -94,18 +104,6 @@ class ApplicationFactory {
         )
     }
 
-    val queryExecutor by bean {
-        QueryExecutor(
-            databasePath = databasePath.value,
-        )
-    }
-
-    val databaseInitializer by bean {
-        DatabaseInitializer(
-            queryExecutor = queryExecutor.value,
-        )
-    }
-
     val httpClient by bean {
         HttpClient(CIO) {
             install(ContentNegotiation) {
@@ -119,27 +117,19 @@ class ApplicationFactory {
     }
 
     val bookService by bean {
-        BookService(
-            queryExecutor = queryExecutor.value,
-        )
+        BookService()
     }
 
     val userService by bean {
-        UserService(
-            queryExecutor = queryExecutor.value,
-        )
+        UserService()
     }
 
     val fb2Parser by bean {
-        Fb2Parser(
-            queryExecutor = queryExecutor.value,
-        )
+        Fb2Parser()
     }
 
     val inpxParser by bean {
-        InpxParser(
-            queryExecutor = queryExecutor.value,
-        )
+        InpxParser()
     }
 
     val adminService by bean {
@@ -151,18 +141,45 @@ class ApplicationFactory {
         )
     }
 
-    fun initialize() = runBlocking(Dispatchers.IO) {
-        launch {
-            databaseInitializer.value.initialize()
+    val dslContext by bean {
+        System.setProperty("org.jooq.no-logo", "true")
+        System.setProperty("org.jooq.no-tips", "true")
+        DSL.using(hikariDataSource.value, SQLDialect.POSTGRES)
+    }
+
+    val transactionProvider by bean {
+        JooqTransactionProvider(
+            dslContext = dslContext.value,
+            ioDispatcher = dispatchersModule.ioDispatcher.value,
+        )
+    }
+
+    val hikariConfig by bean {
+        HikariConfig().apply {
+            poolName = "kotbusta-hikari-pool"
+            dataSourceClassName = PGSimpleDataSource::class.qualifiedName
+            username = pgUser
+            password = pgPassword
+            dataSourceProperties["databaseName"] = pgDatabase
+            dataSourceProperties["serverName"] = pgHost
+            dataSourceProperties["portNumber"] = pgPort
         }
-        launch {
-            queryExecutor.value.initialize()
-        }
+    }
+
+    val hikariDataSource by bean {
+        HikariDataSource(hikariConfig.value)
+    }
+
+    fun initialize() {
+        runMigrations(hikariDataSource.value)
 
         Runtime.getRuntime().addShutdownHook(
             thread(start = false) {
                 if (httpClient.isInitialized) {
                     httpClient.value.use {}
+                }
+                if (hikariDataSource.isInitialized) {
+                    hikariDataSource.value.use {}
                 }
             },
         )

@@ -1,14 +1,11 @@
 package io.heapy.kotbusta.service
 
-import io.heapy.kotbusta.database.QueryExecutor
 import io.heapy.kotbusta.model.Download
 import io.heapy.kotbusta.model.RecentActivity
 import io.heapy.kotbusta.model.UserComment
 import io.heapy.kotbusta.model.UserNote
 
-class UserService(
-    private val queryExecutor: QueryExecutor,
-) {
+class UserService {
     suspend fun addComment(
         userId: Long,
         bookId: Long,

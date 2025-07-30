@@ -1,17 +1,30 @@
 [versions]
-kotlin = "2.2.20-Beta2"
+flyway = "11.10.3"
+hikari = "6.3.1"
+jooq = "3.20.5"
 komok = "1.0.13"
-logback = "1.5.18"
-sqlite-jdbc = "3.50.3.0"
+kotlin = "2.2.20-Beta2"
 kotlinx-serialization = "1.9.0"
+logback = "1.5.18"
+postgresql = "42.7.7"
 
 [libraries]
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+
+hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
+
+jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
+jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
+
 komok-tech-logging = { module = "io.heapy.komok:komok-tech-logging", version.ref = "komok"  }
 komok-tech-to-be-injected = { module = "io.heapy.komok:komok-tech-to-be-injected", version.ref = "komok"  }
 komok-tech-config-dotenv = { module = "io.heapy.komok:komok-tech-config-dotenv", version.ref = "komok"  }
-logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback"}
-sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc" }
+
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback"}
+
+postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

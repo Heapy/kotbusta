@@ -9,6 +9,9 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":dataops"))
+    implementation(libs.hikari)
+
     implementation(ktorLibs.server.cio)
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.serialization.kotlinx.json)
@@ -19,7 +22,7 @@ dependencies {
     implementation(ktorLibs.client.cio)
     implementation(ktorLibs.client.contentNegotiation)
 
-    implementation(libs.sqlite.jdbc)
+
     implementation(libs.komok.tech.config.dotenv)
     implementation(libs.komok.tech.to.be.injected)
     implementation(libs.komok.tech.logging)

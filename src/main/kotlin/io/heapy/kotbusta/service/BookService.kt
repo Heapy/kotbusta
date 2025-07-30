@@ -1,6 +1,5 @@
 package io.heapy.kotbusta.service
 
-import io.heapy.kotbusta.database.QueryExecutor
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.Book
 import io.heapy.kotbusta.model.BookSummary
@@ -10,9 +9,7 @@ import io.heapy.kotbusta.model.Series
 import java.sql.Connection
 import java.sql.ResultSet
 
-class BookService(
-    private val queryExecutor: QueryExecutor,
-) {
+class BookService {
     suspend fun getBooks(limit: Int = 20, offset: Int = 0, userId: Long? = null): SearchResult {
         return queryExecutor.execute(readOnly = true, name = "getBooks") { conn ->
             val books = getBooksList(conn, limit, offset, userId)

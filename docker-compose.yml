@@ -1,23 +1,20 @@
-version: '3.8'
+# docker compose -f docker-compose.dev.yml up -d
+name: "kotbusta"
 
 services:
-  kotbusta-app:
-    build: .
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./data:/app/data
-      - ./books-data:/app/books-data:ro
+  database:
+    image: "postgres:17.5"
+    container_name: "database"
+    restart: "always"
+    mem_limit: "128m"
+    memswap_limit: "0m"
     environment:
-      - DATABASE_PATH=/app/data/kotbusta.db
-      - BOOKS_DATA_PATH=/app/books-data
-      - CONVERSION_SERVICE_URL=http://conversion-service:8081
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-    depends_on:
-      - conversion-service
-    restart: unless-stopped
-
+      POSTGRES_PASSWORD: "kotbusta"
+      POSTGRES_USER: "kotbusta"
+      POSTGRES_DB: "kotbusta"
+    volumes:
+      - "pgdata:/var/lib/postgresql/data"
+    ports:
+      - "127.0.0.1:9578:5432"
 volumes:
-  kotbusta-data:
-    driver: local
+  pgdata:

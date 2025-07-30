@@ -1,7 +1,6 @@
 package io.heapy.kotbusta.parser
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.database.QueryExecutor
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.Series
 import java.nio.file.Path
@@ -11,9 +10,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipFile
 
-class InpxParser(
-    private val queryExecutor: QueryExecutor,
-) {
+class InpxParser {
     suspend fun parseAndImport(booksDataPath: Path) {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         log.info("Starting INPX parsing from: $inpxFilePath")

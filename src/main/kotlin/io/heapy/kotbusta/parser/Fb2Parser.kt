@@ -1,8 +1,6 @@
 package io.heapy.kotbusta.parser
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.database.DatabaseInitializer
-import io.heapy.kotbusta.database.QueryExecutor
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -12,9 +10,7 @@ import java.util.zip.ZipFile
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 
-class Fb2Parser(
-    private val queryExecutor: QueryExecutor,
-) {
+class Fb2Parser {
     suspend fun extractBookCovers(archivePath: String) {
         log.info("Extracting covers from: $archivePath")
         queryExecutor.execute(name = "extractBookCovers") { conn ->
