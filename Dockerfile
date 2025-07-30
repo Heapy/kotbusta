@@ -1,9 +1,9 @@
 # Use Ubuntu-based image instead of Alpine to avoid musl libc issues with SQLite JDBC
 FROM bellsoft/liberica-openjre-debian:24.0.2
 
-# Install calibre
+# Install pandoc
 RUN apt-get update && \
-    apt-get install -y calibre-bin && \
+    apt-get install -y pandoc && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
