@@ -16,9 +16,12 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import java.security.SecureRandom
+import kotlin.concurrent.thread
 import kotlin.io.path.Path
 
 class ApplicationFactory {
@@ -100,7 +103,6 @@ class ApplicationFactory {
     val databaseInitializer by bean {
         DatabaseInitializer(
             queryExecutor = queryExecutor.value,
-            databasePath = databasePath.value,
         )
     }
 
@@ -149,9 +151,21 @@ class ApplicationFactory {
         )
     }
 
-    fun initialize() = runBlocking {
-        queryExecutor.value.initialize()
-        databaseInitializer.value.initialize()
+    fun initialize() = runBlocking(Dispatchers.IO) {
+        launch {
+            databaseInitializer.value.initialize()
+        }
+        launch {
+            queryExecutor.value.initialize()
+        }
+
+        Runtime.getRuntime().addShutdownHook(
+            thread(start = false) {
+                if (httpClient.isInitialized) {
+                    httpClient.value.use {}
+                }
+            },
+        )
     }
 
     private companion object : Logger()

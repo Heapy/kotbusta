@@ -17,13 +17,12 @@ class Fb2Parser(
 ) {
     suspend fun extractBookCovers(archivePath: String) {
         log.info("Extracting covers from: $archivePath")
-        queryExecutor.execute { conn ->
+        queryExecutor.execute(name = "extractBookCovers") { conn ->
             conn.autoCommit = false
 
             ZipFile(archivePath).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".fb2") }
-                    .take(100) // Process first 100 for testing
                     .toList()
 
                 log.info("Processing ${entries.size} FB2 files for cover extraction")

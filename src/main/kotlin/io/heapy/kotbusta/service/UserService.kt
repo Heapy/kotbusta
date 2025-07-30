@@ -14,7 +14,7 @@ class UserService(
         bookId: Long,
         comment: String,
     ): UserComment? {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "addComment") { conn ->
             val sql = """
                 INSERT INTO user_comments (user_id, book_id, comment)
                 VALUES (?, ?, ?)
@@ -39,7 +39,7 @@ class UserService(
         commentId: Long,
         comment: String,
     ): Boolean {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "updateComment") { conn ->
             val sql = """
                 UPDATE user_comments
                 SET comment = ?, updated_at = strftime('%s', 'now')
@@ -57,7 +57,7 @@ class UserService(
     }
 
     suspend fun deleteComment(userId: Long, commentId: Long): Boolean {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "deleteComment") { conn ->
             val sql = "DELETE FROM user_comments WHERE id = ? AND user_id = ?"
 
             conn.prepareStatement(sql).use { stmt ->
@@ -74,7 +74,7 @@ class UserService(
         limit: Int = 20,
         offset: Int = 0,
     ): List<UserComment> {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getBookComments") { conn ->
             val sql = """
                 SELECT uc.id, uc.user_id, uc.book_id, uc.comment, uc.created_at, uc.updated_at,
                        u.name as user_name, u.avatar_url as user_avatar_url,
@@ -122,7 +122,7 @@ class UserService(
         note: String,
         isPrivate: Boolean = true,
     ): UserNote? {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "addOrUpdateNote") { conn ->
             // Check if note already exists
             val selectSql =
                 "SELECT id FROM user_notes WHERE user_id = ? AND book_id = ?"
@@ -174,7 +174,7 @@ class UserService(
     }
 
     suspend fun deleteNote(userId: Long, bookId: Long): Boolean {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "deleteNote") { conn ->
             val sql = "DELETE FROM user_notes WHERE user_id = ? AND book_id = ?"
 
             conn.prepareStatement(sql).use { stmt ->
@@ -187,7 +187,7 @@ class UserService(
     }
 
     suspend fun getUserNote(userId: Long, bookId: Long): UserNote? {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getUserNote") { conn ->
             val sql = """
                 SELECT id, book_id, note, is_private, created_at, updated_at
                 FROM user_notes
@@ -220,7 +220,7 @@ class UserService(
         bookId: Long,
         format: String,
     ): Boolean {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "recordDownload") { conn ->
             val sql =
                 "INSERT INTO downloads (user_id, book_id, format) VALUES (?, ?, ?)"
 
@@ -235,7 +235,7 @@ class UserService(
     }
 
     suspend fun getRecentActivity(limit: Int = 20): RecentActivity {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getRecentActivity") { conn ->
             // Get recent comments
             val commentsSql = """
                 SELECT uc.id, uc.user_id, uc.book_id, uc.comment, uc.created_at, uc.updated_at,
@@ -312,7 +312,7 @@ class UserService(
         userId: Long,
         bookId: Long,
     ): UserComment? {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getLatestComment") { conn ->
             val sql = """
                 SELECT uc.id, uc.user_id, uc.book_id, uc.comment, uc.created_at, uc.updated_at,
                        u.name as user_name, u.avatar_url as user_avatar_url,

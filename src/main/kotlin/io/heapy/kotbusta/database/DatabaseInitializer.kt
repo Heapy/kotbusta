@@ -1,17 +1,17 @@
 package io.heapy.kotbusta.database
 
-import java.io.File
+import io.heapy.komok.tech.logging.Logger
 import java.sql.Connection
 
 class DatabaseInitializer(
     private val queryExecutor: QueryExecutor,
-    private val databasePath: String,
 ) {
     suspend fun initialize() {
-        File(databasePath).mkdirs()
-        queryExecutor.execute { connection ->
+        log.info("Initializing database")
+        queryExecutor.execute(name = "DatabaseInitializer.initialize") { connection ->
             createTables(connection)
         }
+        log.info("Database initialized")
     }
 
     private fun createTables(connection: Connection) {
@@ -163,4 +163,6 @@ class DatabaseInitializer(
             statement.execute("CREATE INDEX IF NOT EXISTS idx_downloads_recent ON downloads(created_at DESC)")
         }
     }
+
+    private companion object : Logger()
 }

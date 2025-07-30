@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.database
 
+import io.heapy.komok.tech.logging.Logger
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +15,7 @@ import org.sqlite.SQLiteConfig.Pragma
 import org.sqlite.SQLiteOpenMode
 import java.sql.Connection
 import java.util.*
+import kotlin.io.path.Path
 
 private typealias Query<T> = suspend (Connection) -> T
 
@@ -32,6 +34,7 @@ class QueryExecutor(
     private val readConnections = Channel<Connection>(parallelReads)
 
     class Operation<T>(
+        val name: String,
         val query: Query<T>,
         val deferred: CompletableDeferred<T>,
     ) {
@@ -54,40 +57,67 @@ class QueryExecutor(
     }
 
     fun initialize() {
-        (1..parallelReads).forEach {
+        log.info("Initializing QueryExecutor")
+
+        Path(databasePath).parent.toFile().mkdirs()
+
+        (1..parallelReads).forEachIndexed { index, _ ->
             coroutineScope.launch {
-                readConnections.send(getConnection(readOnly = true))
+                coroutineScope.launch {
+                    try {
+                        readConnections.send(getConnection(readOnly = true))
+                    } catch (e: Exception) {
+                        log.error("Error creating read connection #$index", e)
+                    }
+                }
             }
         }
 
-        (1..parallelWrites).forEach {
+        (1..parallelWrites).forEachIndexed { index, _ ->
             coroutineScope.launch {
-                writeConnections.send(getConnection(readOnly = false))
+                try {
+                    writeConnections.send(getConnection(readOnly = false))
+                } catch (e: Exception) {
+                    log.error("Error creating write connection #$index", e)
+                }
             }
         }
 
         coroutineScope.launch {
+            var counter = 0
             for (operation in writeChannel) {
+                log.info("Executing write operation: ${operation.name} #${++counter}")
                 writeConnections.borrow { connection ->
                     operation.execute(connection)
                 }
+                log.info("Completed write operation: ${operation.name} #$counter")
             }
         }
 
         coroutineScope.launch {
+            var counter = 0
             for (operation in readChannel) {
+                log.info("Executing read operation: ${operation.name} #${++counter}")
                 readConnections.borrow { connection ->
                     operation.execute(connection)
                 }
+                log.info("Completed read operation: ${operation.name} #$counter")
             }
         }
+
+        log.info("QueryExecutor initialized")
     }
 
     suspend fun <T> execute(
         readOnly: Boolean = false,
+        name: String,
         query: Query<T>,
     ): T {
-        val operation = Operation(query, CompletableDeferred())
+        val operation = Operation(
+            name = name,
+            query = query,
+            deferred = CompletableDeferred(),
+        )
 
         if (readOnly) {
             readChannel.send(operation)
@@ -99,6 +129,7 @@ class QueryExecutor(
     }
 
     private fun getConnection(readOnly: Boolean): Connection {
+        log.info("Getting connection. readOnly=$readOnly")
         return JDBC.createConnection(
             "jdbc:sqlite:$databasePath",
             Properties().apply {
@@ -108,4 +139,6 @@ class QueryExecutor(
             },
         )
     }
+
+    private companion object : Logger()
 }

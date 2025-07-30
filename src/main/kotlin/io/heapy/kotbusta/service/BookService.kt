@@ -14,7 +14,7 @@ class BookService(
     private val queryExecutor: QueryExecutor,
 ) {
     suspend fun getBooks(limit: Int = 20, offset: Int = 0, userId: Long? = null): SearchResult {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getBooks") { conn ->
             val books = getBooksList(conn, limit, offset, userId)
             val total = getTotalBooksCount(conn)
 
@@ -27,7 +27,7 @@ class BookService(
     }
 
     suspend fun searchBooks(query: SearchQuery, userId: Long? = null): SearchResult {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "searchBooks") { conn ->
             val books = searchBooksList(conn, query, userId)
             val total = getSearchResultsCount(conn, query)
 
@@ -40,13 +40,13 @@ class BookService(
     }
 
     suspend fun getBookById(bookId: Long, userId: Long? = null): Book? {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getBookById") { conn ->
             getBookDetails(conn, bookId, userId)
         }
     }
 
     suspend fun getSimilarBooks(bookId: Long, limit: Int = 10, userId: Long? = null): List<BookSummary> {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getSimilarBooks") { conn ->
             // Get book details to find similar books
             val book = getBookDetails(conn, bookId, userId) ?: return@execute emptyList()
 
@@ -90,7 +90,7 @@ class BookService(
     }
 
     suspend fun getBookCover(bookId: Long): ByteArray? {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getBookCover") { conn ->
             val sql = "SELECT cover_image FROM books WHERE id = ?"
 
             conn.prepareStatement(sql).use { stmt ->
@@ -106,7 +106,7 @@ class BookService(
     }
 
     suspend fun starBook(userId: Long, bookId: Long): Boolean {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "starBook") { conn ->
             val sql = "INSERT OR IGNORE INTO user_stars (user_id, book_id) VALUES (?, ?)"
             conn.prepareStatement(sql).use { stmt ->
                 stmt.setLong(1, userId)
@@ -117,7 +117,7 @@ class BookService(
     }
 
     suspend fun unstarBook(userId: Long, bookId: Long): Boolean {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(name = "unstarBook") { conn ->
             val sql = "DELETE FROM user_stars WHERE user_id = ? AND book_id = ?"
             conn.prepareStatement(sql).use { stmt ->
                 stmt.setLong(1, userId)
@@ -129,7 +129,7 @@ class BookService(
     }
 
     suspend fun getStarredBooks(userId: Long, limit: Int = 20, offset: Int = 0): SearchResult {
-        return queryExecutor.execute { conn ->
+        return queryExecutor.execute(readOnly = true, name = "getStarredBooks") { conn ->
             val sql = """
                 SELECT b.id, b.title, b.genre, b.language, b.series_id, b.series_number,
                        s.name as series_name,
@@ -356,7 +356,7 @@ class BookService(
 
         // Get authors for all books
         if (books.isNotEmpty()) {
-            queryExecutor.execute(readOnly = true) { conn ->
+            queryExecutor.execute(readOnly = true, name = "getBookAuthors") { conn ->
                 books.forEach { book ->
                     val authors = getBookAuthors(conn, book.id)
                     bookAuthors[book.id] = authors.map { it.fullName }.toMutableList()

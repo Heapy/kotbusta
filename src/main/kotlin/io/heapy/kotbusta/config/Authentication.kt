@@ -62,7 +62,7 @@ fun Application.configureAuthentication() {
         session<UserSession>("auth-session") {
             validate { session ->
                 // Validate session by checking if user exists in database
-                queryExecutor.execute(readOnly = true) { connection ->
+                queryExecutor.execute(readOnly = true, name = "session validate") { connection ->
                     val sql = "SELECT id FROM users WHERE id = ?"
                     connection.prepareStatement(sql).use { stmt ->
                         stmt.setLong(1, session.userId)
@@ -122,7 +122,7 @@ context(applicationFactory: ApplicationFactory)
 private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
     val queryExecutor = applicationFactory.queryExecutor.value
 
-    return queryExecutor.execute { conn ->
+    return queryExecutor.execute(name = "insertOrUpdateUser") { conn ->
         // Try to find existing user
         val selectSql = "SELECT id, email, name, avatar_url, created_at, updated_at FROM users WHERE google_id = ?"
         conn.prepareStatement(selectSql).use { stmt ->

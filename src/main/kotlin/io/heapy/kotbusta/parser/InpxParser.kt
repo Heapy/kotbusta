@@ -18,7 +18,7 @@ class InpxParser(
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         log.info("Starting INPX parsing from: $inpxFilePath")
 
-        queryExecutor.execute { conn ->
+        queryExecutor.execute(name = "parseAndImport") { conn ->
             conn.autoCommit = false
 
             ZipFile(inpxFilePath.toString()).use { zipFile ->
