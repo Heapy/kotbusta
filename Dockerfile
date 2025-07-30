@@ -1,5 +1,5 @@
 # Use Ubuntu-based image instead of Alpine to avoid musl libc issues with SQLite JDBC
-FROM bellsoft/liberica-openjre-debian:24.0.2
+FROM bellsoft/liberica-openjre-debian:24-37
 
 # Install calibre
 RUN apt-get update && \
