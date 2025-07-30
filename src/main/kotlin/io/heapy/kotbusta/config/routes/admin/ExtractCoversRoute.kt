@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.config.routes.admin
 
 import io.heapy.kotbusta.ApplicationFactory
-import io.heapy.kotbusta.model.ApiResponse
+import io.heapy.kotbusta.model.ApiResponse.Success
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -14,8 +14,7 @@ fun Route.extractCoversRoute() {
             val jobId = adminService.startCoverExtraction()
 
             call.respond(
-                ApiResponse(
-                    success = true,
+                Success(
                     data = mapOf("jobId" to jobId),
                 ),
             )

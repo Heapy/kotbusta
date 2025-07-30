@@ -1,9 +1,9 @@
 package io.heapy.kotbusta.config.routes.admin
 
 import io.heapy.kotbusta.ApplicationFactory
-import io.heapy.kotbusta.config.badRequestError
 import io.heapy.kotbusta.config.notFoundError
-import io.heapy.kotbusta.model.ApiResponse
+import io.heapy.kotbusta.config.routes.requiredParameter
+import io.heapy.kotbusta.model.ApiResponse.Success
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -13,15 +13,13 @@ fun Route.getJobRoute() {
 
     get("/jobs/{id}") {
         adminService.requireAdminRights {
-            val jobId = call.parameters["id"]
-                ?: badRequestError("Job ID required")
+            val jobId = call.requiredParameter<String>("id")
 
             val job = adminService.getJob(jobId)
                 ?: notFoundError("Job $jobId not found")
 
             call.respond(
-                ApiResponse(
-                    success = true,
+                Success(
                     data = job,
                 ),
             )

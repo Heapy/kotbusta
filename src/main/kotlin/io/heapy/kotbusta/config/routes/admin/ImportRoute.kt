@@ -1,9 +1,7 @@
 package io.heapy.kotbusta.config.routes.admin
 
 import io.heapy.kotbusta.ApplicationFactory
-import io.heapy.kotbusta.config.ImportRequest
-import io.heapy.kotbusta.model.ApiResponse
-import io.ktor.server.request.*
+import io.heapy.kotbusta.model.ApiResponse.Success
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -13,13 +11,9 @@ fun Route.importRoute() {
 
     post("/import") {
         adminService.requireAdminRights {
-            val request = call.receive<ImportRequest>()
-            val jobId = adminService.startDataImport(
-                request.extractCovers,
-            )
+            val jobId = adminService.startDataImport()
             call.respond(
-                ApiResponse(
-                    success = true,
+                Success(
                     data = mapOf("jobId" to jobId),
                 ),
             )

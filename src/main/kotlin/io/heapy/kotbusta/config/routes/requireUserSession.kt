@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.config.routes
 
 import io.heapy.kotbusta.config.UserSession
-import io.heapy.kotbusta.model.ApiResponse
+import io.heapy.kotbusta.model.ApiResponse.Error
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -20,9 +20,8 @@ suspend fun requireUserSession(
     } else {
         routingContext.call.respond(
             HttpStatusCode.Unauthorized,
-            ApiResponse<Unit>(
-                success = false,
-                error = "Not authenticated",
+            Error(
+                message = "Not authenticated",
             ),
         )
     }

@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.config
 
+import io.heapy.kotbusta.model.ApiResponse
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
@@ -8,23 +9,29 @@ import io.ktor.server.response.*
 fun Application.configureStatusPages() {
     install(StatusPages) {
         exception<BadRequestException> { call, cause ->
-            call.respondText(
-                text = "400: ${cause.message}",
-                status = HttpStatusCode.BadRequest,
+            call.response.status(HttpStatusCode.BadRequest)
+            call.respond(
+                ApiResponse.Error(
+                    message = "400: ${cause.message}",
+                )
             )
         }
 
         exception<NotFoundException> { call, cause ->
-            call.respondText(
-                text = "404: ${cause.message}",
-                status = HttpStatusCode.NotFound,
+            call.response.status(HttpStatusCode.NotFound)
+            call.respond(
+                ApiResponse.Error(
+                    message = "404: ${cause.message}",
+                )
             )
         }
 
         exception<Throwable> { call, cause ->
-            call.respondText(
-                text = "500: ${cause.message}",
-                status = HttpStatusCode.InternalServerError,
+            call.response.status(HttpStatusCode.InternalServerError)
+            call.respond(
+                ApiResponse.Error(
+                    message = "500: ${cause.message}",
+                )
             )
         }
     }

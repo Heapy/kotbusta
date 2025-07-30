@@ -6,6 +6,8 @@ import io.heapy.kotbusta.parser.InpxParser
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import java.nio.file.Path
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.io.path.listDirectoryEntries
 
 @Serializable
@@ -16,16 +18,17 @@ data class ImportJob(
     val progress: String,
     val startTime: Long,
     val endTime: Long? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
 )
 
+@OptIn(ExperimentalAtomicApi::class)
 class AdminService(
     private val adminEmail: String?,
     private val booksDataPath: Path,
     private val fb2Parser: Fb2Parser,
     private val inpxParser: InpxParser,
 ) {
-    private val jobs = mutableMapOf<String, ImportJob>()
+    private val importJob = AtomicReference<ImportJob?>(null)
 
     fun isAdmin(
         userSession: UserSession?,
@@ -35,33 +38,34 @@ class AdminService(
         } else false
     }
 
-    fun startDataImport(extractCovers: Boolean): String {
+    fun startDataImport(): String {
         val jobId = "import_${System.currentTimeMillis()}"
         val job = ImportJob(
             id = jobId,
             type = "data_import",
             status = "running",
             progress = "Starting import...",
-            startTime = System.currentTimeMillis()
+            startTime = System.currentTimeMillis(),
         )
-        jobs[jobId] = job
+        importJob.store(job)
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 updateJobProgress(jobId, "Parsing INPX data...")
                 inpxParser.parseAndImport(booksDataPath)
 
-                if (extractCovers) {
-                    updateJobProgress(jobId, "Extracting covers...")
-                    val archives = booksDataPath.listDirectoryEntries("*.zip")
-                        .filter { it.fileName.toString().contains("fb2") }
-                        .sorted()
+                updateJobProgress(jobId, "Extracting covers...")
+                val archives = booksDataPath.listDirectoryEntries("*.zip")
+                    .filter { it.fileName.toString().contains("fb2") }
+                    .sorted()
 
-                    if (archives.isNotEmpty()) {
-                        archives.forEachIndexed { index, archive ->
-                            updateJobProgress(jobId, "Processing archive ${index + 1}/${archives.size}: ${archive.fileName}")
-                            fb2Parser.extractBookCovers(archive.toString())
-                        }
+                if (archives.isNotEmpty()) {
+                    archives.forEachIndexed { index, archive ->
+                        updateJobProgress(
+                            jobId,
+                            "Processing archive ${index + 1}/${archives.size}: ${archive.fileName}",
+                        )
+                        fb2Parser.extractBookCovers(archive.toString())
                     }
                 }
 
@@ -81,9 +85,9 @@ class AdminService(
             type = "cover_extraction",
             status = "running",
             progress = "Starting cover extraction...",
-            startTime = System.currentTimeMillis()
+            startTime = System.currentTimeMillis(),
         )
-        jobs[jobId] = job
+        importJob.store(job)
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -98,7 +102,10 @@ class AdminService(
                 }
 
                 archives.forEachIndexed { index, archive ->
-                    updateJobProgress(jobId, "Processing archive ${index + 1}/${archives.size}: ${archive.fileName}")
+                    updateJobProgress(
+                        jobId,
+                        "Processing archive ${index + 1}/${archives.size}: ${archive.fileName}",
+                    )
                     fb2Parser.extractBookCovers(archive.toString())
                 }
 
@@ -112,30 +119,34 @@ class AdminService(
     }
 
     fun getJob(jobId: String): ImportJob? {
-        return jobs[jobId]
+        return importJob.load()
     }
 
     fun getAllJobs(): List<ImportJob> {
-        return jobs.values.toList().sortedByDescending { it.startTime }
+        return importJob.load()?.let { listOf(it) } ?: emptyList()
     }
 
     private fun updateJobProgress(jobId: String, progress: String) {
-        jobs[jobId] = jobs[jobId]?.copy(progress = progress) ?: return
+        importJob.store(importJob.load()?.copy(progress = progress))
     }
 
     private fun completeJob(jobId: String, finalMessage: String) {
-        jobs[jobId] = jobs[jobId]?.copy(
-            status = "completed",
-            progress = finalMessage,
-            endTime = System.currentTimeMillis()
-        ) ?: return
+        importJob.store(
+            importJob.load()?.copy(
+                status = "completed",
+                progress = finalMessage,
+                endTime = System.currentTimeMillis(),
+            ),
+        )
     }
 
     private fun failJob(jobId: String, errorMessage: String) {
-        jobs[jobId] = jobs[jobId]?.copy(
-            status = "failed",
-            errorMessage = errorMessage,
-            endTime = System.currentTimeMillis()
-        ) ?: return
+        importJob.store(
+            importJob.load()?.copy(
+                status = "failed",
+                errorMessage = errorMessage,
+                endTime = System.currentTimeMillis(),
+            ),
+        )
     }
 }

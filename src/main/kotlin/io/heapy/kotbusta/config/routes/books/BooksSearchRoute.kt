@@ -3,7 +3,7 @@ package io.heapy.kotbusta.config.routes.books
 import io.heapy.kotbusta.ApplicationFactory
 import io.heapy.kotbusta.config.UserSession
 import io.heapy.kotbusta.config.routes.requireUserSession
-import io.heapy.kotbusta.model.ApiResponse
+import io.heapy.kotbusta.model.ApiResponse.Success
 import io.heapy.kotbusta.model.SearchQuery
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -40,8 +40,7 @@ fun Route.bookSearchRoute() {
                 userId = userId,
             )
             call.respond(
-                ApiResponse(
-                    success = true,
+                Success(
                     data = result,
                 ),
             )

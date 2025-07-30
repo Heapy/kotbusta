@@ -33,7 +33,7 @@ class InpxParser(
 
                     zipFile.getInputStream(entry).bufferedReader(Charsets.UTF_8).use { reader ->
                         reader.lineSequence().forEach { line ->
-                            parseBookLine(line, conn, booksDataPath)
+                            parseBookLine(line, conn, entry.name.removeSuffix(".inp"))
                         }
                     }
 
@@ -49,8 +49,7 @@ class InpxParser(
         }
     }
 
-    private fun parseBookLine(line: String, connection: Connection,
-                              booksDataPath: Path) {
+    private fun parseBookLine(line: String, connection: Connection, archivePath: String) {
         try {
             val parts = line.split('\u0004') // Field separator in INP files
             if (parts.size < 8) return
@@ -62,12 +61,12 @@ class InpxParser(
             val seriesNumber = parts[4].toIntOrNull()
             val bookId = parts[5].toLongOrNull() ?: return
             val fileSize = parts[6].toLongOrNull()
-            val libId = parts[7]
+            val libId = parts[7] // seems that it's the same as bookId
             val deleted = parts.getOrNull(8)
-            val fileFormat = parts.getOrNull(9) ?: "fb2"
+            val fileFormat = parts.getOrNull(9)
             val dateAdded = parts.getOrNull(10)
             val language = parts.getOrNull(11) ?: "ru"
-            val keywords = parts.getOrNull(12)
+            val keywords = parts.getOrNull(12) // too many empty, so not useful for anything
 
             if (deleted == "1") return // Skip deleted books
 
@@ -81,9 +80,7 @@ class InpxParser(
             } else null
 
             // Determine file paths
-            val archiveName = determineArchiveName(bookId)
-            val archivePath = booksDataPath.resolve(archiveName)
-            val filePath = "${bookId}.fb2"
+            val filePath = "${bookId}.${fileFormat}"
 
             // Insert book into database
             insertBook(
@@ -100,7 +97,6 @@ class InpxParser(
                 fileSize = fileSize,
                 dateAdded = parseDateAdded(dateAdded)
             )
-
         } catch (e: Exception) {
             log.error("Error parsing line: $line", e)
         }
@@ -131,35 +127,6 @@ class InpxParser(
         }
     }
 
-    private fun determineArchiveName(bookId: Long): String {
-        // Based on the file naming pattern observed in all-files.txt
-        return when {
-            bookId < 30560 -> "fb2-000024-030559.zip"
-            bookId < 60424 -> "fb2-030560-060423.zip"
-            bookId < 74392 -> "fb2-060424-074391.zip"
-            bookId < 91841 -> "fb2-074392-091839.zip"
-            bookId < 104215 -> "fb2-091841-104214.zip"
-            bookId < 113437 -> "fb2-104215-113436.zip"
-            bookId < 119691 -> "fb2-113437-119690.zip"
-            bookId < 132108 -> "fb2-119691-132107.zip"
-            bookId < 141329 -> "fb2-132108-141328.zip"
-            bookId < 147519 -> "fb2-141329-147517.zip"
-            bookId < 153556 -> "fb2-147519-153549.zip"
-            bookId < 158328 -> "fb2-153556-158325.zip"
-            bookId < 161831 -> "fb2-158328-161830.zip"
-            bookId < 166043 -> "fb2-161831-166042.zip"
-            bookId < 168103 -> "fb2-166043-168102.zip"
-            bookId < 172703 -> "fb2-168103-172702.zip"
-            bookId < 173909 -> "d.fb2-172703-173908.zip"
-            else -> {
-                // For higher IDs, use the f.fb2 pattern
-                val rangeStart = ((bookId / 5000) * 5000).toInt()
-                val rangeEnd = rangeStart + 5000 - 1
-                "f.fb2-$rangeStart-$rangeEnd.zip"
-            }
-        }
-    }
-
     private fun parseDateAdded(dateStr: String?): Long {
         if (dateStr.isNullOrBlank()) return System.currentTimeMillis() / 1000
 
@@ -183,7 +150,7 @@ class InpxParser(
         genre: String?,
         language: String,
         filePath: String,
-        archivePath: Path,
+        archivePath: String,
         fileSize: Long?,
         dateAdded: Long
     ) {
@@ -208,7 +175,7 @@ class InpxParser(
             if (seriesId != null) stmt.setLong(5, seriesId) else stmt.setNull(5, java.sql.Types.INTEGER)
             if (seriesNumber != null) stmt.setInt(6, seriesNumber) else stmt.setNull(6, java.sql.Types.INTEGER)
             stmt.setString(7, filePath)
-            stmt.setString(8, archivePath.toString())
+            stmt.setString(8, archivePath)
             if (fileSize != null) stmt.setLong(9, fileSize) else stmt.setNull(9, java.sql.Types.INTEGER)
             stmt.setLong(10, dateAdded)
             stmt.executeUpdate()

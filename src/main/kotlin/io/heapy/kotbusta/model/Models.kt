@@ -111,11 +111,19 @@ data class SearchResult(
 )
 
 @Serializable
-data class ApiResponse<T>(
-    val success: Boolean,
-    val data: T? = null,
-    val error: String? = null
-)
+sealed interface ApiResponse {
+    @Serializable
+    data class Success<T>(
+        val data: T
+    ) : ApiResponse {
+        val success = true
+    }
+
+    @Serializable
+    data class Error(val message: String) : ApiResponse {
+        val success = false
+    }
+}
 
 @Serializable
 data class RecentActivity(

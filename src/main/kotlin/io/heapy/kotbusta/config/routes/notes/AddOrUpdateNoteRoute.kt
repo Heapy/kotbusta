@@ -1,0 +1,50 @@
+package io.heapy.kotbusta.config.routes.notes
+
+import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.config.UserSession
+import io.heapy.kotbusta.config.routes.requireUserSession
+import io.heapy.kotbusta.config.routes.requiredParameter
+import io.heapy.kotbusta.model.ApiResponse.Error
+import io.heapy.kotbusta.model.ApiResponse.Success
+import io.ktor.http.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class NoteRequest(
+    val note: String,
+    val isPrivate: Boolean = true,
+)
+
+context(applicationFactory: ApplicationFactory)
+fun Route.addOrUpdateNoteRoute() {
+    val userService = applicationFactory.userService.value
+
+    post("/books/{id}/notes") {
+        requireUserSession {
+            val bookId = call.requiredParameter<Long>("id")
+            val user = contextOf<UserSession>()
+
+            val request = call.receive<NoteRequest>()
+            val note = userService.addOrUpdateNote(
+                userId = user.userId,
+                bookId = bookId,
+                note = request.note,
+                isPrivate = request.isPrivate,
+            )
+
+            if (note != null) {
+                call.respond(Success(data = note))
+            } else {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    Error(
+                        message = "Failed to save note",
+                    ),
+                )
+            }
+        }
+    }
+}
