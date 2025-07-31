@@ -1,8 +1,8 @@
 package io.heapy.kotbusta.config.routes.books
 
 import io.heapy.kotbusta.ApplicationFactory
-import io.heapy.kotbusta.config.UserSession
 import io.heapy.kotbusta.config.routes.requireUserSession
+import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.heapy.kotbusta.model.SearchQuery
 import io.ktor.server.response.*
@@ -11,6 +11,7 @@ import io.ktor.server.routing.*
 context(applicationFactory: ApplicationFactory)
 fun Route.bookSearchRoute() {
     val bookService = applicationFactory.bookService.value
+    val transactionProvider = applicationFactory.transactionProvider.value
 
     get("/books/search") {
         val query = call.request.queryParameters["q"].orEmpty()
@@ -25,8 +26,6 @@ fun Route.bookSearchRoute() {
             ?: 0
 
         requireUserSession {
-            val userId = contextOf<UserSession>().userId
-
             val searchQuery = SearchQuery(
                 query,
                 genre,
@@ -35,10 +34,11 @@ fun Route.bookSearchRoute() {
                 limit,
                 offset,
             )
-            val result = bookService.searchBooks(
-                query = searchQuery,
-                userId = userId,
-            )
+            val result = transactionProvider.transaction(READ_ONLY) {
+                bookService.searchBooks(
+                    query = searchQuery,
+                )
+            }
             call.respond(
                 Success(
                     data = result,
