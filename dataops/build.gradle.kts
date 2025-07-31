@@ -14,3 +14,7 @@ dependencies {
     implementation(libs.komok.tech.config.dotenv)
     implementation(libs.logback.classic)
 }
+
+kotlin {
+    jvmToolchain(24)
+}
