@@ -2,6 +2,10 @@ package io.heapy.kotbusta.config
 
 import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.database.TransactionType.READ_ONLY
+import io.heapy.kotbusta.database.TransactionType.READ_WRITE
+import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.jooq.tables.references.USERS
 import io.heapy.kotbusta.model.User
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -9,10 +13,10 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.sessions.*
-import io.ktor.util.hex
+import io.ktor.util.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.sql.PreparedStatement
+import java.time.OffsetDateTime
 import kotlin.time.Duration.Companion.days
 
 @Serializable
@@ -39,7 +43,7 @@ context(applicationFactory: ApplicationFactory)
 fun Application.configureAuthentication() {
     val googleOauthConfig = applicationFactory.googleOauthConfig.value
     val httpClient = applicationFactory.httpClient.value
-    val queryExecutor = applicationFactory.queryExecutor.value
+    val transactionProvider = applicationFactory.transactionProvider.value
     val sessionConfig = applicationFactory.sessionConfig.value
 
     install(Sessions) {
@@ -62,12 +66,15 @@ fun Application.configureAuthentication() {
         session<UserSession>("auth-session") {
             validate { session ->
                 // Validate session by checking if user exists in database
-                queryExecutor.execute(readOnly = true, name = "session validate") { connection ->
-                    val sql = "SELECT id FROM users WHERE id = ?"
-                    connection.prepareStatement(sql).use { stmt ->
-                        stmt.setLong(1, session.userId)
-                        val rs = stmt.executeQuery()
-                        if (rs.next()) session else null
+                transactionProvider.transaction(READ_ONLY) {
+                    dslContext { dslContext ->
+                        val exists = dslContext
+                            .select(USERS.ID)
+                            .from(USERS)
+                            .where(USERS.ID.eq(session.userId))
+                            .fetchOne() != null
+
+                        if (exists) session else null
                     }
                 }
             }
@@ -120,26 +127,37 @@ suspend fun handleGoogleCallback(
 
 context(applicationFactory: ApplicationFactory)
 private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
-    val queryExecutor = applicationFactory.queryExecutor.value
+    val transactionProvider = applicationFactory.transactionProvider.value
 
-    return queryExecutor.execute(name = "insertOrUpdateUser") { conn ->
-        // Try to find existing user
-        val selectSql = "SELECT id, email, name, avatar_url, created_at, updated_at FROM users WHERE google_id = ?"
-        conn.prepareStatement(selectSql).use { stmt ->
-            stmt.setString(1, userInfo.id)
-            val rs = stmt.executeQuery()
+    return transactionProvider.transaction(READ_WRITE) {
+        dslContext { dslContext ->
+            // Try to find existing user
+            val existingUser = dslContext
+                .select(
+                    USERS.ID,
+                    USERS.EMAIL,
+                    USERS.NAME,
+                    USERS.AVATAR_URL,
+                    USERS.CREATED_AT,
+                    USERS.UPDATED_AT
+                )
+                .from(USERS)
+                .where(USERS.GOOGLE_ID.eq(userInfo.id))
+                .fetchOne()
 
-            if (rs.next()) {
+            if (existingUser != null) {
                 // Update existing user
-                val userId = rs.getLong("id")
-                val updateSql = "UPDATE users SET email = ?, name = ?, avatar_url = ?, updated_at = strftime('%s', 'now') WHERE id = ?"
-                conn.prepareStatement(updateSql).use { updateStmt ->
-                    updateStmt.setString(1, userInfo.email)
-                    updateStmt.setString(2, userInfo.name)
-                    updateStmt.setString(3, userInfo.avatarUrl)
-                    updateStmt.setLong(4, userId)
-                    updateStmt.executeUpdate()
-                }
+                val userId = existingUser.get(USERS.ID)!!
+                val now = OffsetDateTime.now()
+
+                dslContext
+                    .update(USERS)
+                    .set(USERS.EMAIL, userInfo.email)
+                    .set(USERS.NAME, userInfo.name)
+                    .set(USERS.AVATAR_URL, userInfo.avatarUrl)
+                    .set(USERS.UPDATED_AT, now)
+                    .where(USERS.ID.eq(userId))
+                    .execute()
 
                 User(
                     id = userId,
@@ -147,37 +165,35 @@ private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
                     email = userInfo.email,
                     name = userInfo.name,
                     avatarUrl = userInfo.avatarUrl,
-                    createdAt = rs.getLong("created_at"),
-                    updatedAt = System.currentTimeMillis() / 1000
+                    createdAt = existingUser.get(USERS.CREATED_AT)!!.toEpochSecond(),
+                    updatedAt = now.toEpochSecond()
                 )
             } else {
                 // Insert new user
-                val insertSql = "INSERT INTO users (google_id, email, name, avatar_url) VALUES (?, ?, ?, ?)"
-                conn.prepareStatement(insertSql, PreparedStatement.RETURN_GENERATED_KEYS).use { insertStmt ->
-                    insertStmt.setString(1, userInfo.id)
-                    insertStmt.setString(2, userInfo.email)
-                    insertStmt.setString(3, userInfo.name)
-                    insertStmt.setString(4, userInfo.avatarUrl)
-                    insertStmt.executeUpdate()
+                val now = OffsetDateTime.now()
 
-                    val keys = insertStmt.generatedKeys
-                    if (keys.next()) {
-                        val userId = keys.getLong(1)
-                        val now = System.currentTimeMillis() / 1000
+                val userId = dslContext
+                    .insertInto(USERS)
+                    .set(USERS.GOOGLE_ID, userInfo.id)
+                    .set(USERS.EMAIL, userInfo.email)
+                    .set(USERS.NAME, userInfo.name)
+                    .set(USERS.AVATAR_URL, userInfo.avatarUrl)
+                    .set(USERS.CREATED_AT, now)
+                    .set(USERS.UPDATED_AT, now)
+                    .returningResult(USERS.ID)
+                    .fetchOne()
+                    ?.value1()
+                    ?: throw RuntimeException("Failed to insert user")
 
-                        User(
-                            id = userId,
-                            googleId = userInfo.id,
-                            email = userInfo.email,
-                            name = userInfo.name,
-                            avatarUrl = userInfo.avatarUrl,
-                            createdAt = now,
-                            updatedAt = now
-                        )
-                    } else {
-                        throw RuntimeException("Failed to insert/update user")
-                    }
-                }
+                User(
+                    id = userId,
+                    googleId = userInfo.id,
+                    email = userInfo.email,
+                    name = userInfo.name,
+                    avatarUrl = userInfo.avatarUrl,
+                    createdAt = now.toEpochSecond(),
+                    updatedAt = now.toEpochSecond()
+                )
             }
         }
     }

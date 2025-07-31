@@ -44,7 +44,7 @@ interface TransactionProvider {
     @TransactionDsl
     suspend fun <T> transaction(
         type: TransactionType = TransactionType.NONE,
-        block: suspend TransactionContext.() -> T,
+        block: suspend context(TransactionContext) () -> T,
     ): T
 }
 
@@ -54,7 +54,7 @@ class JooqTransactionProvider(
 ) : TransactionProvider {
     override suspend fun <T> transaction(
         type: TransactionType,
-        block: suspend (TransactionContext) -> T,
+        block: suspend context(TransactionContext) () -> T,
     ): T = withContext(ioDispatcher) {
         when (type) {
             TransactionType.READ_ONLY -> dslContext.transactionResult { configuration ->
