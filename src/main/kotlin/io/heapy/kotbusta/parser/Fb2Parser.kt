@@ -1,21 +1,25 @@
 package io.heapy.kotbusta.parser
 
 import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.database.TransactionContext
+import io.heapy.kotbusta.database.TransactionProvider
+import io.heapy.kotbusta.database.TransactionType
+import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.charset.Charset
-import java.sql.Connection
 import java.util.zip.ZipFile
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 
-class Fb2Parser {
+class Fb2Parser(
+    private val transactionProvider: TransactionProvider,
+) {
     suspend fun extractBookCovers(archivePath: String) {
         log.info("Extracting covers from: $archivePath")
-        queryExecutor.execute(name = "extractBookCovers") { conn ->
-            conn.autoCommit = false
-
+        transactionProvider.transaction(TransactionType.READ_WRITE) {
             ZipFile(archivePath).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".fb2") }
@@ -31,7 +35,7 @@ class Fb2Parser {
                                 val cleanedInputStream = cleanInputStream(rawInputStream)
                                 val coverImage = extractCoverFromFb2(cleanedInputStream)
                                 if (coverImage != null) {
-                                    updateBookCover(conn, bookId, coverImage)
+                                    updateBookCover(bookId, coverImage)
                                     log.info("✅ Extracted cover for book $bookId")
                                 } else {
                                     log.info("⚠️  No cover found for book $bookId")
@@ -44,12 +48,10 @@ class Fb2Parser {
                     }
 
                     if ((index + 1) % 50 == 0) {
-                        conn.commit()
-                        log.info("Committed cover batch ${index + 1}")
+                        log.info("Processed ${index + 1} files")
                     }
                 }
 
-                conn.commit()
                 log.info("Cover extraction completed")
             }
         }
@@ -242,22 +244,22 @@ class Fb2Parser {
         }
     }
 
-    private fun updateBookCover(connection: Connection, bookId: Long, coverImage: ByteArray) {
-        val sql = "UPDATE books SET cover_image = ? WHERE id = ?"
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setBytes(1, coverImage)
-            stmt.setLong(2, bookId)
-            stmt.executeUpdate()
-        }
+    context(_: TransactionContext)
+    private fun updateBookCover(bookId: Long, coverImage: ByteArray) = dslContext { dslContext ->
+        dslContext
+            .update(BOOKS)
+            .set(BOOKS.COVER_IMAGE, coverImage)
+            .where(BOOKS.ID.eq(bookId))
+            .execute()
     }
 
-    private fun updateBookAnnotation(connection: Connection, bookId: Long, annotation: String) {
-        val sql = "UPDATE books SET annotation = ? WHERE id = ?"
-        connection.prepareStatement(sql).use { stmt ->
-            stmt.setString(1, annotation)
-            stmt.setLong(2, bookId)
-            stmt.executeUpdate()
-        }
+    context(_: TransactionContext)
+    private fun updateBookAnnotation(bookId: Long, annotation: String) = dslContext { dslContext ->
+        dslContext
+            .update(BOOKS)
+            .set(BOOKS.ANNOTATION, annotation)
+            .where(BOOKS.ID.eq(bookId))
+            .execute()
     }
 
     private companion object : Logger()
