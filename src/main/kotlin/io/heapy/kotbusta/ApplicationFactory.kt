@@ -125,11 +125,15 @@ class ApplicationFactory(
     }
 
     val fb2Parser by bean {
-        Fb2Parser()
+        Fb2Parser(
+            transactionProvider = transactionProvider.value,
+        )
     }
 
     val inpxParser by bean {
-        InpxParser()
+        InpxParser(
+            transactionProvider = transactionProvider.value,
+        )
     }
 
     val adminService by bean {

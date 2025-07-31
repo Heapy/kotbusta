@@ -1,23 +1,27 @@
 package io.heapy.kotbusta.parser
 
 import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.database.TransactionContext
+import io.heapy.kotbusta.database.TransactionProvider
+import io.heapy.kotbusta.database.TransactionType
+import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.jooq.tables.references.*
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.Series
 import java.nio.file.Path
-import java.sql.Connection
-import java.sql.PreparedStatement
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipFile
 
-class InpxParser {
+class InpxParser(
+    private val transactionProvider: TransactionProvider,
+) {
     suspend fun parseAndImport(booksDataPath: Path) {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         log.info("Starting INPX parsing from: $inpxFilePath")
 
-        queryExecutor.execute(name = "parseAndImport") { conn ->
-            conn.autoCommit = false
-
+        transactionProvider.transaction(TransactionType.READ_WRITE) {
             ZipFile(inpxFilePath.toString()).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".inp") }
@@ -30,23 +34,22 @@ class InpxParser {
 
                     zipFile.getInputStream(entry).bufferedReader(Charsets.UTF_8).use { reader ->
                         reader.lineSequence().forEach { line ->
-                            parseBookLine(line, conn, entry.name.removeSuffix(".inp"))
+                            parseBookLine(line, entry.name.removeSuffix(".inp"))
                         }
                     }
 
                     if ((index + 1) % 10 == 0) {
-                        conn.commit()
-                        log.info("Committed batch ${index + 1}")
+                        log.info("Processed batch ${index + 1}")
                     }
                 }
 
-                conn.commit()
                 log.info("INPX parsing completed successfully")
             }
         }
     }
 
-    private fun parseBookLine(line: String, connection: Connection, archivePath: String) {
+    context(_: TransactionContext)
+    private fun parseBookLine(line: String, archivePath: String) {
         try {
             val parts = line.split('\u0004') // Field separator in INP files
             if (parts.size < 8) return
@@ -81,7 +84,6 @@ class InpxParser {
 
             // Insert book into database
             insertBook(
-                connection = connection,
                 bookId = bookId,
                 title = title.trim(),
                 authors = authors,
@@ -124,21 +126,21 @@ class InpxParser {
         }
     }
 
-    private fun parseDateAdded(dateStr: String?): Long {
-        if (dateStr.isNullOrBlank()) return System.currentTimeMillis() / 1000
+    private fun parseDateAdded(dateStr: String?): OffsetDateTime {
+        if (dateStr.isNullOrBlank()) return OffsetDateTime.now()
 
         return try {
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             val date = LocalDate.parse(dateStr, formatter)
-            date.toEpochDay() * 24 * 60 * 60 // Convert to seconds
+            date.atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
         } catch (e: Exception) {
             log.error("Error parsing date: $dateStr", e)
-            System.currentTimeMillis() / 1000
+            OffsetDateTime.now()
         }
     }
 
+    context(_: TransactionContext)
     private fun insertBook(
-        connection: Connection,
         bookId: Long,
         title: String,
         authors: List<Author>,
@@ -149,98 +151,96 @@ class InpxParser {
         filePath: String,
         archivePath: String,
         fileSize: Long?,
-        dateAdded: Long
-    ) {
+        dateAdded: OffsetDateTime
+    ) = dslContext { dslContext ->
         // Insert or get series
-        val seriesId = series?.let { insertOrGetSeries(connection, it.name) }
+        val seriesId = series?.let { insertOrGetSeries(it.name) }
 
         // Insert or get authors
-        val authorIds = authors.map { insertOrGetAuthor(connection, it) }
+        val authorIds = authors.map { insertOrGetAuthor(it) }
 
-        // Insert book
-        val bookSql = """
-            INSERT OR REPLACE INTO books
-            (id, title, genre, language, series_id, series_number, file_path, archive_path, file_size, date_added)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """
-
-        connection.prepareStatement(bookSql).use { stmt ->
-            stmt.setLong(1, bookId)
-            stmt.setString(2, title)
-            stmt.setString(3, genre)
-            stmt.setString(4, language)
-            if (seriesId != null) stmt.setLong(5, seriesId) else stmt.setNull(5, java.sql.Types.INTEGER)
-            if (seriesNumber != null) stmt.setInt(6, seriesNumber) else stmt.setNull(6, java.sql.Types.INTEGER)
-            stmt.setString(7, filePath)
-            stmt.setString(8, archivePath)
-            if (fileSize != null) stmt.setLong(9, fileSize) else stmt.setNull(9, java.sql.Types.INTEGER)
-            stmt.setLong(10, dateAdded)
-            stmt.executeUpdate()
-        }
+        // Insert book using jOOQ with ON DUPLICATE KEY UPDATE (PostgreSQL UPSERT)
+        dslContext
+            .insertInto(BOOKS)
+            .set(BOOKS.ID, bookId)
+            .set(BOOKS.TITLE, title)
+            .set(BOOKS.GENRE, genre)
+            .set(BOOKS.LANGUAGE, language)
+            .set(BOOKS.SERIES_ID, seriesId)
+            .set(BOOKS.SERIES_NUMBER, seriesNumber)
+            .set(BOOKS.FILE_PATH, filePath)
+            .set(BOOKS.ARCHIVE_PATH, archivePath)
+            .set(BOOKS.FILE_SIZE, fileSize)
+            .set(BOOKS.DATE_ADDED, dateAdded)
+            .onConflict(BOOKS.ID)
+            .doUpdate()
+            .set(BOOKS.TITLE, title)
+            .set(BOOKS.GENRE, genre)
+            .set(BOOKS.LANGUAGE, language)
+            .set(BOOKS.SERIES_ID, seriesId)
+            .set(BOOKS.SERIES_NUMBER, seriesNumber)
+            .set(BOOKS.FILE_PATH, filePath)
+            .set(BOOKS.ARCHIVE_PATH, archivePath)
+            .set(BOOKS.FILE_SIZE, fileSize)
+            .set(BOOKS.DATE_ADDED, dateAdded)
+            .execute()
 
         // Insert book-author relationships
-        val bookAuthorSql = "INSERT OR REPLACE INTO book_authors (book_id, author_id) VALUES (?, ?)"
-        connection.prepareStatement(bookAuthorSql).use { stmt ->
-            authorIds.forEach { authorId ->
-                stmt.setLong(1, bookId)
-                stmt.setLong(2, authorId)
-                stmt.executeUpdate()
-            }
+        authorIds.forEach { authorId ->
+            dslContext
+                .insertInto(BOOK_AUTHORS)
+                .set(BOOK_AUTHORS.BOOK_ID, bookId)
+                .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+                .onConflict(BOOK_AUTHORS.BOOK_ID, BOOK_AUTHORS.AUTHOR_ID)
+                .doNothing()
+                .execute()
         }
     }
 
-    private fun insertOrGetSeries(connection: Connection, name: String): Long {
+    context(_: TransactionContext)
+    private fun insertOrGetSeries(name: String): Long = dslContext { dslContext ->
         // Try to get existing series
-        val selectSql = "SELECT id FROM series WHERE name = ?"
-        connection.prepareStatement(selectSql).use { stmt ->
-            stmt.setString(1, name)
-            val rs = stmt.executeQuery()
-            if (rs.next()) {
-                return rs.getLong("id")
-            }
+        val existing = dslContext
+            .select(SERIES.ID)
+            .from(SERIES)
+            .where(SERIES.NAME.eq(name))
+            .fetchOne(SERIES.ID)
+
+        if (existing != null) {
+            return@dslContext existing
         }
 
-        // Insert new series
-        val insertSql = "INSERT INTO series (name) VALUES (?)"
-        connection.prepareStatement(insertSql, PreparedStatement.RETURN_GENERATED_KEYS).use { stmt ->
-            stmt.setString(1, name)
-            stmt.executeUpdate()
-
-            val keys = stmt.generatedKeys
-            if (keys.next()) {
-                return keys.getLong(1)
-            }
-        }
-
-        throw RuntimeException("Failed to insert series: $name")
+        // Insert new series and return the generated ID
+        dslContext
+            .insertInto(SERIES)
+            .set(SERIES.NAME, name)
+            .returning(SERIES.ID)
+            .fetchOne(SERIES.ID)
+            ?: throw RuntimeException("Failed to insert series: $name")
     }
 
-    private fun insertOrGetAuthor(connection: Connection, author: Author): Long {
+    context(_: TransactionContext)
+    private fun insertOrGetAuthor(author: Author): Long = dslContext { dslContext ->
         // Try to get existing author
-        val selectSql = "SELECT id FROM authors WHERE full_name = ?"
-        connection.prepareStatement(selectSql).use { stmt ->
-            stmt.setString(1, author.fullName)
-            val rs = stmt.executeQuery()
-            if (rs.next()) {
-                return rs.getLong("id")
-            }
+        val existing = dslContext
+            .select(AUTHORS.ID)
+            .from(AUTHORS)
+            .where(AUTHORS.FULL_NAME.eq(author.fullName))
+            .fetchOne(AUTHORS.ID)
+
+        if (existing != null) {
+            return@dslContext existing
         }
 
-        // Insert new author
-        val insertSql = "INSERT INTO authors (first_name, last_name, full_name) VALUES (?, ?, ?)"
-        connection.prepareStatement(insertSql, PreparedStatement.RETURN_GENERATED_KEYS).use { stmt ->
-            stmt.setString(1, author.firstName)
-            stmt.setString(2, author.lastName)
-            stmt.setString(3, author.fullName)
-            stmt.executeUpdate()
-
-            val keys = stmt.generatedKeys
-            if (keys.next()) {
-                return keys.getLong(1)
-            }
-        }
-
-        throw RuntimeException("Failed to insert author: ${author.fullName}")
+        // Insert new author and return the generated ID
+        dslContext
+            .insertInto(AUTHORS)
+            .set(AUTHORS.FIRST_NAME, author.firstName)
+            .set(AUTHORS.LAST_NAME, author.lastName)
+            .set(AUTHORS.FULL_NAME, author.fullName)
+            .returning(AUTHORS.ID)
+            .fetchOne(AUTHORS.ID)
+            ?: throw RuntimeException("Failed to insert author: ${author.fullName}")
     }
 
     private companion object : Logger()
