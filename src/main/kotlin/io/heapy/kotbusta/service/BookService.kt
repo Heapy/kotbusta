@@ -7,7 +7,6 @@ import io.heapy.kotbusta.jooq.tables.references.*
 import io.heapy.kotbusta.model.*
 import org.jooq.*
 import org.jooq.impl.DSL
-import java.lang.classfile.Attributes.record
 import java.time.OffsetDateTime
 
 class BookService {
@@ -35,7 +34,7 @@ class BookService {
         )
     }
 
-    context(_: TransactionContext, _: UserSession)
+    context(_: TransactionContext, userSession: UserSession)
     fun getBookById(bookId: Long): Book? = dslContext { dslContext ->
         getBookDetails(dslContext, bookId)
     }
@@ -43,7 +42,7 @@ class BookService {
     context(_: TransactionContext, userSession: UserSession)
     fun getSimilarBooks(bookId: Long, limit: Int = 10): List<BookSummary> = dslContext { dslContext ->
         // Get book details to find similar books
-        val book = getBookDetails(bookId) ?: return@dslContext emptyList()
+        val book = getBookDetails(dslContext, bookId) ?: return@dslContext emptyList()
 
         // Get author IDs for the book
         val authorIds = dslContext
@@ -159,7 +158,7 @@ class BookService {
         val total = dslContext
             .selectCount()
             .from(USER_STARS)
-            .where(USER_STARS.USER_ID.eq(userId))
+            .where(USER_STARS.USER_ID.eq(userSession.userId))
             .fetchOne(0, Long::class.java) ?: 0L
 
         SearchResult(
@@ -205,7 +204,7 @@ class BookService {
             .offset(offset)
             .fetch()
 
-        return buildBookSummaryList(dslContext, results)
+        return buildBookSummaryList(results)
     }
 
     context(_: TransactionContext, userSession: UserSession)
@@ -232,7 +231,7 @@ class BookService {
             conditions.add(AUTHORS.FULL_NAME.likeIgnoreCase("%${query.author}%"))
         }
 
-        var selectQuery = dslContext
+        val selectQuery = dslContext
             .selectDistinct(
                 BOOKS.ID,
                 BOOKS.TITLE,
@@ -253,22 +252,22 @@ class BookService {
             .leftJoin(USER_STARS)
             .on(BOOKS.ID.eq(USER_STARS.BOOK_ID).and(USER_STARS.USER_ID.eq(userSession.userId)))
 
-        if (conditions.isNotEmpty()) {
-            selectQuery = selectQuery.where(DSL.and(conditions))
+        val results = if (conditions.isNotEmpty()) {
+            selectQuery.where(DSL.and(conditions))
+        } else {
+            selectQuery
         }
-
-        val results = selectQuery
             .orderBy(BOOKS.ID.desc())
             .limit(query.limit)
             .offset(query.offset)
             .fetch()
 
-        return buildBookSummaryList(dslContext, results)
+        return buildBookSummaryList(results)
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    private fun getBookDetails(bookId: Long): Book? = dslContext { dslContext ->
-        val book = dslContext
+    private fun getBookDetails(dslContext: DSLContext, bookId: Long): Book? {
+        val record = dslContext
             .select(
                 BOOKS.ID,
                 BOOKS.TITLE,
@@ -295,7 +294,7 @@ class BookService {
             .leftJoin(USER_NOTES)
             .on(BOOKS.ID.eq(USER_NOTES.BOOK_ID).and(USER_NOTES.USER_ID.eq(userSession.userId)))
             .where(BOOKS.ID.eq(bookId))
-            .fetchOne()
+            .fetchOne() ?: return null
 
         val authors = getBookAuthors(dslContext, bookId)
         val series = record.get("series_name", String::class.java)?.let {
@@ -344,7 +343,7 @@ class BookService {
     }
 
     context(_: TransactionContext)
-    private fun buildBookSummaryList(results: Result<Record>): List<BookSummary> {
+    private fun buildBookSummaryList(results: Result<out Record>): List<BookSummary> = dslContext { dslContext ->
         val books = mutableListOf<BookSummary>()
         val bookIds = mutableSetOf<Long>()
 
@@ -386,7 +385,7 @@ class BookService {
         }
 
         // Update books with authors
-        return books.map { book ->
+        return@dslContext books.map { book ->
             book.copy(authors = bookAuthors[book.id] ?: emptyList())
         }
     }
@@ -423,16 +422,16 @@ class BookService {
             conditions.add(AUTHORS.FULL_NAME.likeIgnoreCase("%${query.author}%"))
         }
 
-        var countQuery = dslContext
+        val countQuery = dslContext
             .selectCount()
             .from(BOOKS)
             .leftJoin(BOOK_AUTHORS).on(BOOKS.ID.eq(BOOK_AUTHORS.BOOK_ID))
             .leftJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
 
-        if (conditions.isNotEmpty()) {
-            countQuery = countQuery.where(DSL.and(conditions))
-        }
-
-        return countQuery.fetchOne(0, Long::class.java) ?: 0L
+        return if (conditions.isNotEmpty()) {
+            countQuery.where(DSL.and(conditions))
+        } else {
+            countQuery
+        }.fetchOne(0, Long::class.java) ?: 0L
     }
 }
