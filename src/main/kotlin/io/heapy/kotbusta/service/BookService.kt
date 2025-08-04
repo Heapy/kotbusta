@@ -52,7 +52,7 @@ class BookService {
             .fetch(BOOK_AUTHORS.AUTHOR_ID)
 
         // Build query for similar books
-        var query = dslContext
+        val query = dslContext
             .selectDistinct(
                 BOOKS.ID,
                 BOOKS.TITLE,
@@ -64,7 +64,11 @@ class BookService {
                 DSL.case_()
                     .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
                     .otherwise(DSL.inline(false))
-                    .`as`("is_starred")
+                    .`as`("is_starred"),
+                DSL.case_()
+                    .`when`(BOOKS.GENRE.eq(book.genre), DSL.inline(1))
+                    .otherwise(DSL.inline(0))
+                    .`as`("genre_match_score")
             )
             .from(BOOKS)
             .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
@@ -82,10 +86,7 @@ class BookService {
         val results = query
             .where(condition)
             .orderBy(
-                DSL.case_()
-                    .`when`(BOOKS.GENRE.eq(book.genre), DSL.inline(1))
-                    .otherwise(DSL.inline(0))
-                    .desc(),
+                DSL.field("genre_match_score", Integer::class.java).desc(),
                 BOOKS.ID.desc()
             )
             .limit(limit)
