@@ -1,30 +1,18 @@
-# Use Ubuntu-based image instead of Alpine to avoid musl libc issues with SQLite JDBC
-FROM bellsoft/liberica-openjre-debian:24.0.2
+# Use the base image with pre-installed dependencies
+# Build manually with GitHub Actions: ghcr.io/heapy/kotbusta-base:latest
+FROM ghcr.io/heapy/kotbusta-base:latest
 
-# Install pandoc
-RUN apt-get update && \
-    apt-get install -y pandoc && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Switch back to root temporarily to copy and set permissions
+USER root
 
 # Copy the application
 COPY /build/install/kotbusta /kotbusta
 
-# Create application user for security
-RUN useradd --create-home --shell /bin/bash kotbusta && \
-    chown -R kotbusta:kotbusta /kotbusta
+# Set ownership
+RUN chown -R kotbusta:kotbusta /kotbusta
 
-# Create data directory with proper permissions
-RUN mkdir -p /app/data && chown -R kotbusta:kotbusta /app/data
-
-# Switch to non-root user
+# Switch back to non-root user
 USER kotbusta
-
-# Set working directory
-WORKDIR /app
-
-# Expose port
-EXPOSE 8080
 
 # Run the application
 ENTRYPOINT ["/kotbusta/bin/kotbusta"]
