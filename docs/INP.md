@@ -16,28 +16,30 @@ Each record in an INP file follows a precise format with **13 fields separated b
 
 The fields capture comprehensive book information: **AUTHOR** contains the author name(s), **GENRE** specifies the book's classification, **TITLE** holds the book title, **SERIES** and **SERNO** track series information and numbering, **FILE** provides the numeric filename reference, **SIZE** indicates file size in bytes, **LIBID** offers a unique library identifier, **DEL** flags deleted entries (0=active, 1=deleted), **EXT** specifies the file extension, **DATE** records addition date, **LANG** identifies the language code, and **KEYWORDS** stores additional searchable metadata.
 
-Here's a practical Ruby parsing example that demonstrates reading INP files:
+Here's a practical Kotlin parsing example that demonstrates reading INP files:
 
-```ruby
-require 'csv'
-require 'zip'
+```kotlin
+import java.io.BufferedReader
+import java.util.zip.ZipFile
 
-FIELD_SEP = "\x4"
-RECORD_SEP = "\xd\xa"
+const val FIELD_SEP = "\u0004"
+const val RECORD_SEP = "\r\n"
 
-Zip::File.open('flibusta_fb2_local.inpx') do |inpx|
-  first = inpx.glob('*.inp').first
-  inp = CSV::new(first.get_input_stream,
-                 col_sep: FIELD_SEP,
-                 row_sep: RECORD_SEP)
-
-  inp.each do |entry|
-    author = entry[0]
-    title = entry[2]
-    file = entry[5]
-    # Process record...
-  end
-end
+ZipFile("flibusta_fb2_local.inpx").use { inpx ->
+    val firstInp = inpx.entries().asSequence()
+        .find { it.name.endsWith(".inp") }
+        ?: throw Exception("No .inp file found")
+    
+    inpx.getInputStream(firstInp).bufferedReader().use { reader ->
+        reader.lineSequence().forEach { line ->
+            val fields = line.split(FIELD_SEP)
+            val author = fields[0]
+            val title = fields[2]
+            val file = fields[5]
+            // Process record...
+        }
+    }
+}
 ```
 
 Actual INP records look like this when parsed: "AUTHOR = Аббасзаде,Гусейн,:, TITLE = Белка, FILE = 24", where the FILE field "24" corresponds to a book file named "24.fb2" within the associated ZIP archive. The **UTF-8 encoding** ensures proper handling of Cyrillic and other international characters throughout the catalog.
