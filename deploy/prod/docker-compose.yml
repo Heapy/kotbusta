@@ -1,0 +1,52 @@
+# docker compose up -d
+name: "kotbusta-prod"
+
+services:
+  database:
+    image: "postgres:17.5"
+    restart: "always"
+    mem_limit: "128m"
+    memswap_limit: "0m"
+    environment:
+      POSTGRES_USER: "${KOTBUSTA_POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${KOTBUSTA_POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${KOTBUSTA_POSTGRES_DATABASE}"
+    volumes:
+      - "pgdata:/var/lib/postgresql/data"
+
+  service:
+    image: "ghcr.io/heapy/kotbusta:main"
+    restart: "always"
+    mem_limit: "256m"
+    memswap_limit: "0m"
+    environment:
+      KOTBUSTA_OPTS: "-Xmx200m"
+      KOTBUSTA_GOOGLE_CLIENT_ID: "${KOTBUSTA_GOOGLE_CLIENT_ID}"
+      KOTBUSTA_GOOGLE_CLIENT_SECRET: "${KOTBUSTA_GOOGLE_CLIENT_SECRET}"
+      KOTBUSTA_GOOGLE_REDIRECT_URI: "${KOTBUSTA_GOOGLE_REDIRECT_URI}"
+      KOTBUSTA_SESSION_SIGN_KEY: "${KOTBUSTA_SESSION_SIGN_KEY}"
+      KOTBUSTA_SESSION_ENCRYPT_KEY: "${KOTBUSTA_SESSION_ENCRYPT_KEY}"
+      KOTBUSTA_POSTGRES_HOST: "${KOTBUSTA_POSTGRES_HOST}"
+      KOTBUSTA_POSTGRES_PORT: "${KOTBUSTA_POSTGRES_PORT}"
+      KOTBUSTA_POSTGRES_USER: "${KOTBUSTA_POSTGRES_USER}"
+      KOTBUSTA_POSTGRES_PASSWORD: "${KOTBUSTA_POSTGRES_PASSWORD}"
+      KOTBUSTA_POSTGRES_DATABASE: "${KOTBUSTA_POSTGRES_DATABASE}"
+      KOTBUSTA_ADMIN_EMAIL: "${KOTBUSTA_ADMIN_EMAIL}"
+      KOTBUSTA_BOOKS_DATA_PATH: "/data/books"
+    volumes:
+      - "books:/data/books"
+    ports:
+      - "8080:8080"
+volumes:
+  pgdata:
+    driver: local
+    driver_opts:
+      type: none
+      device: "${KOTBUSTA_DB_DATA_PATH_LOCAL}"
+      o: bind
+  books:
+    driver: local
+    driver_opts:
+      type: none
+      device: "${KOTBUSTA_BOOKS_DATA_PATH_LOCAL}"
+      o: bind,ro
