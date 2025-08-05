@@ -4,8 +4,6 @@ import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationFactory
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.database.dslContext
-import io.heapy.kotbusta.jooq.tables.references.USERS
 import io.heapy.kotbusta.model.User
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -45,6 +43,7 @@ fun Application.configureAuthentication() {
     val httpClient = applicationFactory.httpClient.value
     val transactionProvider = applicationFactory.transactionProvider.value
     val sessionConfig = applicationFactory.sessionConfig.value
+    val validateUserSessionDao = applicationFactory.validateUserSessionDao.value
 
     install(Sessions) {
         cookie<UserSession>("user_session") {
@@ -67,15 +66,8 @@ fun Application.configureAuthentication() {
             validate { session ->
                 // Validate session by checking if user exists in database
                 transactionProvider.transaction(READ_ONLY) {
-                    dslContext { dslContext ->
-                        val exists = dslContext
-                            .select(USERS.ID)
-                            .from(USERS)
-                            .where(USERS.ID.eq(session.userId))
-                            .fetchOne() != null
-
-                        if (exists) session else null
-                    }
+                    val exists = validateUserSessionDao.userExists(session.userId)
+                    if (exists) session else null
                 }
             }
         }
@@ -128,73 +120,58 @@ suspend fun handleGoogleCallback(
 context(applicationFactory: ApplicationFactory)
 private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
     val transactionProvider = applicationFactory.transactionProvider.value
+    val findUserByGoogleIdDao = applicationFactory.findUserByGoogleIdDao.value
+    val updateUserDao = applicationFactory.updateUserDao.value
+    val insertUserDao = applicationFactory.insertUserDao.value
 
     return transactionProvider.transaction(READ_WRITE) {
-        dslContext { dslContext ->
-            // Try to find existing user
-            val existingUser = dslContext
-                .select(
-                    USERS.ID,
-                    USERS.EMAIL,
-                    USERS.NAME,
-                    USERS.AVATAR_URL,
-                    USERS.CREATED_AT,
-                    USERS.UPDATED_AT
-                )
-                .from(USERS)
-                .where(USERS.GOOGLE_ID.eq(userInfo.id))
-                .fetchOne()
+        // Try to find existing user
+        val existingUser = findUserByGoogleIdDao.findByGoogleId(userInfo.id)
 
-            if (existingUser != null) {
-                // Update existing user
-                val userId = existingUser.get(USERS.ID)!!
-                val now = OffsetDateTime.now()
+        if (existingUser != null) {
+            // Update existing user
+            val userId = existingUser.id!!
+            val now = OffsetDateTime.now()
 
-                dslContext
-                    .update(USERS)
-                    .set(USERS.EMAIL, userInfo.email)
-                    .set(USERS.NAME, userInfo.name)
-                    .set(USERS.AVATAR_URL, userInfo.avatarUrl)
-                    .set(USERS.UPDATED_AT, now)
-                    .where(USERS.ID.eq(userId))
-                    .execute()
+            updateUserDao.updateUser(
+                userId = userId,
+                email = userInfo.email,
+                name = userInfo.name,
+                avatarUrl = userInfo.avatarUrl,
+                updatedAt = now
+            )
 
-                User(
-                    id = userId,
-                    googleId = userInfo.id,
-                    email = userInfo.email,
-                    name = userInfo.name,
-                    avatarUrl = userInfo.avatarUrl,
-                    createdAt = existingUser.get(USERS.CREATED_AT)!!.toEpochSecond(),
-                    updatedAt = now.toEpochSecond()
-                )
-            } else {
-                // Insert new user
-                val now = OffsetDateTime.now()
+            User(
+                id = userId,
+                googleId = userInfo.id,
+                email = userInfo.email,
+                name = userInfo.name,
+                avatarUrl = userInfo.avatarUrl,
+                createdAt = existingUser.createdAt!!.toEpochSecond(),
+                updatedAt = now.toEpochSecond()
+            )
+        } else {
+            // Insert new user
+            val now = OffsetDateTime.now()
 
-                val userId = dslContext
-                    .insertInto(USERS)
-                    .set(USERS.GOOGLE_ID, userInfo.id)
-                    .set(USERS.EMAIL, userInfo.email)
-                    .set(USERS.NAME, userInfo.name)
-                    .set(USERS.AVATAR_URL, userInfo.avatarUrl)
-                    .set(USERS.CREATED_AT, now)
-                    .set(USERS.UPDATED_AT, now)
-                    .returningResult(USERS.ID)
-                    .fetchOne()
-                    ?.value1()
-                    ?: throw RuntimeException("Failed to insert user")
+            val userId = insertUserDao.insertUser(
+                googleId = userInfo.id,
+                email = userInfo.email,
+                name = userInfo.name,
+                avatarUrl = userInfo.avatarUrl,
+                createdAt = now,
+                updatedAt = now
+            )
 
-                User(
-                    id = userId,
-                    googleId = userInfo.id,
-                    email = userInfo.email,
-                    name = userInfo.name,
-                    avatarUrl = userInfo.avatarUrl,
-                    createdAt = now.toEpochSecond(),
-                    updatedAt = now.toEpochSecond()
-                )
-            }
+            User(
+                id = userId,
+                googleId = userInfo.id,
+                email = userInfo.email,
+                name = userInfo.name,
+                avatarUrl = userInfo.avatarUrl,
+                createdAt = now.toEpochSecond(),
+                updatedAt = now.toEpochSecond()
+            )
         }
     }
 }

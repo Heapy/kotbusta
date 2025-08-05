@@ -13,6 +13,10 @@ import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.ktor.GoogleOauthConfig
 import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.coroutines.DispatchersModule
+import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdDao
+import io.heapy.kotbusta.dao.auth.InsertUserDao
+import io.heapy.kotbusta.dao.auth.UpdateUserDao
+import io.heapy.kotbusta.dao.auth.ValidateUserSessionDao
 import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
@@ -35,6 +39,22 @@ import kotlin.io.path.Path
 class ApplicationFactory(
     val dispatchersModule: DispatchersModule,
 ) {
+    val insertUserDao by bean {
+        InsertUserDao()
+    }
+
+    val updateUserDao by bean {
+        UpdateUserDao()
+    }
+
+    val findUserByGoogleIdDao by bean {
+        FindUserByGoogleIdDao()
+    }
+
+    val validateUserSessionDao by bean {
+        ValidateUserSessionDao()
+    }
+
     val dotenv by bean {
         dotenv {}
     }
