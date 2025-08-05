@@ -6,6 +6,7 @@ import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.BOOKS
+import kotlinx.coroutines.*
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -19,7 +20,11 @@ class Fb2Parser(
 ) {
     suspend fun extractBookCovers(archivePath: String) {
         log.info("Extracting covers from: $archivePath")
-        transactionProvider.transaction(READ_WRITE) {
+
+        val parallelism = Runtime.getRuntime().availableProcessors()
+        log.info("Using $parallelism parallel workers for cover extraction")
+
+        coroutineScope {
             ZipFile(archivePath).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".fb2") }
@@ -27,29 +32,38 @@ class Fb2Parser(
 
                 log.info("Processing ${entries.size} FB2 files for cover extraction")
 
-                entries.forEachIndexed { index, entry ->
-                    try {
-                        val bookId = entry.name.removeSuffix(".fb2").toLongOrNull()
-                        if (bookId != null) {
-                            zipFile.getInputStream(entry).use { rawInputStream ->
-                                val cleanedInputStream = cleanInputStream(rawInputStream)
-                                val coverImage = extractCoverFromFb2(cleanedInputStream)
-                                if (coverImage != null) {
-                                    updateBookCover(bookId, coverImage)
-                                    log.info("✅ Extracted cover for book $bookId")
+                // Process entries in chunks to avoid too many concurrent operations
+                entries.chunked(100).forEach { chunk ->
+                    chunk.map { entry ->
+                        async(Dispatchers.IO) {
+                            try {
+                                val bookId = entry.name.removeSuffix(".fb2").toLongOrNull()
+                                if (bookId != null) {
+                                    val bytes = zipFile.getInputStream(entry).use { it.readAllBytes() }
+                                    val cleanedInputStream = cleanInputStream(ByteArrayInputStream(bytes))
+                                    val coverImage = extractCoverFromFb2(cleanedInputStream)
+
+                                    if (coverImage != null) {
+                                        transactionProvider.transaction(READ_WRITE) {
+                                            updateBookCover(bookId, coverImage)
+                                        }
+                                        log.debug("✅ Extracted cover for book $bookId")
+                                        true
+                                    } else {
+                                        log.debug("⚠️  No cover found for book $bookId")
+                                        false
+                                    }
                                 } else {
-                                    log.info("⚠️  No cover found for book $bookId")
+                                    false
                                 }
+                            } catch (e: Exception) {
+                                log.warn("❌ Error processing ${entry.name}: ${e.message}")
+                                false
                             }
                         }
-                    } catch (e: Exception) {
-                        log.warn("❌ Error processing ${entry.name}: ${e.message}", e)
-                        // Continue with next file
-                    }
+                    }.awaitAll()
 
-                    if ((index + 1) % 50 == 0) {
-                        log.info("Processed ${index + 1} files")
-                    }
+                    log.info("Processed chunk of ${chunk.size} files")
                 }
 
                 log.info("Cover extraction completed")

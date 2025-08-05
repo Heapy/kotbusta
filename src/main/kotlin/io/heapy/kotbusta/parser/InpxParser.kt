@@ -8,6 +8,7 @@ import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.*
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.Series
+import kotlinx.coroutines.*
 import java.nio.file.Path
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -21,7 +22,10 @@ class InpxParser(
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         log.info("Starting INPX parsing from: $inpxFilePath")
 
-        transactionProvider.transaction(READ_WRITE) {
+        val parallelism = Runtime.getRuntime().availableProcessors()
+        log.info("Using $parallelism parallel workers for import")
+
+        coroutineScope {
             ZipFile(inpxFilePath.toString()).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".inp") }
@@ -29,19 +33,32 @@ class InpxParser(
 
                 log.info("Found ${entries.size} .inp files to process")
 
-                entries.forEachIndexed { index, entry ->
-                    log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
+                // Process INP files in parallel
+                entries.mapIndexed { index, entry ->
+                    async(Dispatchers.IO) {
+                        log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
 
-                    zipFile.getInputStream(entry).bufferedReader(Charsets.UTF_8).use { reader ->
-                        reader.lineSequence().forEach { line ->
-                            parseBookLine(line, entry.name.removeSuffix(".inp"))
+                        val lines = mutableListOf<String>()
+                        zipFile.getInputStream(entry).bufferedReader(Charsets.UTF_8).use { reader ->
+                            reader.lineSequence().forEach { line ->
+                                lines.add(line)
+                            }
                         }
-                    }
 
-                    if ((index + 1) % 10 == 0) {
-                        log.info("Processed batch ${index + 1}")
+                        val archiveName = entry.name.removeSuffix(".inp")
+
+                        // Process lines in batches within a transaction
+                        transactionProvider.transaction(READ_WRITE) {
+                            lines.chunked(100).forEach { batch ->
+                                batch.forEach { line ->
+                                    parseBookLine(line, archiveName)
+                                }
+                            }
+                        }
+
+                        log.info("Completed processing ${entry.name}")
                     }
-                }
+                }.awaitAll()
 
                 log.info("INPX parsing completed successfully")
             }
