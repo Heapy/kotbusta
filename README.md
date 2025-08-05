@@ -149,12 +149,10 @@ A modern web application for browsing, searching, and downloading books from Fli
 ## API Endpoints
 
 ### Public Endpoints
-- `GET /api/books` - List books with pagination
-- `GET /api/books/search` - Search books
-- `GET /api/books/{id}` - Get book details
-- `GET /api/books/{id}/cover` - Get book cover image
-- `GET /api/books/{id}/comments` - Get book comments
-- `GET /api/activity` - Get recent activity
+- `GET /login` - Redirects to `/oauth/google`
+- `GET /oauth/google` - Redirect to Google OAuth login page
+- `GET /callback` - Google OAuth callback
+- `GET /logout` - Logout clearing session data
 
 ### Authenticated Endpoints
 - `POST/DELETE /api/books/{id}/star` - Star/unstar books
@@ -162,6 +160,16 @@ A modern web application for browsing, searching, and downloading books from Fli
 - `POST /api/books/{id}/comments` - Add comment
 - `POST /api/books/{id}/notes` - Add/update note
 - `GET /api/books/{id}/download/{format}` - Download book
+- `GET /api/books` - List books with pagination
+- `GET /api/books/search` - Search books
+- `GET /api/books/{id}` - Get book details
+- `GET /api/books/{id}/cover` - Get book cover image
+- `GET /api/books/{id}/comments` - Get book comments
+- `GET /api/activity` - Get recent activity
+
+### Admin Endpoints
+
+TODO
 
 ## Development
 
