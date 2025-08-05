@@ -150,6 +150,10 @@ kotbusta/
 └── docker-compose.yml        # Docker setup
 ```
 
+## Documentation
+
+- [INP File Format](docs/INP.md) - Detailed documentation about the INP/INPX file format used by Flibusta for metadata cataloging
+
 ## Configuration
 
 ### Environment Variables
