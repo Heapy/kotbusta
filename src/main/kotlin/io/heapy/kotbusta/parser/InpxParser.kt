@@ -3,7 +3,7 @@ package io.heapy.kotbusta.parser
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.TransactionProvider
-import io.heapy.kotbusta.database.TransactionType
+import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.*
 import io.heapy.kotbusta.model.Author
@@ -21,7 +21,7 @@ class InpxParser(
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         log.info("Starting INPX parsing from: $inpxFilePath")
 
-        transactionProvider.transaction(TransactionType.READ_WRITE) {
+        transactionProvider.transaction(READ_WRITE) {
             ZipFile(inpxFilePath.toString()).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".inp") }

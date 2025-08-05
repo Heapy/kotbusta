@@ -3,7 +3,7 @@ package io.heapy.kotbusta.parser
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.TransactionProvider
-import io.heapy.kotbusta.database.TransactionType
+import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import org.slf4j.LoggerFactory
@@ -19,7 +19,7 @@ class Fb2Parser(
 ) {
     suspend fun extractBookCovers(archivePath: String) {
         log.info("Extracting covers from: $archivePath")
-        transactionProvider.transaction(TransactionType.READ_WRITE) {
+        transactionProvider.transaction(READ_WRITE) {
             ZipFile(archivePath).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".fb2") }
