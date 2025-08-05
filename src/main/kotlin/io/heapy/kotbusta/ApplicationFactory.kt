@@ -49,21 +49,16 @@ class ApplicationFactory(
     }
 
     val adminEmail by bean {
-        env["ADMIN_EMAIL"]
-    }
-
-    val databasePath by bean {
-        env["DATABASE_PATH"]
-            ?: "data/database/kotbusta.db"
+        env["KOTBUSTA_ADMIN_EMAIL"]
     }
 
     val googleOauthConfig by bean {
-        val clientId = env["GOOGLE_CLIENT_ID"]
-            ?: error("GOOGLE_CLIENT_ID not found")
-        val clientSecret = env["GOOGLE_CLIENT_SECRET"]
-            ?: error("GOOGLE_CLIENT_SECRET not found")
-        val redirectUri = env["GOOGLE_REDIRECT_URI"]
-            ?: error("GOOGLE_REDIRECT_URI not found")
+        val clientId = env["KOTBUSTA_GOOGLE_CLIENT_ID"]
+            ?: error("KOTBUSTA_GOOGLE_CLIENT_ID not found")
+        val clientSecret = env["KOTBUSTA_GOOGLE_CLIENT_SECRET"]
+            ?: error("KOTBUSTA_GOOGLE_CLIENT_SECRET not found")
+        val redirectUri = env["KOTBUSTA_GOOGLE_REDIRECT_URI"]
+            ?: error("KOTBUSTA_GOOGLE_REDIRECT_URI not found")
 
         GoogleOauthConfig(
             clientId = clientId,
@@ -73,7 +68,7 @@ class ApplicationFactory(
     }
 
     val booksDataPath by bean {
-        env["BOOKS_DATA_PATH"]
+        env["KOTBUSTA_BOOKS_DATA_PATH"]
             ?.let(::Path)
             ?: Path("data", "books")
     }
@@ -89,13 +84,13 @@ class ApplicationFactory(
                 .toHexString()
         }
 
-        val sessionSignKey = env["SESSION_SIGN_KEY"]
+        val sessionSignKey = env["KOTBUSTA_SESSION_SIGN_KEY"]
             ?: generateRandomKey(32).also {
-                log.info("Generated SESSION_SIGN_KEY=$it, add to env to persist")
+                log.info("Generated KOTBUSTA_SESSION_SIGN_KEY=$it, add to env to persist")
             }
-        val sessionEncryptKey = env["SESSION_ENCRYPT_KEY"]
+        val sessionEncryptKey = env["KOTBUSTA_SESSION_ENCRYPT_KEY"]
             ?: generateRandomKey(16).also {
-                log.info("Generated SESSION_ENCRYPT_KEY=$it, add to env to persist")
+                log.info("Generated KOTBUSTA_SESSION_ENCRYPT_KEY=$it, add to env to persist")
             }
 
         SessionConfig(

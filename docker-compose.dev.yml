@@ -9,9 +9,9 @@ services:
     mem_limit: "128m"
     memswap_limit: "0m"
     environment:
-      POSTGRES_PASSWORD: "kotbusta"
-      POSTGRES_USER: "kotbusta"
-      POSTGRES_DB: "kotbusta"
+      POSTGRES_PASSWORD: "${KOTBUSTA_POSTGRES_PASSWORD}"
+      POSTGRES_USER: "${KOTBUSTA_POSTGRES_USER}"
+      POSTGRES_DB: "${KOTBUSTA_POSTGRES_DATABASE}"
     volumes:
       - "pgdata:/var/lib/postgresql/data"
     ports:
