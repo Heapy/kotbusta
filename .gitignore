@@ -13,8 +13,5 @@ build
 # Kotlin compiler errors
 .kotlin
 
-# Data
-data/
-
 # Configuration
 .env
