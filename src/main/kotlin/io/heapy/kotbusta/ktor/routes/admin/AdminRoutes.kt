@@ -8,7 +8,6 @@ fun Route.adminRoutes() {
     route("/admin") {
         statusRoute()
         importRoute()
-        extractCoversRoute()
         getJobsRoute()
         getJobRoute()
     }

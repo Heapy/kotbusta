@@ -31,7 +31,7 @@ fun Route.googleOauthRoutes() {
                     call.sessions.set(userSession)
                     call.respondRedirect("/")
                 } catch (e: Exception) {
-                    log.error("Error handling OAuth callback", e,)
+                    log.error("Error handling OAuth callback", e)
                     call.respond(
                         HttpStatusCode.InternalServerError,
                         "Error processing authentication",
