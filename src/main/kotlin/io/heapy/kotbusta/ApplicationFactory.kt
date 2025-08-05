@@ -10,8 +10,8 @@ import com.zaxxer.hikari.HikariDataSource
 import io.heapy.komok.tech.config.dotenv.dotenv
 import io.heapy.komok.tech.di.delegate.bean
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.config.GoogleOauthConfig
-import io.heapy.kotbusta.config.SessionConfig
+import io.heapy.kotbusta.ktor.GoogleOauthConfig
+import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.coroutines.DispatchersModule
 import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.parser.Fb2Parser

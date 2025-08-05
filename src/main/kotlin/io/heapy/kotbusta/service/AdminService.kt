@@ -1,6 +1,6 @@
 package io.heapy.kotbusta.service
 
-import io.heapy.kotbusta.config.UserSession
+import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
 import kotlinx.coroutines.*
@@ -51,25 +51,28 @@ class AdminService(
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                updateJobProgress(jobId, "Parsing INPX data...")
+                updateJobProgress(jobId, "Parsing INPX data in parallel...")
                 inpxParser.parseAndImport(booksDataPath)
 
-                updateJobProgress(jobId, "Extracting covers...")
+                updateJobProgress(jobId, "Extracting covers in parallel...")
                 val archives = booksDataPath.listDirectoryEntries("*.zip")
                     .filter { it.fileName.toString().contains("fb2") }
                     .sorted()
 
                 if (archives.isNotEmpty()) {
-                    archives.forEachIndexed { index, archive ->
-                        updateJobProgress(
-                            jobId,
-                            "Processing archive ${index + 1}/${archives.size}: ${archive.fileName}",
-                        )
-                        fb2Parser.extractBookCovers(archive.toString())
-                    }
+                    // Process archives in parallel
+                    archives.mapIndexed { index, archive ->
+                        async {
+                            updateJobProgress(
+                                jobId,
+                                "Processing archives in parallel: ${archives.size} archives",
+                            )
+                            fb2Parser.extractBookCovers(archive.toString())
+                        }
+                    }.awaitAll()
                 }
 
-                completeJob(jobId, "Import completed successfully!")
+                completeJob(jobId, "Import completed successfully with parallel processing!")
             } catch (e: Exception) {
                 failJob(jobId, e.message ?: "Unknown error occurred")
             }
@@ -101,15 +104,16 @@ class AdminService(
                     return@launch
                 }
 
-                archives.forEachIndexed { index, archive ->
-                    updateJobProgress(
-                        jobId,
-                        "Processing archive ${index + 1}/${archives.size}: ${archive.fileName}",
-                    )
-                    fb2Parser.extractBookCovers(archive.toString())
-                }
+                updateJobProgress(jobId, "Processing archives in parallel...")
 
-                completeJob(jobId, "Cover extraction completed successfully!")
+                // Process archives in parallel
+                archives.map { archive ->
+                    async {
+                        fb2Parser.extractBookCovers(archive.toString())
+                    }
+                }.awaitAll()
+
+                completeJob(jobId, "Cover extraction completed successfully with parallel processing!")
             } catch (e: Exception) {
                 failJob(jobId, e.message ?: "Unknown error occurred")
             }

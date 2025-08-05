@@ -15,21 +15,21 @@ A modern web application for browsing, searching, and downloading books from Fli
 ## Technology Stack
 
 **Backend:**
-- Kotlin + Ktor 3.2.3
-- SQLite database with JDBC
+- Kotlin + Ktor
+- Postgres database with jOOQ
 - Google OAuth authentication
 - RESTful API design
 
 **Frontend:**
-- Preact 10.27.0 (no bundler)
+- Preact (no bundler)
 - Modern CSS with CSS Grid/Flexbox
 - Native ES modules
 - Progressive Web App features
 
 **Infrastructure:**
 - Docker & Docker Compose
-- Calibre-based conversion service
-- Volume mounts for book data
+- Pandoc-based conversion service
+- Read-Only Volume mounts for book data
 
 ## Quick Start
 
@@ -39,27 +39,91 @@ A modern web application for browsing, searching, and downloading books from Fli
 - Flibusta torrent data (FB2 files and INPX metadata)
 - Google OAuth credentials
 
-### Setup
+### Deployment
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Heapy/kotbusta.git
+   cd kotbusta
+   ```
+
+2. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` and configure the following required variables:
+   - `KOTBUSTA_GOOGLE_CLIENT_ID` - Your Google OAuth client ID
+   - `KOTBUSTA_GOOGLE_CLIENT_SECRET` - Your Google OAuth client secret
+   - `KOTBUSTA_GOOGLE_REDIRECT_URI` - OAuth redirect URI (e.g., `https://yourdomain.com/callback`)
+   - `KOTBUSTA_SESSION_SIGN_KEY` - Session signing key (will be auto-generated if not provided)
+   - `KOTBUSTA_SESSION_ENCRYPT_KEY` - Session encryption key (will be auto-generated if not provided)
+   - `KOTBUSTA_ADMIN_EMAIL` - Your admin email address
+   - `KOTBUSTA_POSTGRES_HOST` - PostgreSQL host
+   - `KOTBUSTA_POSTGRES_PORT` - PostgreSQL port
+   - `KOTBUSTA_POSTGRES_USER` - PostgreSQL username
+   - `KOTBUSTA_POSTGRES_PASSWORD` - PostgreSQL password
+   - `KOTBUSTA_POSTGRES_DATABASE` - PostgreSQL database name
+   - `KOTBUSTA_DB_DATA_PATH_LOCAL` - Local path for PostgreSQL data storage
+   - `KOTBUSTA_BOOKS_DATA_PATH_LOCAL` - Local path to your Flibusta book archives
+
+3. **Prepare your Flibusta data**
+   ```bash
+   # Create directory for book data if it doesn't exist
+   mkdir -p /path/to/flibusta/books
+
+   # Your directory should contain:
+   # - fb2-*.zip archives with books
+   # - flibusta_fb2_local.inpx metadata file
+   ```
+
+4. **Run the application**
+   ```bash
+   docker compose -f deploy/prod/docker-compose.yml up -d
+   ```
+
+5. **Monitor the startup**
+   ```bash
+   # Check logs to ensure services started correctly
+   docker compose -f deploy/prod/docker-compose.yml logs -f
+
+   # Verify containers are running
+   docker compose -f deploy/prod/docker-compose.yml ps
+   ```
+
+6. **Initial setup**
+   - Navigate to your configured URL (e.g., `https://yourdomain.com`)
+   - Login with Google using your admin email
+   - Go to the Admin panel
+   - Run the import process to index your book collection
+   - The import may take some time depending on your collection size
+
+7. **Verify installation**
+   - Check that books appear in the catalog
+   - Test search functionality
+   - Try downloading a book in different formats
+
+### Development Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone git@github.com:Heapy/kotbusta.git
    cd kotbusta
    ```
 
 2. **Set up environment**
    ```bash
    cp .env.example .env
-   # Edit .env with your Google OAuth credentials
+   # Edit .env
    ```
 
 3. **Configure Google OAuth**
    - Go to [Google Console](https://console.developers.google.com/)
    - Create a new project or select existing
-   - Enable Google+ API
    - Create OAuth 2.0 credentials
    - Add authorized redirect URI: `http://localhost:8080/callback`
    - Copy Client ID and Secret to `.env`
+   - Add your email address as ad
 
 4. **Prepare book data**
    ```bash
@@ -69,25 +133,17 @@ A modern web application for browsing, searching, and downloading books from Fli
    # Structure should match: books-data/fb2-*.zip, books-data/flibusta_fb2_local.inpx
    ```
 
-5. **Start the application**
+5. **Start postgres container**
    ```bash
    docker-compose up -d
    ```
-
-6. **Import book data**
-   ```bash
-   # Access the main container
-   docker-compose exec kotbusta-app /bin/bash
-
-   # Run the INPX parser (one-time setup)
-   java -cp app.jar io.heapy.kotbusta.parser.InpxParserKt \
-     /app/books-data/flibusta_fb2_local.inpx \
-     /app/books-data
-   ```
+6. **Start the application in IDEA***
+   - Run Kotbusta run-configuration
 
 7. **Access the application**
    - Open http://localhost:8080
    - Click "Login with Google" to authenticate
+   - Go to "Admin" and run import
    - Start browsing your digital library!
 
 ## API Endpoints
@@ -113,13 +169,14 @@ A modern web application for browsing, searching, and downloading books from Fli
 
 1. **Backend development**
    ```bash
-   ./gradlew run
+   Start `Kotbusta` run-configuration in IDEA
+   # Navigate to http://localhost:8080`
    ```
 
 2. **Frontend development**
    - Edit files in `src/main/resources/static/`
-   - No build process needed - uses native ES modules
-   - Browser will reload automatically
+   - No build process needed, Kotbusta uses native ES modules
+   - Reload browser to see changes
 
 ### Database Schema
 
@@ -138,16 +195,18 @@ The application uses SQLite with the following main tables:
 ```
 kotbusta/
 ├── src/main/kotlin/io/heapy/kotbusta/
-│   ├── Application.kt          # Main application
-│   ├── config/                 # Configuration modules
+│   ├── Application.kt         # Main application
+│   ├── ApplicationFactory.kt  # All services, daos and configurations are created here
+│   ├── ktor/                  # Ktor routes and modules
 │   ├── database/              # Database setup
+│   ├── jooq/                  # jOOQ code generation
 │   ├── model/                 # Data models
 │   ├── parser/                # FB2/INPX parsers
 │   └── service/               # Business logic
 ├── src/main/resources/
 │   ├── static/                # Frontend files
-│   └── application.conf       # Configuration
-└── docker-compose.yml        # Docker setup
+│   └── application.conf       # Ktor Configuration
+└── .env                       # Application Configuration
 ```
 
 ## Documentation
@@ -158,91 +217,15 @@ kotbusta/
 
 ### Environment Variables
 
-- `GOOGLE_CLIENT_ID` - Google OAuth client ID
-- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
-- `DATABASE_PATH` - SQLite database file path
-- `BOOKS_DATA_PATH` - Path to Flibusta book archives
-- `CONVERSION_SERVICE_URL` - URL of conversion service
+Edit the `.env` file to configure all aspects of the application.
 
-### Application Configuration
+### Ktor Configuration
 
-Edit `src/main/resources/application.conf` for advanced configuration:
-- Server port and host
-- Database settings
-- OAuth settings
-- File paths
-
-## Deployment
-
-### Production Deployment
-
-2. **Docker Production**
-   ```bash
-   # Use production environment file
-   cp .env.example .env.prod
-   # Set production values
-
-   # Deploy
-   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-   ```
-
-3. **Reverse Proxy Setup**
-   ```nginx
-   server {
-       listen 443 ssl;
-       server_name your-domain.com;
-
-       location / {
-           proxy_pass http://localhost:8080;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-       }
-   }
-   ```
-
-### Data Backup
-
-```bash
-# Backup database
-docker-compose exec kotbusta-app cp /app/data/kotbusta.db /app/data/backup-$(date +%Y%m%d).db
-
-# Backup user data
-tar -czf kotbusta-backup-$(date +%Y%m%d).tar.gz data/
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Books not appearing**
-   - Check INPX import completed successfully
-   - Verify book data path is correctly mounted
-   - Check database permissions
-
-2. **Authentication failing**
-   - Verify Google OAuth credentials
-   - Check authorized redirect URIs
-   - Ensure cookies are enabled
-
-3. **Download/conversion issues**
-   - Check conversion service is running
-   - Verify book archive files are accessible
-   - Check calibre installation in conversion container
-
-4. **Performance issues**
-   - Index database for large collections
-   - Monitor container resources
-   - Consider database optimization
+Edit `src/main/resources/application.conf` to add additional ktor modules and adjust ktor configuration.
 
 ### Logs
 
 ```bash
-# View application logs
-docker-compose logs kotbusta-app
-
-# View conversion service logs
-docker-compose logs conversion-service
-
 # Follow logs in real-time
 docker-compose logs -f
 ```
@@ -257,11 +240,11 @@ docker-compose logs -f
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the AGPL-3.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
 - Flibusta library for book archives
-- Calibre for format conversion
+- Pandoc for format conversion
 - Preact team for the lightweight framework
 - Ktor team for the excellent Kotlin framework

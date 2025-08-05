@@ -1,6 +1,6 @@
 package io.heapy.kotbusta.service
 
-import io.heapy.kotbusta.config.UserSession
+import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.BOOKS
