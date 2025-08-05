@@ -4,11 +4,11 @@
 
 Kotbusta follows a rolling release model with the `main` branch as the primary release channel.
 
-| Version/Tag | Support Status | Notes |
-|------------|----------------|-------|
-| `main` (latest) | ✅ **Fully Supported** | Recommended for production use |
-| Tagged releases | ⚠️ Limited Support | Security patches only for critical vulnerabilities |
-| Development branches | ❌ Not Supported | Use at your own risk |
+| Version/Tag          | Support Status        | Notes                                              |
+|----------------------|-----------------------|----------------------------------------------------|
+| `main` (latest)      | ✅ **Fully Supported** | Recommended for production use                     |
+| Tagged releases      | ⚠️ Limited Support    | Security patches only for critical vulnerabilities |
+| Development branches | ❌ Not Supported       | Use at your own risk                               |
 
 ### Docker Image Policy
 
