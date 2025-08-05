@@ -46,7 +46,7 @@ We take security seriously at Kotbusta. If you discover a security vulnerability
 1. **Private Disclosure**: Report through secure channels
 2. **Verification**: We verify and assess the vulnerability
 3. **Fix Development**: Create and test patches
-4. **Coordinated Release**: 
+4. **Coordinated Release**:
    - Apply fix to `main` branch
    - Update Docker images
    - Publish security advisory
