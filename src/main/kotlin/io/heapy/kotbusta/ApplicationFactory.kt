@@ -18,6 +18,7 @@ import io.heapy.kotbusta.dao.auth.InsertUserDao
 import io.heapy.kotbusta.dao.auth.UpdateUserDao
 import io.heapy.kotbusta.dao.auth.ValidateUserSessionDao
 import io.heapy.kotbusta.database.JooqTransactionProvider
+import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.AdminService
@@ -39,6 +40,13 @@ import kotlin.io.path.Path
 class ApplicationFactory(
     val dispatchersModule: DispatchersModule,
 ) {
+    val staticFilesConfig by bean {
+        StaticFilesConfig(
+            filesPath = env["KOTBUSTA_STATIC_FILES_PATH"] ?: "static",
+            useResources = env["KOTBUSTA_STATIC_FILES_USE_RESOURCES"]?.toBooleanStrictOrNull() ?: true
+        )
+    }
+
     val insertUserDao by bean {
         InsertUserDao()
     }
