@@ -3,9 +3,8 @@
     <option name="envFilePaths">
       <option value="$PROJECT_DIR$/.env" />
     </option>
-    <option name="MAIN_CLASS_NAME" value="io.heapy.kotbusta.ApplicationKt" />
+    <option name="MAIN_CLASS_NAME" value="io.heapy.kotbusta.Application" />
     <module name="kotbusta.main" />
-    <option name="VM_PARAMETERS" value="--enable-native-access=ALL-UNNAMED" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="io.heapy.kotbusta.*" />
@@ -15,11 +14,11 @@
     <option name="alternativeJrePath" />
     <option name="alternativeJrePathEnabled" value="false" />
     <option name="includeProvidedScope" value="false" />
-    <option name="mainClass" value="io.heapy.kotbusta.ApplicationKt" />
+    <option name="mainClass" value="io.heapy.kotbusta.Application" />
     <option name="passParentEnvs" value="true" />
     <option name="programParameters" value="" />
     <option name="shortenCommandLine" />
-    <option name="vmParameters" value="--enable-native-access=ALL-UNNAMED" />
+    <option name="vmParameters" />
     <option name="workingDirectory" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
