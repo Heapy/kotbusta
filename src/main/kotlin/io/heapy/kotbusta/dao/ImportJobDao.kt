@@ -5,6 +5,7 @@ import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.enums.JobStatusEnum
 import io.heapy.kotbusta.jooq.enums.JobTypeEnum
 import io.heapy.kotbusta.jooq.tables.ImportJobs.Companion.IMPORT_JOBS
+import io.heapy.kotbusta.jooq.tables.records.ImportJobsRecord
 import io.heapy.kotbusta.model.ImportJob
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.model.JobStatus
@@ -54,7 +55,7 @@ class ImportJobDao {
     fun updateProgress(
         jobId: Long,
         progress: String,
-    ) = dslContext { dslContext ->
+    ): Int = dslContext { dslContext ->
         dslContext
             .update(IMPORT_JOBS)
             .set(IMPORT_JOBS.PROGRESS, progress)
@@ -66,7 +67,7 @@ class ImportJobDao {
     fun updateStats(
         jobId: Long,
         stats: ImportStats,
-    ) = dslContext { dslContext ->
+    ): Int = dslContext { dslContext ->
         dslContext
             .update(IMPORT_JOBS)
             .set(IMPORT_JOBS.INP_FILES_PROCESSED, stats.inpFilesProcessed.load())
@@ -84,7 +85,7 @@ class ImportJobDao {
     fun completeJob(
         jobId: Long,
         finalMessage: String,
-    ) = dslContext { dslContext ->
+    ): Int = dslContext { dslContext ->
         dslContext
             .update(IMPORT_JOBS)
             .set(IMPORT_JOBS.STATUS, JobStatus.COMPLETED.toDbEnum())
@@ -98,7 +99,7 @@ class ImportJobDao {
     fun failJob(
         jobId: Long,
         errorMessage: String,
-    ) = dslContext { dslContext ->
+    ): Int = dslContext { dslContext ->
         dslContext
             .update(IMPORT_JOBS)
             .set(IMPORT_JOBS.STATUS, JobStatus.FAILED.toDbEnum())
@@ -113,84 +114,39 @@ class ImportJobDao {
         jobId: Long,
     ): ImportJob? = dslContext { dslContext ->
         dslContext
-            .select(
-                IMPORT_JOBS.ID,
-                IMPORT_JOBS.JOB_TYPE,
-                IMPORT_JOBS.STATUS,
-                IMPORT_JOBS.PROGRESS,
-                IMPORT_JOBS.INP_FILES_PROCESSED,
-                IMPORT_JOBS.BOOKS_ADDED,
-                IMPORT_JOBS.BOOKS_UPDATED,
-                IMPORT_JOBS.BOOKS_DELETED,
-                IMPORT_JOBS.COVERS_ADDED,
-                IMPORT_JOBS.BOOK_ERRORS,
-                IMPORT_JOBS.COVER_ERRORS,
-                IMPORT_JOBS.ERROR_MESSAGE,
-                IMPORT_JOBS.STARTED_AT,
-                IMPORT_JOBS.COMPLETED_AT,
-            )
-            .from(IMPORT_JOBS)
+            .selectFrom(IMPORT_JOBS)
             .where(IMPORT_JOBS.ID.eq(jobId))
             .fetchOne()
-            ?.let { record ->
-                ImportJob(
-                    id = record.get(IMPORT_JOBS.ID)!!,
-                    jobType = record.get(IMPORT_JOBS.JOB_TYPE)!!.toApiEnum(),
-                    status = record.get(IMPORT_JOBS.STATUS)!!.toApiEnum(),
-                    progress = record.get(IMPORT_JOBS.PROGRESS),
-                    inpFilesProcessed = record.get(IMPORT_JOBS.INP_FILES_PROCESSED) ?: 0,
-                    booksAdded = record.get(IMPORT_JOBS.BOOKS_ADDED) ?: 0,
-                    booksUpdated = record.get(IMPORT_JOBS.BOOKS_UPDATED) ?: 0,
-                    booksDeleted = record.get(IMPORT_JOBS.BOOKS_DELETED) ?: 0,
-                    coversAdded = record.get(IMPORT_JOBS.COVERS_ADDED) ?: 0,
-                    bookErrors = record.get(IMPORT_JOBS.BOOK_ERRORS) ?: 0,
-                    coverErrors = record.get(IMPORT_JOBS.COVER_ERRORS) ?: 0,
-                    errorMessage = record.get(IMPORT_JOBS.ERROR_MESSAGE),
-                    startedAt = record.get(IMPORT_JOBS.STARTED_AT)!!.toEpochSecond(),
-                    completedAt = record.get(IMPORT_JOBS.COMPLETED_AT)?.toEpochSecond()
-                )
-            }
+            ?.toPojo()
     }
 
     context(_: TransactionContext)
     fun getAllJobs(): List<ImportJob> = dslContext { dslContext ->
         dslContext
-            .select(
-                IMPORT_JOBS.ID,
-                IMPORT_JOBS.JOB_TYPE,
-                IMPORT_JOBS.STATUS,
-                IMPORT_JOBS.PROGRESS,
-                IMPORT_JOBS.INP_FILES_PROCESSED,
-                IMPORT_JOBS.BOOKS_ADDED,
-                IMPORT_JOBS.BOOKS_UPDATED,
-                IMPORT_JOBS.BOOKS_DELETED,
-                IMPORT_JOBS.COVERS_ADDED,
-                IMPORT_JOBS.BOOK_ERRORS,
-                IMPORT_JOBS.COVER_ERRORS,
-                IMPORT_JOBS.ERROR_MESSAGE,
-                IMPORT_JOBS.STARTED_AT,
-                IMPORT_JOBS.COMPLETED_AT,
-            )
-            .from(IMPORT_JOBS)
+            .selectFrom(IMPORT_JOBS)
             .orderBy(IMPORT_JOBS.STARTED_AT.desc())
             .fetch()
             .map { record ->
-                ImportJob(
-                    id = record.get(IMPORT_JOBS.ID)!!,
-                    jobType = record.get(IMPORT_JOBS.JOB_TYPE)!!.toApiEnum(),
-                    status = record.get(IMPORT_JOBS.STATUS)!!.toApiEnum(),
-                    progress = record.get(IMPORT_JOBS.PROGRESS),
-                    inpFilesProcessed = record.get(IMPORT_JOBS.INP_FILES_PROCESSED) ?: 0,
-                    booksAdded = record.get(IMPORT_JOBS.BOOKS_ADDED) ?: 0,
-                    booksUpdated = record.get(IMPORT_JOBS.BOOKS_UPDATED) ?: 0,
-                    booksDeleted = record.get(IMPORT_JOBS.BOOKS_DELETED) ?: 0,
-                    coversAdded = record.get(IMPORT_JOBS.COVERS_ADDED) ?: 0,
-                    bookErrors = record.get(IMPORT_JOBS.BOOK_ERRORS) ?: 0,
-                    coverErrors = record.get(IMPORT_JOBS.COVER_ERRORS) ?: 0,
-                    errorMessage = record.get(IMPORT_JOBS.ERROR_MESSAGE),
-                    startedAt = record.get(IMPORT_JOBS.STARTED_AT)!!.toEpochSecond(),
-                    completedAt = record.get(IMPORT_JOBS.COMPLETED_AT)?.toEpochSecond()
-                )
+                record.toPojo()
             }
+    }
+
+    private fun ImportJobsRecord.toPojo(): ImportJob {
+        return ImportJob(
+            id = id!!,
+            jobType = jobType.toApiEnum(),
+            status = status.toApiEnum(),
+            progress = progress,
+            inpFilesProcessed = inpFilesProcessed ?: 0,
+            booksAdded = booksAdded ?: 0,
+            booksUpdated = booksUpdated ?: 0,
+            booksDeleted = booksDeleted ?: 0,
+            coversAdded = coversAdded ?: 0,
+            bookErrors = bookErrors ?: 0,
+            coverErrors = coverErrors ?: 0,
+            errorMessage = errorMessage,
+            startedAt = startedAt!!.toEpochSecond(),
+            completedAt = completedAt?.toEpochSecond()
+        )
     }
 }
