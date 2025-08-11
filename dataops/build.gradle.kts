@@ -15,6 +15,12 @@ dependencies {
     implementation(libs.logback.classic)
 }
 
+tasks.register<JavaExec>("migrate") {
+    mainClass.set("GenerateJooqClasses")
+    workingDir = rootDir
+    classpath = sourceSets["main"].runtimeClasspath
+}
+
 kotlin {
     jvmToolchain(24)
 }
