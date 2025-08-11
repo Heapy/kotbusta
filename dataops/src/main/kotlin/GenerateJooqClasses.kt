@@ -73,7 +73,6 @@ fun jooq() {
             }
 
             generate = Generate().apply {
-                isDaos = true
                 isPojos = true
                 isKotlinNotNullPojoAttributes = true
                 isKotlinNotNullInterfaceAttributes = true
