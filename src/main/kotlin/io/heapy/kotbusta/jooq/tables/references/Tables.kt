@@ -9,6 +9,7 @@ import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.Series
 import io.heapy.kotbusta.jooq.tables.UserComments
 import io.heapy.kotbusta.jooq.tables.UserNotes
@@ -36,6 +37,11 @@ val BOOKS: Books = Books.BOOKS
  * The table <code>public.downloads</code>.
  */
 val DOWNLOADS: Downloads = Downloads.DOWNLOADS
+
+/**
+ * The table <code>public.import_jobs</code>.
+ */
+val IMPORT_JOBS: ImportJobs = ImportJobs.IMPORT_JOBS
 
 /**
  * The table <code>public.series</code>.

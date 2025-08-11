@@ -8,6 +8,7 @@ package io.heapy.kotbusta.jooq.indexes
 import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.UserComments
 
 import org.jooq.Index
@@ -26,5 +27,8 @@ val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("idx_books_languag
 val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("idx_books_series"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)
 val IDX_BOOKS_TITLE: Index = Internal.createIndex(DSL.name("idx_books_title"), Books.BOOKS, arrayOf(Books.BOOKS.TITLE), false)
 val IDX_DOWNLOADS_RECENT: Index = Internal.createIndex(DSL.name("idx_downloads_recent"), Downloads.DOWNLOADS, arrayOf(Downloads.DOWNLOADS.CREATED_AT.desc()), false)
+val IDX_IMPORT_JOBS_STARTED: Index = Internal.createIndex(DSL.name("idx_import_jobs_started"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STARTED_AT.desc()), false)
+val IDX_IMPORT_JOBS_STATUS: Index = Internal.createIndex(DSL.name("idx_import_jobs_status"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STATUS), false)
+val IDX_IMPORT_JOBS_TYPE: Index = Internal.createIndex(DSL.name("idx_import_jobs_type"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.JOB_TYPE), false)
 val IDX_USER_COMMENTS_BOOK: Index = Internal.createIndex(DSL.name("idx_user_comments_book"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.BOOK_ID), false)
 val IDX_USER_COMMENTS_USER: Index = Internal.createIndex(DSL.name("idx_user_comments_user"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.USER_ID), false)

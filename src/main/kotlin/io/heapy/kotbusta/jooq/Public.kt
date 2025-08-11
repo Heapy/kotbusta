@@ -8,6 +8,7 @@ import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.Series
 import io.heapy.kotbusta.jooq.tables.UserComments
 import io.heapy.kotbusta.jooq.tables.UserNotes
@@ -56,6 +57,11 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
     val DOWNLOADS: Downloads get() = Downloads.DOWNLOADS
 
     /**
+     * The table <code>public.import_jobs</code>.
+     */
+    val IMPORT_JOBS: ImportJobs get() = ImportJobs.IMPORT_JOBS
+
+    /**
      * The table <code>public.series</code>.
      */
     val SERIES: Series get() = Series.SERIES
@@ -87,6 +93,7 @@ open class Public : SchemaImpl(DSL.name("public"), DefaultCatalog.DEFAULT_CATALO
         BookAuthors.BOOK_AUTHORS,
         Books.BOOKS,
         Downloads.DOWNLOADS,
+        ImportJobs.IMPORT_JOBS,
         Series.SERIES,
         UserComments.USER_COMMENTS,
         UserNotes.USER_NOTES,

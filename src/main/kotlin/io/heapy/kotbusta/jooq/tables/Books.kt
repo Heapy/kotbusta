@@ -115,7 +115,7 @@ open class Books(
     /**
      * The column <code>public.books.language</code>.
      */
-    val LANGUAGE: TableField<BooksRecord, String?> = createField(DSL.name("language"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'ru'::text"), SQLDataType.CLOB)), this, "")
+    val LANGUAGE: TableField<BooksRecord, String?> = createField(DSL.name("language"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'RU'::text"), SQLDataType.CLOB)), this, "")
 
     /**
      * The column <code>public.books.series_id</code>.

@@ -9,6 +9,7 @@ import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.Series
 import io.heapy.kotbusta.jooq.tables.UserComments
 import io.heapy.kotbusta.jooq.tables.UserNotes
@@ -18,6 +19,7 @@ import io.heapy.kotbusta.jooq.tables.records.AuthorsRecord
 import io.heapy.kotbusta.jooq.tables.records.BookAuthorsRecord
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
 import io.heapy.kotbusta.jooq.tables.records.DownloadsRecord
+import io.heapy.kotbusta.jooq.tables.records.ImportJobsRecord
 import io.heapy.kotbusta.jooq.tables.records.SeriesRecord
 import io.heapy.kotbusta.jooq.tables.records.UserCommentsRecord
 import io.heapy.kotbusta.jooq.tables.records.UserNotesRecord
@@ -40,6 +42,7 @@ val AUTHORS_PKEY: UniqueKey<AuthorsRecord> = Internal.createUniqueKey(Authors.AU
 val BOOK_AUTHORS_PKEY: UniqueKey<BookAuthorsRecord> = Internal.createUniqueKey(BookAuthors.BOOK_AUTHORS, DSL.name("book_authors_pkey"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID, BookAuthors.BOOK_AUTHORS.AUTHOR_ID), true)
 val BOOKS_PKEY: UniqueKey<BooksRecord> = Internal.createUniqueKey(Books.BOOKS, DSL.name("books_pkey"), arrayOf(Books.BOOKS.ID), true)
 val DOWNLOADS_PKEY: UniqueKey<DownloadsRecord> = Internal.createUniqueKey(Downloads.DOWNLOADS, DSL.name("downloads_pkey"), arrayOf(Downloads.DOWNLOADS.ID), true)
+val IMPORT_JOBS_PKEY: UniqueKey<ImportJobsRecord> = Internal.createUniqueKey(ImportJobs.IMPORT_JOBS, DSL.name("import_jobs_pkey"), arrayOf(ImportJobs.IMPORT_JOBS.ID), true)
 val SERIES_PKEY: UniqueKey<SeriesRecord> = Internal.createUniqueKey(Series.SERIES, DSL.name("series_pkey"), arrayOf(Series.SERIES.ID), true)
 val USER_COMMENTS_PKEY: UniqueKey<UserCommentsRecord> = Internal.createUniqueKey(UserComments.USER_COMMENTS, DSL.name("user_comments_pkey"), arrayOf(UserComments.USER_COMMENTS.ID), true)
 val USER_NOTES_PKEY: UniqueKey<UserNotesRecord> = Internal.createUniqueKey(UserNotes.USER_NOTES, DSL.name("user_notes_pkey"), arrayOf(UserNotes.USER_NOTES.ID), true)
