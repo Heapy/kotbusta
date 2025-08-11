@@ -73,13 +73,7 @@ fun jooq() {
             }
 
             generate = Generate().apply {
-                isPojos = true
-                isKotlinNotNullPojoAttributes = true
-                isKotlinNotNullInterfaceAttributes = true
                 isKotlinNotNullRecordAttributes = true
-                isImmutablePojos = true
-                isInterfaces = true
-                isImmutableInterfaces = true
             }
 
             target = Target().apply {
