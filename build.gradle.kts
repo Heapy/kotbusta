@@ -51,7 +51,10 @@ kotlin {
     jvmToolchain(24)
 
     compilerOptions {
-        freeCompilerArgs.add("-Xcontext-parameters")
+        freeCompilerArgs.addAll(
+            "-Xcontext-parameters",
+            "-opt-in=kotlin.concurrent.atomics.ExperimentalAtomicApi",
+        )
     }
 }
 
