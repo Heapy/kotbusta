@@ -6,8 +6,9 @@ services:
     image: "postgres:17.5"
     container_name: "database"
     restart: "always"
-    mem_limit: "128m"
+    mem_limit: "2g"
     memswap_limit: "0m"
+    shm_size: "1g"
     environment:
       POSTGRES_PASSWORD: "${KOTBUSTA_POSTGRES_PASSWORD}"
       POSTGRES_USER: "${KOTBUSTA_POSTGRES_USER}"
