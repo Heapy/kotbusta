@@ -110,17 +110,6 @@ class ImportJobDao {
     }
 
     context(_: TransactionContext)
-    fun getJob(
-        jobId: Long,
-    ): ImportJob? = dslContext { dslContext ->
-        dslContext
-            .selectFrom(IMPORT_JOBS)
-            .where(IMPORT_JOBS.ID.eq(jobId))
-            .fetchOne()
-            ?.toPojo()
-    }
-
-    context(_: TransactionContext)
     fun getAllJobs(): List<ImportJob> = dslContext { dslContext ->
         dslContext
             .selectFrom(IMPORT_JOBS)
