@@ -6,7 +6,9 @@ import io.heapy.kotbusta.jooq.tables.references.USERS
 
 class ValidateUserSessionDao {
     context(_: TransactionContext)
-    fun userExists(userId: Long): Boolean = dslContext { dslContext ->
+    fun userExists(
+        userId: Long,
+    ): Boolean = dslContext { dslContext ->
         dslContext
             .select(USERS.ID)
             .from(USERS)
