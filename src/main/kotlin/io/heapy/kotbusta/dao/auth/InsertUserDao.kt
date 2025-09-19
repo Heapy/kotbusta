@@ -25,6 +25,6 @@ class InsertUserDao {
             .set(USERS.UPDATED_AT, updatedAt)
             .returningResult(USERS.ID)
             .fetchOne(USERS.ID)
-            ?: throw RuntimeException("Failed to insert user")
+            ?: error("Failed to insert user")
     }
 }
