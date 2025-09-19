@@ -1,4 +1,4 @@
-package infra.coroutines
+package io.heapy.kotbusta.coroutines
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

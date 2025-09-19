@@ -1,6 +1,5 @@
 package io.heapy.kotbusta.coroutines
 
-import infra.coroutines.Loom
 import io.heapy.komok.tech.di.delegate.bean
 import kotlinx.coroutines.Dispatchers
 
