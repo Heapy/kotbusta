@@ -17,6 +17,10 @@ import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdDao
 import io.heapy.kotbusta.dao.auth.InsertUserDao
 import io.heapy.kotbusta.dao.auth.UpdateUserDao
 import io.heapy.kotbusta.dao.auth.ValidateUserSessionDao
+import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdQuery
+import io.heapy.kotbusta.dao.auth.InsertUserQuery
+import io.heapy.kotbusta.dao.auth.UpdateUserQuery
+import io.heapy.kotbusta.dao.auth.ValidateUserSessionQuery
 import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.Fb2Parser
@@ -47,20 +51,20 @@ class ApplicationFactory(
         )
     }
 
-    val insertUserDao by bean {
-        InsertUserDao()
+    val insertUserQuery by bean {
+        InsertUserQuery()
     }
 
-    val updateUserDao by bean {
-        UpdateUserDao()
+    val updateUserQuery by bean {
+        UpdateUserQuery()
     }
 
-    val findUserByGoogleIdDao by bean {
-        FindUserByGoogleIdDao()
+    val findUserByGoogleIdQuery by bean {
+        FindUserByGoogleIdQuery()
     }
 
-    val validateUserSessionDao by bean {
-        ValidateUserSessionDao()
+    val validateUserSessionQuery by bean {
+        ValidateUserSessionQuery()
     }
 
     val dotenv by bean {

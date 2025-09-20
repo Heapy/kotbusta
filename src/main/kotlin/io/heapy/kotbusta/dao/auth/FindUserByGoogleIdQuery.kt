@@ -5,7 +5,7 @@ import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.records.UsersRecord
 import io.heapy.kotbusta.jooq.tables.references.USERS
 
-class FindUserByGoogleIdDao {
+class FindUserByGoogleIdQuery {
     context(_: TransactionContext)
     fun findByGoogleId(
         googleId: String,

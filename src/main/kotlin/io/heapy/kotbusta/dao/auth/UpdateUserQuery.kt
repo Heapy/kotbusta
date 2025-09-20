@@ -5,7 +5,7 @@ import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.USERS
 import java.time.OffsetDateTime
 
-class UpdateUserDao {
+class UpdateUserQuery {
     context(_: TransactionContext)
     fun updateUser(
         userId: Long,

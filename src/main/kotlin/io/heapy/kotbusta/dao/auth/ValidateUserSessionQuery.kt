@@ -4,7 +4,7 @@ import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.USERS
 
-class ValidateUserSessionDao {
+class ValidateUserSessionQuery {
     context(_: TransactionContext)
     fun userExists(
         userId: Long,

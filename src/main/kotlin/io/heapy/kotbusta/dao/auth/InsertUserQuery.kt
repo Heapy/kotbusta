@@ -5,7 +5,7 @@ import io.heapy.kotbusta.database.dslContext
 import io.heapy.kotbusta.jooq.tables.references.USERS
 import java.time.OffsetDateTime
 
-class InsertUserDao {
+class InsertUserQuery {
     context(_: TransactionContext)
     fun insertUser(
         googleId: String,
