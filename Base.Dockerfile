@@ -1,5 +1,5 @@
 # Base image with Liberica OpenJRE and Pandoc
-FROM bellsoft/liberica-openjre-debian:24.0.2
+FROM bellsoft/liberica-openjre-debian:25-37
 
 # Install dependencies
 RUN apt-get update && \
