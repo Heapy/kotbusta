@@ -155,7 +155,7 @@ A modern web application for browsing, searching, and downloading books from Fli
 - `GET /logout` - Logout clearing session data
 
 ### Authenticated Endpoints
-- `GET /user/info` - Get current user information
+- `GET /api/user/info` - Get current user information
 - `GET /api/books` - List books with pagination
 - `GET /api/books/search` - Search books
 - `GET /api/books/{id}` - Get book details
@@ -174,9 +174,9 @@ A modern web application for browsing, searching, and downloading books from Fli
 - `GET /api/activity` - Get recent activity
 
 ### Admin Endpoints
-- `GET /admin/status` - Check admin rights status
-- `POST /admin/import` - Start book import process
-- `GET /admin/jobs` - Get all import jobs and their status
+- `GET /api/admin/status` - Check admin rights status
+- `POST /api/admin/import` - Start book import process
+- `GET /api/admin/jobs` - Get all import jobs and their status
 
 ## Development
 
