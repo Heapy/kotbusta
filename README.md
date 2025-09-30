@@ -16,7 +16,7 @@ A modern web application for browsing, searching, and downloading books from Fli
 
 **Backend:**
 - Kotlin + Ktor
-- Postgres database with jOOQ
+- PostgreSQL database with jOOQ
 - Google OAuth authentication
 - RESTful API design
 
@@ -133,7 +133,7 @@ A modern web application for browsing, searching, and downloading books from Fli
    # Structure should match: books-data/fb2-*.zip, books-data/flibusta_fb2_local.inpx
    ```
 
-5. **Start postgres container**
+5. **Start PostgreSQL container**
    ```bash
    docker-compose up -d
    ```
@@ -195,15 +195,18 @@ A modern web application for browsing, searching, and downloading books from Fli
 
 ### Database Schema
 
-The application uses SQLite with the following main tables:
+The application uses PostgreSQL with the following main tables:
 - `books` - Book metadata and file paths
 - `authors` - Author information
 - `series` - Book series
+- `genres` - Genre information
+- `languages` - Language information
 - `users` - User accounts (from Google OAuth)
 - `user_stars` - User's starred books
 - `user_comments` - Public comments
 - `user_notes` - Private notes
 - `downloads` - Download history
+- `import_jobs` - Background import job tracking
 
 ### File Structure
 
