@@ -3,7 +3,7 @@ name: "kotbusta-prod"
 
 services:
   database:
-    image: "postgres:17.6"
+    image: "postgres:18.0"
     restart: "always"
     mem_limit: "128m"
     memswap_limit: "0m"

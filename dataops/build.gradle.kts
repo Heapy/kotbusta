@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
 }
@@ -21,6 +23,14 @@ tasks.register<JavaExec>("migrate") {
     classpath = sourceSets["main"].runtimeClasspath
 }
 
+java {
+    targetCompatibility = JavaVersion.VERSION_24
+}
+
 kotlin {
-    jvmToolchain(24)
+    jvmToolchain(25)
+
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_24
+    }
 }

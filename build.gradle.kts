@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
@@ -28,7 +30,7 @@ dependencies {
     implementation(libs.komok.tech.logging)
     implementation(libs.logback.classic)
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation(libs.kotlinx.coroutines.core)
 
     testImplementation(ktorLibs.server.testHost)
 }
@@ -48,9 +50,10 @@ tasks.distZip {
 }
 
 kotlin {
-    jvmToolchain(24)
+    jvmToolchain(25)
 
     compilerOptions {
+        jvmTarget = JvmTarget.JVM_24
         freeCompilerArgs.addAll(
             "-Xcontext-parameters",
             "-opt-in=kotlin.concurrent.atomics.ExperimentalAtomicApi",
@@ -61,7 +64,7 @@ kotlin {
 testing {
     suites {
         val test by getting(JvmTestSuite::class) {
-            useJUnitJupiter("5.13.4")
+            useJUnitJupiter(libs.versions.junit)
         }
     }
 }

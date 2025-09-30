@@ -5,8 +5,10 @@ jooq = "3.20.8"
 komok = "1.0.13"
 kotlin = "2.2.20"
 kotlinx-serialization = "1.9.0"
+kotlinx-coroutines = "1.10.2"
 logback = "1.5.19"
 postgresql = "42.7.8"
+junit = "5.13.4"
 
 [libraries]
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
@@ -21,6 +23,8 @@ komok-tech-to-be-injected = { module = "io.heapy.komok:komok-tech-to-be-injected
 komok-tech-config-dotenv = { module = "io.heapy.komok:komok-tech-config-dotenv", version.ref = "komok"  }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback"}
 
