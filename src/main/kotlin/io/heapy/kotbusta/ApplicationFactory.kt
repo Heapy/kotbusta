@@ -13,20 +13,24 @@ import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.ktor.GoogleOauthConfig
 import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.coroutines.DispatchersModule
-import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdDao
-import io.heapy.kotbusta.dao.auth.InsertUserDao
-import io.heapy.kotbusta.dao.auth.UpdateUserDao
-import io.heapy.kotbusta.dao.auth.ValidateUserSessionDao
+import io.heapy.kotbusta.dao.job.CompleteJobQuery
+import io.heapy.kotbusta.dao.job.FailJobQuery
+import io.heapy.kotbusta.dao.job.GetAllJobsQuery
+import io.heapy.kotbusta.dao.job.UpdateProgressQuery
+import io.heapy.kotbusta.dao.job.UpdateStatsQuery
 import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdQuery
 import io.heapy.kotbusta.dao.auth.InsertUserQuery
 import io.heapy.kotbusta.dao.auth.UpdateUserQuery
 import io.heapy.kotbusta.dao.auth.ValidateUserSessionQuery
+import io.heapy.kotbusta.dao.job.CreateImportJobQuery
 import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
+import io.heapy.kotbusta.repository.ImportJobRepository
 import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.BookService
+import io.heapy.kotbusta.service.ImportJobService
 import io.heapy.kotbusta.service.UserService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -166,6 +170,47 @@ class ApplicationFactory(
     val adminService by bean {
         AdminService(
             adminEmail = adminEmail.value,
+        )
+    }
+
+    val updateProgressQuery by bean {
+        UpdateProgressQuery()
+    }
+
+    val updateStatsQuery by bean {
+        UpdateStatsQuery()
+    }
+
+    val completeJobQuery by bean {
+        CompleteJobQuery()
+    }
+
+    val failJobQuery by bean {
+        FailJobQuery()
+    }
+
+    val getAllJobsQuery by bean {
+        GetAllJobsQuery()
+    }
+
+    val createImportJobQuery by bean {
+        CreateImportJobQuery()
+    }
+
+    val importJobRepository by bean {
+        ImportJobRepository(
+            createImportJobQuery = createImportJobQuery.value,
+            updateProgressQuery = updateProgressQuery.value,
+            updateStatsQuery = updateStatsQuery.value,
+            completeJobQuery = completeJobQuery.value,
+            failJobQuery = failJobQuery.value,
+            getAllJobsQuery = getAllJobsQuery.value,
+        )
+    }
+
+    val importJobService by bean {
+        ImportJobService(
+            importJobRepository = importJobRepository.value,
             booksDataPath = booksDataPath.value,
             fb2Parser = fb2Parser.value,
             inpxParser = inpxParser.value,

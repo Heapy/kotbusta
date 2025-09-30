@@ -9,13 +9,13 @@ import io.ktor.server.routing.*
 context(applicationFactory: ApplicationFactory)
 fun Route.getJobsRoute() {
     val adminService = applicationFactory.adminService.value
-    val importJobService = applicationFactory.importJobService.value
+    val importJobRepository = applicationFactory.importJobRepository.value
     val transactionProvider = applicationFactory.transactionProvider.value
 
     get("/jobs") {
         adminService.requireAdminRights {
             val jobs = transactionProvider.transaction(READ_ONLY) {
-                importJobService.getAllJobs()
+                importJobRepository.getAll()
             }
 
             call.respond(

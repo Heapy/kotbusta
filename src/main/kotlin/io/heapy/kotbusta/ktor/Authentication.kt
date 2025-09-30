@@ -43,7 +43,7 @@ fun Application.configureAuthentication() {
     val httpClient = applicationFactory.httpClient.value
     val transactionProvider = applicationFactory.transactionProvider.value
     val sessionConfig = applicationFactory.sessionConfig.value
-    val validateUserSessionDao = applicationFactory.validateUserSessionDao.value
+    val validateUserSessionDao = applicationFactory.validateUserSessionQuery.value
 
     install(Sessions) {
         cookie<UserSession>("user_session") {
@@ -120,9 +120,9 @@ suspend fun handleGoogleCallback(
 context(applicationFactory: ApplicationFactory)
 private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
     val transactionProvider = applicationFactory.transactionProvider.value
-    val findUserByGoogleIdDao = applicationFactory.findUserByGoogleIdDao.value
-    val updateUserDao = applicationFactory.updateUserDao.value
-    val insertUserDao = applicationFactory.insertUserDao.value
+    val findUserByGoogleIdDao = applicationFactory.findUserByGoogleIdQuery.value
+    val updateUserDao = applicationFactory.updateUserQuery.value
+    val insertUserDao = applicationFactory.insertUserQuery.value
 
     return transactionProvider.transaction(READ_WRITE) {
         // Try to find existing user

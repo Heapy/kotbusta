@@ -31,13 +31,16 @@ data class ImportStats(
     val bookErrors: AtomicInt = AtomicInt(0),
     val coverErrors: AtomicInt = AtomicInt(0),
 ) {
-    fun incrementInpFiles() = inpFilesProcessed.fetchAndIncrement()
-    fun incrementBooksAdded() = booksAdded.fetchAndIncrement()
-    fun incrementBooksUpdated() = booksUpdated.fetchAndIncrement()
-    fun incrementBooksDeleted() = booksDeleted.fetchAndIncrement()
-    fun incrementCoversAdded() = coversAdded.fetchAndIncrement()
-    fun incrementBookErrors() = bookErrors.fetchAndIncrement()
-    fun incrementCoverErrors() = coverErrors.fetchAndIncrement()
+    fun incInpFiles() = inpFilesProcessed.fetchAndIncrement()
+    fun incBookAdded() = booksAdded.fetchAndIncrement()
+    fun incBooksUpdated() = booksUpdated.fetchAndIncrement()
+    fun incInvalidBookId() = booksDeleted.fetchAndIncrement()
+    fun incBooksDeleted() = booksDeleted.fetchAndIncrement()
+    fun incInvalidInpLine() = bookErrors.fetchAndIncrement()
+    fun incBookNoAuthors() = bookErrors.fetchAndIncrement()
+    fun incBookErrors() = bookErrors.fetchAndIncrement()
+    fun incCoversAdded() = coversAdded.fetchAndIncrement()
+    fun incCoverErrors() = coverErrors.fetchAndIncrement()
 }
 
 enum class JobStatus {

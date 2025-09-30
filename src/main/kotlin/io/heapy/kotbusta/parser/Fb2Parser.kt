@@ -4,21 +4,27 @@ import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.BOOKS
+import io.heapy.kotbusta.model.ImportStats
+import io.heapy.kotbusta.service.ImportJobService
 import kotlinx.coroutines.*
-import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.charset.Charset
 import java.util.zip.ZipFile
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
+import kotlin.concurrent.atomics.plusAssign
 
 class Fb2Parser(
     private val transactionProvider: TransactionProvider,
 ) {
-    suspend fun extractBookCovers(archivePath: String) {
+    suspend fun extractBookCovers(
+        archivePath: String,
+        jobId: ImportJobService.JobId,
+        stats: ImportStats,
+    ) {
         log.info("Extracting covers from: $archivePath")
 
         val parallelism = Runtime.getRuntime().availableProcessors()
@@ -34,7 +40,7 @@ class Fb2Parser(
 
                 // Process entries in chunks to avoid too many concurrent operations
                 entries.chunked(100).forEach { chunk ->
-                    chunk.map { entry ->
+                    val results = chunk.map { entry ->
                         async(Dispatchers.IO) {
                             try {
                                 val bookId = entry.name.removeSuffix(".fb2").toLongOrNull()
@@ -63,7 +69,14 @@ class Fb2Parser(
                         }
                     }.awaitAll()
 
-                    log.info("Processed chunk of ${chunk.size} files")
+                    // Update statistics
+                    val successCount = results.count { it }
+                    val errorCount = results.count { !it }
+
+                    stats.coversAdded += successCount
+                    stats.coverErrors += errorCount
+
+                    log.info("Processed chunk of ${chunk.size} files: $successCount covers extracted, $errorCount errors")
                 }
 
                 log.info("Cover extraction completed")
@@ -129,8 +142,9 @@ class Fb2Parser(
                                     val imageData = kotlin.io.encoding.Base64.Mime.decode(base64Data)
                                     binaryData[binaryId] = imageData
                                 } catch (e: Exception) {
-                                    LoggerFactory.getLogger(Fb2Parser::class.java)
-                                        .error("Base64 decoding error", e)
+                                    // append base64data to base64debug.txt
+
+                                    log.error("Base64 decoding error", e)
                                 }
                             }
                         }
@@ -259,7 +273,7 @@ class Fb2Parser(
     }
 
     context(_: TransactionContext)
-    private fun updateBookCover(bookId: Long, coverImage: ByteArray) = dslContext { dslContext ->
+    private fun updateBookCover(bookId: Long, coverImage: ByteArray) = useTx { dslContext ->
         dslContext
             .update(BOOKS)
             .set(BOOKS.COVER_IMAGE, coverImage)
@@ -268,7 +282,7 @@ class Fb2Parser(
     }
 
     context(_: TransactionContext)
-    private fun updateBookAnnotation(bookId: Long, annotation: String) = dslContext { dslContext ->
+    private fun updateBookAnnotation(bookId: Long, annotation: String) = useTx { dslContext ->
         dslContext
             .update(BOOKS)
             .set(BOOKS.ANNOTATION, annotation)

@@ -49,6 +49,10 @@ tasks.distZip {
     enabled = false
 }
 
+java {
+    targetCompatibility = JavaVersion.VERSION_24
+}
+
 kotlin {
     jvmToolchain(25)
 

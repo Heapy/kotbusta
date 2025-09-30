@@ -4,10 +4,12 @@ import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.*
 import io.heapy.kotbusta.model.Author
+import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.model.Series
+import io.heapy.kotbusta.service.ImportJobService.JobId
 import kotlinx.coroutines.*
 import java.nio.file.Path
 import java.time.LocalDate
@@ -18,12 +20,13 @@ import java.util.zip.ZipFile
 class InpxParser(
     private val transactionProvider: TransactionProvider,
 ) {
-    suspend fun parseAndImport(booksDataPath: Path) {
+    suspend fun parseAndImport(
+        booksDataPath: Path,
+        jobId: JobId,
+        stats: ImportStats,
+    ) {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         log.info("Starting INPX parsing from: $inpxFilePath")
-
-        val parallelism = Runtime.getRuntime().availableProcessors()
-        log.info("Using $parallelism parallel workers for import")
 
         coroutineScope {
             ZipFile(inpxFilePath.toString()).use { zipFile ->
@@ -35,15 +38,13 @@ class InpxParser(
 
                 // Process INP files in parallel
                 entries.mapIndexed { index, entry ->
+                    stats.incInpFiles()
                     async(Dispatchers.IO) {
                         log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
 
-                        val lines = mutableListOf<String>()
-                        zipFile.getInputStream(entry).bufferedReader(Charsets.UTF_8).use { reader ->
-                            reader.lineSequence().forEach { line ->
-                                lines.add(line)
-                            }
-                        }
+                        val lines = zipFile.getInputStream(entry)
+                            .bufferedReader(Charsets.UTF_8)
+                            .useLines(Sequence<String>::toList)
 
                         val archiveName = entry.name.removeSuffix(".inp")
 
@@ -51,12 +52,12 @@ class InpxParser(
                         transactionProvider.transaction(READ_WRITE) {
                             lines.chunked(100).forEach { batch ->
                                 batch.forEach { line ->
-                                    parseBookLine(line, archiveName)
+                                    parseBookLine(line, archiveName, stats)
                                 }
                             }
                         }
 
-                        log.info("Completed processing ${entry.name}")
+                        log.info("Completed processing ${entry.name}: ${stats.booksAdded} books added, ${stats.bookErrors} errors")
                     }
                 }.awaitAll()
 
@@ -66,17 +67,29 @@ class InpxParser(
     }
 
     context(_: TransactionContext)
-    private fun parseBookLine(line: String, archivePath: String) {
-        try {
+    private fun parseBookLine(
+        line: String,
+        archivePath: String,
+        stats: ImportStats,
+    ): Boolean {
+        return try {
             val parts = line.split('\u0004') // Field separator in INP files
-            if (parts.size < 8) return
+            if (parts.size < 8) {
+                log.warn("Invalid line: $line")
+                stats.incInvalidInpLine()
+                return false
+            }
 
             val authorPart = parts[0]
             val genre = parts[1]
             val title = parts[2]
             val seriesPart = parts[3]
             val seriesNumber = parts[4].toIntOrNull()
-            val bookId = parts[5].toLongOrNull() ?: return
+            val bookId = parts[5].toLongOrNull() ?: run {
+                log.warn("Invalid bookId: ${parts[5]}")
+                stats.incInvalidBookId()
+                return false
+            }
             val fileSize = parts[6].toLongOrNull()
             val libId = parts[7] // seems that it's the same as bookId
             val deleted = parts.getOrNull(8)
@@ -85,11 +98,19 @@ class InpxParser(
             val language = parts.getOrNull(11) ?: "ru"
             val keywords = parts.getOrNull(12) // too many empty, so not useful for anything
 
-            if (deleted == "1") return // Skip deleted books
+            if (deleted == "1") {
+                log.warn("Book $bookId deleted")
+                stats.incBooksDeleted()
+                return false // Skip deleted books
+            }
 
             // Parse authors
             val authors = parseAuthors(authorPart)
-            if (authors.isEmpty()) return
+            if (authors.isEmpty()) {
+                log.warn("No authors for book $bookId")
+                stats.incBookNoAuthors()
+                return false
+            }
 
             // Parse series
             val series = if (seriesPart.isNotBlank()) {
@@ -113,8 +134,11 @@ class InpxParser(
                 fileSize = fileSize,
                 dateAdded = parseDateAdded(dateAdded)
             )
+            stats.incBookAdded()
+            true
         } catch (e: Exception) {
             log.error("Error parsing line: $line", e)
+            false
         }
     }
 
@@ -139,7 +163,12 @@ class InpxParser(
                 }
             }
 
-            Author(0, firstName, lastName, fullName)
+            Author(
+                id = 0,
+                firstName = firstName,
+                lastName = lastName,
+                fullName = fullName,
+            )
         }
     }
 
@@ -169,7 +198,7 @@ class InpxParser(
         archivePath: String,
         fileSize: Long?,
         dateAdded: OffsetDateTime
-    ) = dslContext { dslContext ->
+    ) = useTx { dslContext ->
         // Insert or get series
         val seriesId = series?.let { insertOrGetSeries(it.name) }
 
@@ -215,8 +244,8 @@ class InpxParser(
     }
 
     context(_: TransactionContext)
-    private fun insertOrGetSeries(name: String): Long = dslContext { dslContext ->
-        // Try to get existing series
+    private fun insertOrGetSeries(name: String): Long = useTx { dslContext ->
+        // Try to get existing series - use LIMIT 1 to avoid multiple results
         val existing = dslContext
             .select(SERIES.ID)
             .from(SERIES)
@@ -224,32 +253,31 @@ class InpxParser(
             .fetchOne(SERIES.ID)
 
         if (existing != null) {
-            return@dslContext existing
+            return@useTx existing
         }
 
-        // Insert new series and return the generated ID
         dslContext
             .insertInto(SERIES)
             .set(SERIES.NAME, name)
             .returning(SERIES.ID)
             .fetchOne(SERIES.ID)
-            ?: throw RuntimeException("Failed to insert series: $name")
+            ?: error("Failed to insert series: $name")
     }
 
     context(_: TransactionContext)
-    private fun insertOrGetAuthor(author: Author): Long = dslContext { dslContext ->
-        // Try to get existing author
+    private fun insertOrGetAuthor(author: Author): Long = useTx { dslContext ->
+        // Try to get existing author - use LIMIT 1 to avoid multiple results
         val existing = dslContext
             .select(AUTHORS.ID)
             .from(AUTHORS)
             .where(AUTHORS.FULL_NAME.eq(author.fullName))
+            .limit(1)
             .fetchOne(AUTHORS.ID)
 
         if (existing != null) {
-            return@dslContext existing
+            return@useTx existing
         }
 
-        // Insert new author and return the generated ID
         dslContext
             .insertInto(AUTHORS)
             .set(AUTHORS.FIRST_NAME, author.firstName)
@@ -257,7 +285,7 @@ class InpxParser(
             .set(AUTHORS.FULL_NAME, author.fullName)
             .returning(AUTHORS.ID)
             .fetchOne(AUTHORS.ID)
-            ?: throw RuntimeException("Failed to insert author: ${author.fullName}")
+            ?: error("Failed to insert author: ${author.fullName}")
     }
 
     private companion object : Logger()

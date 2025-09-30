@@ -2,7 +2,7 @@ package io.heapy.kotbusta.service
 
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.database.TransactionContext
-import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.jooq.tables.references.DOWNLOADS
 import io.heapy.kotbusta.jooq.tables.references.USERS
@@ -19,7 +19,7 @@ class UserService {
     fun addComment(
         bookId: Long,
         comment: String,
-    ): UserComment? = dslContext { dslContext ->
+    ): UserComment? = useTx { dslContext ->
         val insertedId = dslContext
             .insertInto(USER_COMMENTS)
             .set(USER_COMMENTS.USER_ID, userSession.userId)
@@ -40,7 +40,7 @@ class UserService {
     fun updateComment(
         commentId: Long,
         comment: String,
-    ): Boolean = dslContext { dslContext ->
+    ): Boolean = useTx { dslContext ->
         val updated = dslContext
             .update(USER_COMMENTS)
             .set(USER_COMMENTS.COMMENT, comment)
@@ -53,7 +53,7 @@ class UserService {
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    fun deleteComment(commentId: Long): Boolean = dslContext { dslContext ->
+    fun deleteComment(commentId: Long): Boolean = useTx { dslContext ->
         val deleted = dslContext
             .deleteFrom(USER_COMMENTS)
             .where(USER_COMMENTS.ID.eq(commentId))
@@ -68,7 +68,7 @@ class UserService {
         bookId: Long,
         limit: Int = 20,
         offset: Int = 0,
-    ): List<UserComment> = dslContext { dslContext ->
+    ): List<UserComment> = useTx { dslContext ->
         dslContext
             .select(
                 USER_COMMENTS.ID,
@@ -108,7 +108,7 @@ class UserService {
         bookId: Long,
         note: String,
         isPrivate: Boolean = true,
-    ): UserNote? = dslContext { dslContext ->
+    ): UserNote? = useTx { dslContext ->
         // Check if note already exists
         val existingNote = dslContext
             .select(USER_NOTES.ID)
@@ -151,7 +151,7 @@ class UserService {
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    fun deleteNote(bookId: Long): Boolean = dslContext { dslContext ->
+    fun deleteNote(bookId: Long): Boolean = useTx { dslContext ->
         val deleted = dslContext
             .deleteFrom(USER_NOTES)
             .where(USER_NOTES.USER_ID.eq(userSession.userId))
@@ -162,7 +162,7 @@ class UserService {
     }
 
     context(_: TransactionContext)
-    fun getUserNote(userId: Long, bookId: Long): UserNote? = dslContext { dslContext ->
+    fun getUserNote(userId: Long, bookId: Long): UserNote? = useTx { dslContext ->
         dslContext
             .select(
                 USER_NOTES.ID,
@@ -191,7 +191,7 @@ class UserService {
     fun recordDownload(
         bookId: Long,
         format: String,
-    ): Boolean = dslContext { dslContext ->
+    ): Boolean = useTx { dslContext ->
         val inserted = dslContext
             .insertInto(DOWNLOADS)
             .set(DOWNLOADS.USER_ID, userSession.userId)
@@ -204,7 +204,7 @@ class UserService {
     }
 
     context(_: TransactionContext)
-    fun getRecentActivity(limit: Int = 20): RecentActivity = dslContext { dslContext ->
+    fun getRecentActivity(limit: Int = 20): RecentActivity = useTx { dslContext ->
         // Get recent comments
         val comments = dslContext
             .select(
@@ -271,7 +271,7 @@ class UserService {
     context(_: TransactionContext, userSession: UserSession)
     private fun getLatestComment(
         bookId: Long,
-    ): UserComment? = dslContext { dslContext ->
+    ): UserComment? = useTx { dslContext ->
         dslContext
             .select(
                 USER_COMMENTS.ID,

@@ -2,7 +2,7 @@ package io.heapy.kotbusta.service
 
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.database.TransactionContext
-import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.*
 import io.heapy.kotbusta.model.*
 import org.jooq.*
@@ -11,7 +11,7 @@ import java.time.OffsetDateTime
 
 class BookService {
     context(_: TransactionContext)
-    fun getBooks(limit: Int = 20, offset: Int = 0, userId: Long? = null): SearchResult = dslContext { dslContext ->
+    fun getBooks(limit: Int = 20, offset: Int = 0, userId: Long? = null): SearchResult = useTx { dslContext ->
         val books = getBooksList(dslContext, limit, offset, userId)
         val total = getTotalBooksCount(dslContext)
 
@@ -23,7 +23,7 @@ class BookService {
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    fun searchBooks(query: SearchQuery): SearchResult = dslContext { dslContext ->
+    fun searchBooks(query: SearchQuery): SearchResult = useTx { dslContext ->
         val books = searchBooksList(dslContext, query)
         val total = getSearchResultsCount(dslContext, query)
 
@@ -35,14 +35,14 @@ class BookService {
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    fun getBookById(bookId: Long): Book? = dslContext { dslContext ->
+    fun getBookById(bookId: Long): Book? = useTx { dslContext ->
         getBookDetails(dslContext, bookId)
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    fun getSimilarBooks(bookId: Long, limit: Int = 10): List<BookSummary> = dslContext { dslContext ->
+    fun getSimilarBooks(bookId: Long, limit: Int = 10): List<BookSummary> = useTx { dslContext ->
         // Get book details to find similar books
-        val book = getBookDetails(dslContext, bookId) ?: return@dslContext emptyList()
+        val book = getBookDetails(dslContext, bookId) ?: return@useTx emptyList()
 
         // Get author IDs for the book
         val authorIds = dslContext
@@ -96,7 +96,7 @@ class BookService {
     }
 
     context(_: TransactionContext)
-    fun getBookCover(bookId: Long): ByteArray? = dslContext { dslContext ->
+    fun getBookCover(bookId: Long): ByteArray? = useTx { dslContext ->
         dslContext
             .select(BOOKS.COVER_IMAGE)
             .from(BOOKS)
@@ -105,7 +105,7 @@ class BookService {
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    fun starBook(bookId: Long): Boolean = dslContext { dslContext ->
+    fun starBook(bookId: Long): Boolean = useTx { dslContext ->
         val inserted = dslContext
             .insertInto(USER_STARS)
             .set(USER_STARS.USER_ID, userSession.userId)
@@ -118,7 +118,7 @@ class BookService {
     }
 
     context(_: TransactionContext, userSession: UserSession)
-    fun unstarBook(bookId: Long): Boolean = dslContext { dslContext ->
+    fun unstarBook(bookId: Long): Boolean = useTx { dslContext ->
         val deleted = dslContext
             .deleteFrom(USER_STARS)
             .where(USER_STARS.USER_ID.eq(userSession.userId))
@@ -132,7 +132,7 @@ class BookService {
     fun getStarredBooks(
         limit: Int = 20,
         offset: Int = 0,
-    ): SearchResult = dslContext { dslContext ->
+    ): SearchResult = useTx { dslContext ->
         val results = dslContext
             .select(
                 BOOKS.ID,
@@ -344,7 +344,7 @@ class BookService {
     }
 
     context(_: TransactionContext)
-    private fun buildBookSummaryList(results: Result<out Record>): List<BookSummary> = dslContext { dslContext ->
+    private fun buildBookSummaryList(results: Result<out Record>): List<BookSummary> = useTx { dslContext ->
         val books = mutableListOf<BookSummary>()
         val bookIds = mutableSetOf<Long>()
 
@@ -386,7 +386,7 @@ class BookService {
         }
 
         // Update books with authors
-        return@dslContext books.map { book ->
+        return@useTx books.map { book ->
             book.copy(authors = bookAuthors[book.id] ?: emptyList())
         }
     }

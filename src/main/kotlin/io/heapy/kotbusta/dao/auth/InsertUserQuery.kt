@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.dao.auth
 
 import io.heapy.kotbusta.database.TransactionContext
-import io.heapy.kotbusta.database.dslContext
+import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.USERS
 import java.time.OffsetDateTime
 
@@ -14,7 +14,7 @@ class InsertUserQuery {
         avatarUrl: String?,
         createdAt: OffsetDateTime,
         updatedAt: OffsetDateTime
-    ): Long = dslContext { dslContext ->
+    ): Long = useTx { dslContext ->
         dslContext
             .insertInto(USERS)
             .set(USERS.GOOGLE_ID, googleId)

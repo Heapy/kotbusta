@@ -26,7 +26,7 @@ annotation class TransactionDsl
 
 @TransactionDsl
 context(_: TransactionContext)
-fun <T> dslContext(
+fun <T> useTx(
     body: (DSLContext) -> T,
 ): T {
     return body(unwrap())
