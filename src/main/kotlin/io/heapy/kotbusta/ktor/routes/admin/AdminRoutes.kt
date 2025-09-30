@@ -1,9 +1,9 @@
 package io.heapy.kotbusta.ktor.routes.admin
 
-import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.ApplicationModule
 import io.ktor.server.routing.*
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 fun Route.adminRoutes() {
     route("/admin") {
         statusRoute()

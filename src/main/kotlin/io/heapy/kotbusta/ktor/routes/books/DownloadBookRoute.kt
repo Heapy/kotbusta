@@ -1,6 +1,6 @@
 package io.heapy.kotbusta.ktor.routes.books
 
-import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.badRequestError
 import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireUserSession
@@ -17,12 +17,12 @@ import java.io.File
 import java.util.zip.ZipFile
 import kotlin.io.path.exists
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 fun Route.downloadBookRoute() {
-    val bookService = applicationFactory.bookService.value
-    val userService = applicationFactory.userService.value
-    val booksDataPath = applicationFactory.booksDataPath.value
-    val transactionProvider = applicationFactory.transactionProvider.value
+    val bookService = applicationModule.bookService.value
+    val userService = applicationModule.userService.value
+    val booksDataPath = applicationModule.booksDataPath.value
+    val transactionProvider = applicationModule.transactionProvider.value
     val conversionService = PandocConversionService()
 
     get("/books/{id}/download/{format}") {

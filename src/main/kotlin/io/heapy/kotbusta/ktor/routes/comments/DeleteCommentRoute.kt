@@ -1,6 +1,6 @@
 package io.heapy.kotbusta.ktor.routes.comments
 
-import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.routes.requireUserSession
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
@@ -8,10 +8,10 @@ import io.heapy.kotbusta.model.ApiResponse.Success
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 fun Route.deleteCommentRoute() {
-    val userService = applicationFactory.userService.value
-    val transactionProvider = applicationFactory.transactionProvider.value
+    val userService = applicationModule.userService.value
+    val transactionProvider = applicationModule.transactionProvider.value
 
     delete("/comments/{id}") {
         requireUserSession {

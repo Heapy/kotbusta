@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.ktor.routes.auth
 
 import io.heapy.komok.tech.logging.logger
-import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.handleGoogleCallback
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.OAuthAccessTokenResponse
@@ -16,7 +16,7 @@ import io.ktor.server.sessions.set
 
 private val log = logger {}
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 fun Route.googleOauthRoutes() {
     authenticate("google-oauth") {
         get("/oauth/google") {

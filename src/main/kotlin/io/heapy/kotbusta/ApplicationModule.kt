@@ -13,21 +13,15 @@ import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.ktor.GoogleOauthConfig
 import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.coroutines.DispatchersModule
-import io.heapy.kotbusta.dao.job.CompleteJobQuery
-import io.heapy.kotbusta.dao.job.FailJobQuery
-import io.heapy.kotbusta.dao.job.GetAllJobsQuery
-import io.heapy.kotbusta.dao.job.UpdateProgressQuery
-import io.heapy.kotbusta.dao.job.UpdateStatsQuery
 import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdQuery
 import io.heapy.kotbusta.dao.auth.InsertUserQuery
 import io.heapy.kotbusta.dao.auth.UpdateUserQuery
 import io.heapy.kotbusta.dao.auth.ValidateUserSessionQuery
-import io.heapy.kotbusta.dao.job.CreateImportJobQuery
 import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
-import io.heapy.kotbusta.repository.ImportJobRepository
+import io.heapy.kotbusta.repository.RepositoryModule
 import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.BookService
 import io.heapy.kotbusta.service.ImportJobService
@@ -45,8 +39,9 @@ import java.security.SecureRandom
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
 
-class ApplicationFactory(
+class ApplicationModule(
     val dispatchersModule: DispatchersModule,
+    val repositoryModule: RepositoryModule,
 ) {
     val staticFilesConfig by bean {
         StaticFilesConfig(
@@ -148,7 +143,9 @@ class ApplicationFactory(
     }
 
     val bookService by bean {
-        BookService()
+        BookService(
+            bookRepository = repositoryModule.bookRepository.value,
+        )
     }
 
     val userService by bean {
@@ -173,44 +170,9 @@ class ApplicationFactory(
         )
     }
 
-    val updateProgressQuery by bean {
-        UpdateProgressQuery()
-    }
-
-    val updateStatsQuery by bean {
-        UpdateStatsQuery()
-    }
-
-    val completeJobQuery by bean {
-        CompleteJobQuery()
-    }
-
-    val failJobQuery by bean {
-        FailJobQuery()
-    }
-
-    val getAllJobsQuery by bean {
-        GetAllJobsQuery()
-    }
-
-    val createImportJobQuery by bean {
-        CreateImportJobQuery()
-    }
-
-    val importJobRepository by bean {
-        ImportJobRepository(
-            createImportJobQuery = createImportJobQuery.value,
-            updateProgressQuery = updateProgressQuery.value,
-            updateStatsQuery = updateStatsQuery.value,
-            completeJobQuery = completeJobQuery.value,
-            failJobQuery = failJobQuery.value,
-            getAllJobsQuery = getAllJobsQuery.value,
-        )
-    }
-
     val importJobService by bean {
         ImportJobService(
-            importJobRepository = importJobRepository.value,
+            importJobRepository = repositoryModule.importJobRepository.value,
             booksDataPath = booksDataPath.value,
             fb2Parser = fb2Parser.value,
             inpxParser = inpxParser.value,

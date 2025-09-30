@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.ktor
 
 import io.heapy.komok.tech.logging.logger
-import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.model.User
@@ -37,13 +37,13 @@ data class SessionConfig(
     val secretSignKey: String,
 )
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 fun Application.configureAuthentication() {
-    val googleOauthConfig = applicationFactory.googleOauthConfig.value
-    val httpClient = applicationFactory.httpClient.value
-    val transactionProvider = applicationFactory.transactionProvider.value
-    val sessionConfig = applicationFactory.sessionConfig.value
-    val validateUserSessionDao = applicationFactory.validateUserSessionQuery.value
+    val googleOauthConfig = applicationModule.googleOauthConfig.value
+    val httpClient = applicationModule.httpClient.value
+    val transactionProvider = applicationModule.transactionProvider.value
+    val sessionConfig = applicationModule.sessionConfig.value
+    val validateUserSessionDao = applicationModule.validateUserSessionQuery.value
 
     install(Sessions) {
         cookie<UserSession>("user_session") {
@@ -93,11 +93,11 @@ fun Application.configureAuthentication() {
     }
 }
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 suspend fun handleGoogleCallback(
     principal: OAuthAccessTokenResponse.OAuth2,
 ): UserSession {
-    val httpClient = applicationFactory.httpClient.value
+    val httpClient = applicationModule.httpClient.value
 
     val userInfo: GoogleUserInfo = httpClient
         .get("https://www.googleapis.com/oauth2/v1/userinfo") {
@@ -117,12 +117,12 @@ suspend fun handleGoogleCallback(
     )
 }
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
-    val transactionProvider = applicationFactory.transactionProvider.value
-    val findUserByGoogleIdDao = applicationFactory.findUserByGoogleIdQuery.value
-    val updateUserDao = applicationFactory.updateUserQuery.value
-    val insertUserDao = applicationFactory.insertUserQuery.value
+    val transactionProvider = applicationModule.transactionProvider.value
+    val findUserByGoogleIdDao = applicationModule.findUserByGoogleIdQuery.value
+    val updateUserDao = applicationModule.updateUserQuery.value
+    val insertUserDao = applicationModule.insertUserQuery.value
 
     return transactionProvider.transaction(READ_WRITE) {
         // Try to find existing user

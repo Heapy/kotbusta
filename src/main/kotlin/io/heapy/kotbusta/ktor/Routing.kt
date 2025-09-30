@@ -1,6 +1,6 @@
 package io.heapy.kotbusta.ktor
 
-import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.routes.activity.getActivityRoute
 import io.heapy.kotbusta.ktor.routes.admin.adminRoutes
 import io.heapy.kotbusta.ktor.routes.auth.googleOauthRoutes
@@ -27,7 +27,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 fun Application.configureRouting() {
     routing {
         staticFilesRoute()

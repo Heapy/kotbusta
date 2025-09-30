@@ -1,6 +1,6 @@
 package io.heapy.kotbusta.ktor.routes.books
 
-import io.heapy.kotbusta.ApplicationFactory
+import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.routes.requireUserSession
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
@@ -17,10 +17,10 @@ data class CommentRequest(
     val comment: String,
 )
 
-context(applicationFactory: ApplicationFactory)
+context(applicationModule: ApplicationModule)
 fun Route.addBookCommentRoute() {
-    val userService = applicationFactory.userService.value
-    val transactionProvider = applicationFactory.transactionProvider.value
+    val userService = applicationModule.userService.value
+    val transactionProvider = applicationModule.transactionProvider.value
 
     post("/books/{id}/comments") {
         requireUserSession {
