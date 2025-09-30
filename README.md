@@ -155,21 +155,28 @@ A modern web application for browsing, searching, and downloading books from Fli
 - `GET /logout` - Logout clearing session data
 
 ### Authenticated Endpoints
-- `POST/DELETE /api/books/{id}/star` - Star/unstar books
-- `GET /api/books/starred` - Get starred books
-- `POST /api/books/{id}/comments` - Add comment
-- `POST /api/books/{id}/notes` - Add/update note
-- `GET /api/books/{id}/download/{format}` - Download book
+- `GET /user/info` - Get current user information
 - `GET /api/books` - List books with pagination
 - `GET /api/books/search` - Search books
 - `GET /api/books/{id}` - Get book details
 - `GET /api/books/{id}/cover` - Get book cover image
+- `GET /api/books/{id}/similar` - Get similar books
+- `GET /api/books/{id}/download/{format}` - Download book
+- `POST /api/books/{id}/star` - Star a book
+- `DELETE /api/books/{id}/star` - Unstar a book
+- `GET /api/books/starred` - Get starred books
 - `GET /api/books/{id}/comments` - Get book comments
+- `POST /api/books/{id}/comments` - Add comment
+- `PUT /api/comments/{id}` - Update comment
+- `DELETE /api/comments/{id}` - Delete comment
+- `POST /api/books/{id}/notes` - Add/update note
+- `DELETE /api/books/{id}/notes` - Delete note
 - `GET /api/activity` - Get recent activity
 
 ### Admin Endpoints
-
-TODO
+- `GET /admin/status` - Check admin rights status
+- `POST /admin/import` - Start book import process
+- `GET /admin/jobs` - Get all import jobs and their status
 
 ## Development
 
