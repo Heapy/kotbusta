@@ -213,18 +213,22 @@ The application uses PostgreSQL with the following main tables:
 ```
 kotbusta/
 ├── src/main/kotlin/io/heapy/kotbusta/
-│   ├── Application.kt         # Main application
-│   ├── ApplicationFactory.kt  # All services, daos and configurations are created here
-│   ├── ktor/                  # Ktor routes and modules
-│   ├── database/              # Database setup
-│   ├── jooq/                  # jOOQ code generation
-│   ├── model/                 # Data models
-│   ├── parser/                # FB2/INPX parsers
-│   └── service/               # Business logic
+│   ├── Application.kt         # Main application entry point
+│   ├── ApplicationModule.kt   # Dependency injection and bean configuration
+│   ├── coroutines/            # Coroutine utilities and context
+│   ├── dao/                   # Data access objects (deprecated, being migrated to repository)
+│   ├── database/              # Database setup and transaction management
+│   ├── jooq/                  # jOOQ generated code (tables, records, enums)
+│   ├── ktor/                  # Ktor routes and HTTP modules
+│   ├── mapper/                # Data mapping utilities
+│   ├── model/                 # Domain models and DTOs
+│   ├── parser/                # FB2/INPX file parsers
+│   ├── repository/            # Repository layer for data access
+│   └── service/               # Business logic and services
 ├── src/main/resources/
-│   ├── static/                # Frontend files
-│   └── application.conf       # Ktor Configuration
-└── .env                       # Application Configuration
+│   ├── static/                # Frontend files (HTML, CSS, JS)
+│   └── logback.xml            # Logging configuration
+└── .env                       # Application configuration
 ```
 
 ## Documentation
