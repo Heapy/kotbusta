@@ -1,19 +1,17 @@
 package io.heapy.kotbusta.service
 
-import io.heapy.kotbusta.dao.user.GetUserStatusQuery
+import io.heapy.kotbusta.dao.user.GetUserInfoQuery
 import io.heapy.kotbusta.dao.user.ListPendingUsersQuery
 import io.heapy.kotbusta.dao.user.UpdateUserStatusQuery
-import io.heapy.kotbusta.dao.user.UserStatusMapper
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.jooq.enums.UserStatusEnum
-import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.PendingUsersResponse
-import io.heapy.kotbusta.model.UserStatus
+import io.heapy.kotbusta.model.UserInfo
 
 class UserApprovalService(
     private val listPendingUsersQuery: ListPendingUsersQuery,
     private val updateUserStatusQuery: UpdateUserStatusQuery,
-    private val getUserStatusQuery: GetUserStatusQuery,
+    private val getUserInfoQuery: GetUserInfoQuery,
 ) {
     context(_: TransactionContext)
     fun listPending(
@@ -50,9 +48,8 @@ class UserApprovalService(
     }
 
     context(_: TransactionContext)
-    fun getUserStatus(userId: Long): UserStatus? {
-        return getUserStatusQuery
-            .getUserStatus(userId)
-            ?.mapUsing(UserStatusMapper)
+    fun getUserInfo(userId: Long): UserInfo? {
+        return getUserInfoQuery
+            .getUserInfo(userId)
     }
 }

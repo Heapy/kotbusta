@@ -3,6 +3,7 @@ package io.heapy.kotbusta.ktor.routes
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.ApiResponse.Error
+import io.heapy.kotbusta.model.UserStatus.APPROVED
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -37,11 +38,11 @@ suspend fun requireApprovedUser(
     }
 
     // Check if user is approved
-    val status = transactionProvider.transaction {
-        userApprovalService.getUserStatus(userSession.userId)
+    val userInfo = transactionProvider.transaction {
+        userApprovalService.getUserInfo(userSession.userId)
     }
 
-    if (status == io.heapy.kotbusta.model.UserStatus.APPROVED) {
+    if (userInfo?.status == APPROVED) {
         context(userSession) {
             body()
         }

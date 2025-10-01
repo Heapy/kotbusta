@@ -17,7 +17,7 @@ import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdQuery
 import io.heapy.kotbusta.dao.auth.InsertUserQuery
 import io.heapy.kotbusta.dao.auth.UpdateUserQuery
 import io.heapy.kotbusta.dao.auth.ValidateUserSessionQuery
-import io.heapy.kotbusta.dao.user.GetUserStatusQuery
+import io.heapy.kotbusta.dao.user.GetUserInfoQuery
 import io.heapy.kotbusta.dao.user.ListPendingUsersQuery
 import io.heapy.kotbusta.dao.user.UpdateUserStatusQuery
 import io.heapy.kotbusta.database.JooqTransactionProvider
@@ -78,8 +78,8 @@ class ApplicationModule(
         UpdateUserStatusQuery()
     }
 
-    val getUserStatusQuery by bean {
-        GetUserStatusQuery()
+    val getUserInfoQuery by bean {
+        GetUserInfoQuery()
     }
 
     val dotenv by bean {
@@ -190,7 +190,7 @@ class ApplicationModule(
         UserApprovalService(
             listPendingUsersQuery = listPendingUsersQuery.value,
             updateUserStatusQuery = updateUserStatusQuery.value,
-            getUserStatusQuery = getUserStatusQuery.value,
+            getUserInfoQuery = getUserInfoQuery.value,
         )
     }
 

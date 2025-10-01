@@ -4,7 +4,6 @@ import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.ktor.routes.requireUserSession
 import io.heapy.kotbusta.model.ApiResponse.Success
-import io.heapy.kotbusta.model.UserInfo
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -16,21 +15,13 @@ fun Route.userInfoRoute() {
     get("/user/info") {
         requireUserSession {
             val userSession = contextOf<UserSession>()
-            val status = transactionProvider.transaction {
-                userApprovalService.getUserStatus(userSession.userId)
-            } ?: io.heapy.kotbusta.model.UserStatus.PENDING
+            val userInfo = transactionProvider
+                .transaction {
+                    userApprovalService.getUserInfo(userSession.userId)
+                }
+                ?: error("User not found")
 
-            call.respond(
-                Success(
-                    data = UserInfo(
-                        userId = userSession.userId,
-                        email = userSession.email,
-                        name = userSession.name,
-                        avatarUrl = null,
-                        status = status
-                    ),
-                ),
-            )
+            call.respond(Success(data = userInfo))
         }
     }
 }
