@@ -9,5 +9,6 @@ fun Route.adminRoutes() {
         statusRoute()
         importRoute()
         getJobsRoute()
+        userManagementRoutes()
     }
 }

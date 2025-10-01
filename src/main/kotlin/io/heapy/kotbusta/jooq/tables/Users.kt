@@ -5,6 +5,7 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.Public
+import io.heapy.kotbusta.jooq.enums.UserStatusEnum
 import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_USER
 import io.heapy.kotbusta.jooq.keys.USERS_GOOGLE_ID_KEY
 import io.heapy.kotbusta.jooq.keys.USERS_PKEY
@@ -108,6 +109,11 @@ open class Users(
      * The column <code>public.users.avatar_url</code>.
      */
     val AVATAR_URL: TableField<UsersRecord, String?> = createField(DSL.name("avatar_url"), SQLDataType.CLOB, this, "")
+
+    /**
+     * The column <code>public.users.status</code>.
+     */
+    val STATUS: TableField<UsersRecord, UserStatusEnum?> = createField(DSL.name("status"), SQLDataType.VARCHAR.nullable(false).defaultValue(DSL.field(DSL.raw("'PENDING'::user_status_enum"), SQLDataType.VARCHAR)).asEnumDataType(UserStatusEnum::class.java), this, "")
 
     /**
      * The column <code>public.users.created_at</code>.

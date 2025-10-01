@@ -2,6 +2,7 @@ package io.heapy.kotbusta.dao.auth
 
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.useTx
+import io.heapy.kotbusta.jooq.enums.UserStatusEnum
 import io.heapy.kotbusta.jooq.tables.references.USERS
 import java.time.OffsetDateTime
 
@@ -21,6 +22,7 @@ class InsertUserQuery {
             .set(USERS.EMAIL, email)
             .set(USERS.NAME, name)
             .set(USERS.AVATAR_URL, avatarUrl)
+            .set(USERS.STATUS, UserStatusEnum.PENDING)
             .set(USERS.CREATED_AT, createdAt)
             .set(USERS.UPDATED_AT, updatedAt)
             .returningResult(USERS.ID)

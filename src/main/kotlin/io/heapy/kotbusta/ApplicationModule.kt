@@ -17,6 +17,9 @@ import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdQuery
 import io.heapy.kotbusta.dao.auth.InsertUserQuery
 import io.heapy.kotbusta.dao.auth.UpdateUserQuery
 import io.heapy.kotbusta.dao.auth.ValidateUserSessionQuery
+import io.heapy.kotbusta.dao.user.GetUserStatusQuery
+import io.heapy.kotbusta.dao.user.ListPendingUsersQuery
+import io.heapy.kotbusta.dao.user.UpdateUserStatusQuery
 import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.Fb2Parser
@@ -25,6 +28,7 @@ import io.heapy.kotbusta.repository.RepositoryModule
 import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.BookService
 import io.heapy.kotbusta.service.ImportJobService
+import io.heapy.kotbusta.service.UserApprovalService
 import io.heapy.kotbusta.service.UserService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -64,6 +68,18 @@ class ApplicationModule(
 
     val validateUserSessionQuery by bean {
         ValidateUserSessionQuery()
+    }
+
+    val listPendingUsersQuery by bean {
+        ListPendingUsersQuery()
+    }
+
+    val updateUserStatusQuery by bean {
+        UpdateUserStatusQuery()
+    }
+
+    val getUserStatusQuery by bean {
+        GetUserStatusQuery()
     }
 
     val dotenv by bean {
@@ -167,6 +183,14 @@ class ApplicationModule(
     val adminService by bean {
         AdminService(
             adminEmail = adminEmail.value,
+        )
+    }
+
+    val userApprovalService by bean {
+        UserApprovalService(
+            listPendingUsersQuery = listPendingUsersQuery.value,
+            updateUserStatusQuery = updateUserStatusQuery.value,
+            getUserStatusQuery = getUserStatusQuery.value,
         )
     }
 

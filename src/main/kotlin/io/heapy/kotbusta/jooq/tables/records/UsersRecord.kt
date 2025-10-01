@@ -4,6 +4,7 @@
 package io.heapy.kotbusta.jooq.tables.records
 
 
+import io.heapy.kotbusta.jooq.enums.UserStatusEnum
 import io.heapy.kotbusta.jooq.tables.Users
 
 import java.time.OffsetDateTime
@@ -38,13 +39,17 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
         set(value): Unit = set(4, value)
         get(): String? = get(4) as String?
 
-    open var createdAt: OffsetDateTime?
+    open var status: UserStatusEnum?
         set(value): Unit = set(5, value)
-        get(): OffsetDateTime? = get(5) as OffsetDateTime?
+        get(): UserStatusEnum? = get(5) as UserStatusEnum?
 
-    open var updatedAt: OffsetDateTime?
+    open var createdAt: OffsetDateTime?
         set(value): Unit = set(6, value)
         get(): OffsetDateTime? = get(6) as OffsetDateTime?
+
+    open var updatedAt: OffsetDateTime?
+        set(value): Unit = set(7, value)
+        get(): OffsetDateTime? = get(7) as OffsetDateTime?
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -55,12 +60,13 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
     /**
      * Create a detached, initialised UsersRecord
      */
-    constructor(id: Long? = null, googleId: String, email: String, name: String, avatarUrl: String? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: Long? = null, googleId: String, email: String, name: String, avatarUrl: String? = null, status: UserStatusEnum? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
         this.id = id
         this.googleId = googleId
         this.email = email
         this.name = name
         this.avatarUrl = avatarUrl
+        this.status = status
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         resetTouchedOnNotNull()

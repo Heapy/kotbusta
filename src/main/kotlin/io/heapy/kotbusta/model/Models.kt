@@ -9,6 +9,7 @@ data class User(
     val email: String,
     val name: String,
     val avatarUrl: String?,
+    val status: UserStatus,
     val createdAt: Long,
     val updatedAt: Long
 )
@@ -130,3 +131,27 @@ data class RecentActivity(
     val comments: List<UserComment>,
     val downloads: List<Download>
 )
+
+@Serializable
+data class UserInfo(
+    val userId: Long,
+    val email: String,
+    val name: String,
+    val avatarUrl: String?,
+    val status: UserStatus
+)
+
+@Serializable
+data class PendingUsersResponse(
+    val users: List<User>,
+    val total: Long,
+    val hasMore: Boolean
+)
+
+@Serializable
+enum class UserStatus {
+    PENDING,
+    APPROVED,
+    REJECTED,
+    DEACTIVATED;
+}

@@ -4,6 +4,7 @@ import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
+import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.User
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -147,6 +148,7 @@ private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
                 email = userInfo.email,
                 name = userInfo.name,
                 avatarUrl = userInfo.avatarUrl,
+                status = existingUser.status!!.mapUsing(io.heapy.kotbusta.dao.user.UserStatusMapper),
                 createdAt = existingUser.createdAt!!.toEpochSecond(),
                 updatedAt = now.toEpochSecond()
             )
@@ -169,8 +171,9 @@ private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
                 email = userInfo.email,
                 name = userInfo.name,
                 avatarUrl = userInfo.avatarUrl,
+                status = io.heapy.kotbusta.model.UserStatus.PENDING,
                 createdAt = now.toEpochSecond(),
-                updatedAt = now.toEpochSecond()
+                updatedAt = now.toEpochSecond(),
             )
         }
     }
