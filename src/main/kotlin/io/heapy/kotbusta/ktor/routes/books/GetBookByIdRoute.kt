@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.ktor.routes.requireUserSession
+import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.model.ApiResponse.Error
@@ -16,7 +16,7 @@ fun Route.getBookByIdRoute() {
     val transactionProvider = applicationModule.transactionProvider.value
 
     get("/books/{id}") {
-        requireUserSession {
+        requireApprovedUser {
             val bookId = call.requiredParameter<Long>("id")
             val book = transactionProvider.transaction(READ_ONLY) {
                 bookService.getBookById(bookId)

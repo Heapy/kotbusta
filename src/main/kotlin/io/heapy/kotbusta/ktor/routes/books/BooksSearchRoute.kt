@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.ktor.routes.requireUserSession
+import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.heapy.kotbusta.model.SearchQuery
@@ -25,7 +25,7 @@ fun Route.bookSearchRoute() {
             ?.toIntOrNull()
             ?: 0
 
-        requireUserSession {
+        requireApprovedUser {
             val searchQuery = SearchQuery(
                 query,
                 genre,

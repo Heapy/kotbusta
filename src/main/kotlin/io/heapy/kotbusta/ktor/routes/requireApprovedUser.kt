@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.ktor.routes
 
 import io.heapy.kotbusta.ApplicationModule
+import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.UserStatus.APPROVED
@@ -38,7 +39,7 @@ suspend fun requireApprovedUser(
     }
 
     // Check if user is approved
-    val userInfo = transactionProvider.transaction {
+    val userInfo = transactionProvider.transaction(READ_ONLY) {
         userApprovalService.getUserInfo(userSession.userId)
     }
 

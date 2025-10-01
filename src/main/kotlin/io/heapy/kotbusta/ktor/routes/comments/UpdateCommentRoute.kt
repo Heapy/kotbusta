@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.ktor.routes.comments
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.ktor.routes.requireUserSession
+import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.model.ApiResponse.Success
@@ -21,7 +21,7 @@ fun Route.updateCommentRoute() {
     val transactionProvider = applicationModule.transactionProvider.value
 
     put("/comments/{id}") {
-        requireUserSession {
+        requireApprovedUser {
             val commentId = call.requiredParameter<Long>("id")
             val request = call.receive<CommentRequest>()
             val success = transactionProvider.transaction(READ_WRITE) {

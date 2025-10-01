@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.ktor.routes.admin
 
 import io.heapy.kotbusta.ApplicationModule
+import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -13,7 +14,7 @@ fun Route.importRoute() {
 
     post("/import") {
         adminService.requireAdminRights {
-            transactionProvider.transaction {
+            transactionProvider.transaction(READ_WRITE) {
                 importJobService.startImport(application)
             }
 

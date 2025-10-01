@@ -1,6 +1,9 @@
 package io.heapy.kotbusta.ktor.routes.admin
 
 import io.heapy.kotbusta.ApplicationModule
+import io.heapy.kotbusta.database.TransactionType
+import io.heapy.kotbusta.database.TransactionType.READ_ONLY
+import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.ApiResponse.Success
@@ -15,87 +18,89 @@ fun Route.userManagementRoutes() {
     val transactionProvider = applicationModule.transactionProvider.value
 
     get("/users/pending") {
-        val ctx = this
-        context(ctx) {
-            adminService.requireAdminRights {
-                val routingCall = contextOf<RoutingContext>().call
-                val limit = routingCall.request.queryParameters["limit"]?.toIntOrNull() ?: 20
-                val offset = routingCall.request.queryParameters["offset"]?.toIntOrNull() ?: 0
+        adminService.requireAdminRights {
+            val limit = call.requiredParameter<Int>("limit")
+            val offset = call.requiredParameter<Int>("offset")
 
-                val response = transactionProvider.transaction {
-                    userApprovalService.listPending(limit, offset)
-                }
-
-                routingCall.respond(Success(data = response))
+            val response = transactionProvider.transaction(READ_ONLY) {
+                userApprovalService.listPending(limit, offset)
             }
+
+            call.respond(Success(data = response))
         }
     }
 
     post("/users/{userId}/approve") {
-        val ctx = this
-        context(ctx) {
-            adminService.requireAdminRights {
-                val routingCall = contextOf<RoutingContext>().call
-                val userId = routingCall.requiredParameter<Long>("userId")
+        adminService.requireAdminRights {
+            val userId = call.requiredParameter<Long>("userId")
 
-                val success = transactionProvider.transaction {
-                    userApprovalService.approve(userId)
-                }
+            val success = transactionProvider.transaction(READ_WRITE) {
+                userApprovalService.approve(userId)
+            }
 
-                if (success) {
-                    routingCall.respond(Success(data = mapOf("message" to "User approved successfully")))
-                } else {
-                    routingCall.respond(
-                        HttpStatusCode.NotFound,
-                        Error(message = "User not found")
-                    )
-                }
+            if (success) {
+                call.respond(
+                    Success(
+                        data = mapOf(
+                            "message" to "User approved successfully",
+                        ),
+                    ),
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    Error(message = "User not found"),
+                )
             }
         }
     }
 
     post("/users/{userId}/reject") {
-        val ctx = this
-        context(ctx) {
-            adminService.requireAdminRights {
-                val routingCall = contextOf<RoutingContext>().call
-                val userId = routingCall.requiredParameter<Long>("userId")
+        adminService.requireAdminRights {
+            val userId = call.requiredParameter<Long>("userId")
 
-                val success = transactionProvider.transaction {
-                    userApprovalService.reject(userId)
-                }
+            val success = transactionProvider.transaction(READ_WRITE) {
+                userApprovalService.reject(userId)
+            }
 
-                if (success) {
-                    routingCall.respond(Success(data = mapOf("message" to "User rejected successfully")))
-                } else {
-                    routingCall.respond(
-                        HttpStatusCode.NotFound,
-                        Error(message = "User not found")
-                    )
-                }
+            if (success) {
+                call.respond(
+                    Success(
+                        data = mapOf(
+                            "message" to "User rejected successfully",
+                        ),
+                    ),
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    Error(message = "User not found"),
+                )
             }
         }
     }
 
     post("/users/{userId}/deactivate") {
-        val ctx = this
-        context(ctx) {
-            adminService.requireAdminRights {
-                val routingCall = contextOf<RoutingContext>().call
-                val userId = routingCall.requiredParameter<Long>("userId")
+        adminService.requireAdminRights {
+            val userId = call.requiredParameter<Long>("userId")
 
-                val success = transactionProvider.transaction {
-                    userApprovalService.deactivate(userId)
-                }
+            val success = transactionProvider.transaction(READ_WRITE) {
+                userApprovalService.deactivate(userId)
+            }
 
-                if (success) {
-                    routingCall.respond(Success(data = mapOf("message" to "User deactivated successfully")))
-                } else {
-                    routingCall.respond(
-                        HttpStatusCode.NotFound,
-                        Error(message = "User not found")
-                    )
-                }
+            if (success) {
+                call.respond(
+                    Success(
+                        data = mapOf(
+                            "message" to "User deactivated successfully",
+                        ),
+                    ),
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    Error(message = "User not found"),
+                )
             }
         }
     }

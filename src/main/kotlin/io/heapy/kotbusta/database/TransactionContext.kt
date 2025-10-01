@@ -43,7 +43,7 @@ private fun unwrap(): DSLContext {
 interface TransactionProvider {
     @TransactionDsl
     suspend fun <T> transaction(
-        type: TransactionType = TransactionType.NONE,
+        type: TransactionType,
         block: suspend context(TransactionContext) () -> T,
     ): T
 }

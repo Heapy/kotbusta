@@ -2,7 +2,7 @@ package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.UserSession
-import io.heapy.kotbusta.ktor.routes.requireUserSession
+import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.ktor.server.response.*
@@ -14,7 +14,7 @@ fun Route.getBooksRoute() {
     val transactionProvider = applicationModule.transactionProvider.value
 
     get("/books") {
-        requireUserSession {
+        requireApprovedUser {
             val limit = call.request.queryParameters["limit"]
                 ?.toIntOrNull()
                 ?: 20

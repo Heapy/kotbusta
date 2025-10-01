@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.ktor.routes.notes
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.ktor.routes.requireUserSession
+import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.model.ApiResponse.Success
@@ -14,7 +14,7 @@ fun Route.deleteNoteRoute() {
     val transactionProvider = applicationModule.transactionProvider.value
 
     delete("/books/{id}/notes") {
-        requireUserSession {
+        requireApprovedUser {
             val bookId = call.requiredParameter<Long>("id")
 
             val success = transactionProvider.transaction(READ_WRITE) {
