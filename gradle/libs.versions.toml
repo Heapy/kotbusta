@@ -1,7 +1,7 @@
 [versions]
 flyway = "11.13.2"
 hikari = "7.0.2"
-jooq = "3.20.7"
+jooq = "3.20.8"
 komok = "1.0.13"
 kotlin = "2.2.20"
 kotlinx-serialization = "1.9.0"
