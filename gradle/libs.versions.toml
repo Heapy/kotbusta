@@ -9,6 +9,7 @@ kotlinx-coroutines = "1.10.2"
 logback = "1.5.19"
 postgresql = "42.7.8"
 junit = "6.0.0"
+aws-sdk = "1.5.50"
 
 [libraries]
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
@@ -29,6 +30,8 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback"}
 
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+
+aws-sdk-ses = { module = "aws.sdk.kotlin:ses", version.ref = "aws-sdk" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
