@@ -9,6 +9,7 @@ kotlinx-coroutines = "1.10.2"
 logback = "1.5.19"
 postgresql = "42.7.8"
 junit = "5.13.4"
+junit = "6.0.0"
 
 [libraries]
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
