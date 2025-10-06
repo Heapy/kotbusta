@@ -2,7 +2,6 @@ name: "Build Kotbusta Docker"
 
 permissions:
   contents: read
-  packages: write
 
 on:
   - push
@@ -11,13 +10,13 @@ on:
 jobs:
   build:
     name: "Build Application"
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
           java-version: "25"
-          distribution: "liberica"
+          distribution: "corretto"
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew distTar
       - uses: actions/upload-artifact@v4
@@ -28,7 +27,10 @@ jobs:
   build-and-push-image:
     name: "Build Docker Image"
     if: ${{ github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
     needs: build
     steps:
       - uses: actions/checkout@v5
