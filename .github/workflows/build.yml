@@ -18,6 +18,9 @@ jobs:
           java-version: "25"
           distribution: "corretto"
       - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-overwrite-existing: "true"
+          cache-cleanup: "never"
       - run: ./gradlew distTar
       - uses: actions/upload-artifact@v4
         with:
