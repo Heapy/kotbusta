@@ -18,7 +18,7 @@ jobs:
           java-version: "25"
           distribution: "corretto"
       - run: ./gradlew distTar
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: "Kotlin Application"
           path: "build/distributions/kotbusta.tar"
