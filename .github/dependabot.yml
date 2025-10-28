@@ -11,10 +11,6 @@ updates:
       day: "monday"
       time: "04:00"
     open-pull-requests-limit: 10
-    reviewers:
-      - "Heapy/maintainers-kotbusta"
-    assignees:
-      - "Heapy/maintainers-kotbusta"
     commit-message:
       prefix: "gradle"
       prefix-development: "gradle"
@@ -31,10 +27,6 @@ updates:
       day: "monday"
       time: "04:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "Heapy/maintainers-kotbusta"
-    assignees:
-      - "Heapy/maintainers-kotbusta"
     commit-message:
       prefix: "docker"
       include: "scope"
@@ -50,10 +42,6 @@ updates:
       day: "monday"
       time: "04:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "Heapy/maintainers-kotbusta"
-    assignees:
-      - "Heapy/maintainers-kotbusta"
     commit-message:
       prefix: "actions"
       include: "scope"

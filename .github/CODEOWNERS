@@ -1,0 +1,6 @@
+# Dependency files
+build.gradle.kts @Heapy/maintainers-kotbusta
+settings.gradle.kts @Heapy/maintainers-kotbusta
+gradle.properties @Heapy/maintainers-kotbusta
+gradle/wrapper/gradle-wrapper.properties @Heapy/maintainers-kotbusta
+**/build.gradle.kts @Heapy/maintainers-kotbusta
