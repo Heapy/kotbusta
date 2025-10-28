@@ -32,6 +32,8 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.core)
 
+    implementation(libs.aws.sdk.ses)
+
     testImplementation(ktorLibs.server.testHost)
 }
 

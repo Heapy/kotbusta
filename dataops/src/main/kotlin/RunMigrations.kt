@@ -1,10 +1,6 @@
 @file:JvmName("RunMigrations")
 
-import Configuration.pgDatabase
-import Configuration.pgHost
-import Configuration.pgPassword
-import Configuration.pgPort
-import Configuration.pgUser
+import Configuration.dbPath
 import org.flywaydb.core.Flyway
 import javax.sql.DataSource
 
@@ -13,9 +9,9 @@ fun main() {
         .configure()
         .locations("classpath:migrations")
         .dataSource(
-            "jdbc:postgresql://$pgHost:$pgPort/$pgDatabase",
-            pgUser,
-            pgPassword
+            "jdbc:sqlite:$dbPath",
+            null,
+            null
         )
         .loggers("slf4j")
         .load()

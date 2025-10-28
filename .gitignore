@@ -16,5 +16,8 @@ build
 # Configuration
 .env
 
+# Database
+kotbusta.db
+
 # Test Unpacked Data
 src/test/resources/flibusta-sample/

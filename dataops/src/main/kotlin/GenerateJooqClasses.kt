@@ -1,5 +1,6 @@
 @file:JvmName("GenerateJooqClasses")
 
+import Configuration.dbPath
 import org.flywaydb.core.Flyway
 import org.jooq.codegen.GenerationTool
 import org.jooq.meta.jaxb.Configuration
@@ -8,13 +9,8 @@ import org.jooq.meta.jaxb.Generate
 import org.jooq.meta.jaxb.Generator
 import org.jooq.meta.jaxb.Jdbc
 import org.jooq.meta.jaxb.Target
-import org.postgresql.ds.PGSimpleDataSource
-import java.util.Locale
-import Configuration.pgDatabase
-import Configuration.pgHost
-import Configuration.pgPassword
-import Configuration.pgPort
-import Configuration.pgUser
+import java.util.*
+import kotlin.io.path.deleteIfExists
 
 fun main() {
     drop()
@@ -23,19 +19,8 @@ fun main() {
 }
 
 fun drop() {
-    PGSimpleDataSource()
-        .apply {
-            setURL("jdbc:postgresql://$pgHost:$pgPort/$pgDatabase")
-            user = pgUser
-            password = pgPassword
-        }
-        .connection
-        .use { connection ->
-            connection.createStatement().use { statement ->
-                statement.execute("DROP SCHEMA public CASCADE;")
-                statement.execute("CREATE SCHEMA public;")
-            }
-        }
+    // Delete the database file to start fresh
+    dbPath.deleteIfExists()
 }
 
 fun flyway() {
@@ -45,9 +30,9 @@ fun flyway() {
             "filesystem:./dataops/src/main/resources/migrations",
         )
         .dataSource(
-            "jdbc:postgresql://$pgHost:$pgPort/$pgDatabase",
-            pgUser,
-            pgPassword
+            "jdbc:sqlite:$dbPath",
+            null,
+            null
         )
         .loggers("slf4j")
         .load()
@@ -57,19 +42,16 @@ fun flyway() {
 fun jooq() {
     GenerationTool.generate(Configuration().apply {
         jdbc = Jdbc().apply {
-            driver = "org.postgresql.Driver"
-            url = "jdbc:postgresql://$pgHost:$pgPort/$pgDatabase"
-            user = pgUser
-            password = pgPassword
+            driver = "org.sqlite.JDBC"
+            url = "jdbc:sqlite:$dbPath"
         }
 
         generator = Generator().apply {
             name = "org.jooq.codegen.KotlinGenerator"
             database = Database().apply {
-                name = "org.jooq.meta.postgres.PostgresDatabase"
+                name = "org.jooq.meta.sqlite.SQLiteDatabase"
                 includes = ".*"
                 excludes = "flyway_schema_history"
-                inputSchema = "public"
             }
 
             generate = Generate().apply {

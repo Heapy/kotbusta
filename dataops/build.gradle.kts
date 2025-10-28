@@ -11,8 +11,8 @@ repositories {
 dependencies {
     api(libs.jooq.core)
     implementation(libs.jooq.codegen)
-    implementation(libs.flyway.database.postgresql)
-    api(libs.postgresql)
+    implementation(libs.flyway.core)
+    api(libs.sqlite.jdbc)
     implementation(libs.komok.tech.config.dotenv)
     implementation(libs.logback.classic)
 }

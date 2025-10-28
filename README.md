@@ -16,7 +16,7 @@ A modern web application for browsing, searching, and downloading books from Fli
 
 **Backend:**
 - Kotlin + Ktor
-- PostgreSQL database with jOOQ
+- SQLite database with jOOQ
 - Google OAuth authentication
 - RESTful API design
 
@@ -59,12 +59,7 @@ A modern web application for browsing, searching, and downloading books from Fli
    - `KOTBUSTA_SESSION_SIGN_KEY` - Session signing key (will be auto-generated if not provided)
    - `KOTBUSTA_SESSION_ENCRYPT_KEY` - Session encryption key (will be auto-generated if not provided)
    - `KOTBUSTA_ADMIN_EMAIL` - Your admin email address
-   - `KOTBUSTA_POSTGRES_HOST` - PostgreSQL host
-   - `KOTBUSTA_POSTGRES_PORT` - PostgreSQL port
-   - `KOTBUSTA_POSTGRES_USER` - PostgreSQL username
-   - `KOTBUSTA_POSTGRES_PASSWORD` - PostgreSQL password
-   - `KOTBUSTA_POSTGRES_DATABASE` - PostgreSQL database name
-   - `KOTBUSTA_DB_DATA_PATH_LOCAL` - Local path for PostgreSQL data storage
+   - `KOTBUSTA_DB_PATH` - Path to SQLite database file (optional, defaults to `kotbusta.db`)
    - `KOTBUSTA_BOOKS_DATA_PATH_LOCAL` - Local path to your Flibusta book archives
 
 3. **Prepare your Flibusta data**
@@ -133,14 +128,11 @@ A modern web application for browsing, searching, and downloading books from Fli
    # Structure should match: books-data/fb2-*.zip, books-data/flibusta_fb2_local.inpx
    ```
 
-5. **Start PostgreSQL container**
-   ```bash
-   docker-compose up -d
-   ```
-6. **Start the application in IDEA***
+5. **Start the application in IDEA**
    - Run Kotbusta run-configuration
+   - The SQLite database will be created automatically on first run
 
-7. **Access the application**
+6. **Access the application**
    - Open http://localhost:8080
    - Click "Login with Google" to authenticate
    - Go to "Admin" and run import
@@ -195,7 +187,7 @@ A modern web application for browsing, searching, and downloading books from Fli
 
 ### Database Schema
 
-The application uses PostgreSQL with the following main tables:
+The application uses SQLite with the following main tables:
 - `books` - Book metadata and file paths
 - `authors` - Author information
 - `series` - Book series
