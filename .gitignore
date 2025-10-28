@@ -15,3 +15,6 @@ build
 
 # Configuration
 .env
+
+# Test Unpacked Data
+src/test/resources/flibusta-sample/
