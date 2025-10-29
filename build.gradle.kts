@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
@@ -51,15 +49,10 @@ tasks.distZip {
     enabled = false
 }
 
-java {
-    targetCompatibility = JavaVersion.VERSION_24
-}
-
 kotlin {
     jvmToolchain(25)
 
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_24
         freeCompilerArgs.addAll(
             "-Xcontext-parameters",
             "-opt-in=kotlin.concurrent.atomics.ExperimentalAtomicApi",
