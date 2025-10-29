@@ -1,7 +1,7 @@
 package io.heapy.kotbusta.mapper
 
-import io.heapy.kotbusta.dao.job.JobStatusMapper
-import io.heapy.kotbusta.dao.job.JobTypeMapper
+import io.heapy.kotbusta.dao.JobStatusMapper
+import io.heapy.kotbusta.dao.JobTypeMapper
 import io.heapy.kotbusta.jooq.enums.JobStatusEnum
 import io.heapy.kotbusta.jooq.enums.JobTypeEnum
 import io.heapy.kotbusta.model.JobStatus

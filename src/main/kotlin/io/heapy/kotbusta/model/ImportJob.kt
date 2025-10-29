@@ -3,10 +3,11 @@ package io.heapy.kotbusta.model
 import kotlinx.serialization.Serializable
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.fetchAndIncrement
+import kotlin.time.Instant
 
 @Serializable
 data class ImportJob(
-    val id: Long,
+    val id: Int,
     val jobType: JobType,
     val status: JobStatus,
     val progress: String?,
@@ -18,8 +19,8 @@ data class ImportJob(
     val bookErrors: Int = 0,
     val coverErrors: Int = 0,
     val errorMessage: String? = null,
-    val startedAt: Long,
-    val completedAt: Long? = null,
+    val startedAt: Instant,
+    val completedAt: Instant? = null,
 )
 
 data class ImportStats(
