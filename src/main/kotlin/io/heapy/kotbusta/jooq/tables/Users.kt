@@ -4,26 +4,30 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
-import io.heapy.kotbusta.jooq.enums.UserStatusEnum
-import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_USER
-import io.heapy.kotbusta.jooq.keys.USERS_GOOGLE_ID_KEY
-import io.heapy.kotbusta.jooq.keys.USERS_PKEY
-import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_USER
-import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_USER
-import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_USER
+import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_USERS
+import io.heapy.kotbusta.jooq.keys.KINDLE_DEVICES__FK_KINDLE_DEVICES_PK_USERS
+import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS
+import io.heapy.kotbusta.jooq.keys.USERS__PK_USERS
+import io.heapy.kotbusta.jooq.keys.USERS__UK_USERS_1_34197334
+import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_USERS
+import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_PK_USERS
+import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_PK_USERS
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.Downloads.DownloadsPath
+import io.heapy.kotbusta.jooq.tables.KindleDevices.KindleDevicesPath
+import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
 import io.heapy.kotbusta.jooq.tables.UserComments.UserCommentsPath
 import io.heapy.kotbusta.jooq.tables.UserNotes.UserNotesPath
 import io.heapy.kotbusta.jooq.tables.UserStars.UserStarsPath
 import io.heapy.kotbusta.jooq.tables.records.UsersRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
 
+import org.jooq.Check
 import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.ForeignKey
@@ -62,7 +66,7 @@ open class Users(
     where: Condition?
 ): TableImpl<UsersRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -75,7 +79,7 @@ open class Users(
     companion object {
 
         /**
-         * The reference instance of <code>public.users</code>
+         * The reference instance of <code>USERS</code>
          */
         val USERS: Users = Users()
     }
@@ -86,63 +90,63 @@ open class Users(
     override fun getRecordType(): Class<UsersRecord> = UsersRecord::class.java
 
     /**
-     * The column <code>public.users.id</code>.
+     * The column <code>USERS.ID</code>.
      */
-    val ID: TableField<UsersRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false).identity(true), this, "")
+    val ID: TableField<UsersRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>public.users.google_id</code>.
+     * The column <code>USERS.GOOGLE_ID</code>.
      */
-    val GOOGLE_ID: TableField<UsersRecord, String?> = createField(DSL.name("google_id"), SQLDataType.CLOB.nullable(false), this, "")
+    val GOOGLE_ID: TableField<UsersRecord, String?> = createField(DSL.name("GOOGLE_ID"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.users.email</code>.
+     * The column <code>USERS.EMAIL</code>.
      */
-    val EMAIL: TableField<UsersRecord, String?> = createField(DSL.name("email"), SQLDataType.CLOB.nullable(false), this, "")
+    val EMAIL: TableField<UsersRecord, String?> = createField(DSL.name("EMAIL"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.users.name</code>.
+     * The column <code>USERS.NAME</code>.
      */
-    val NAME: TableField<UsersRecord, String?> = createField(DSL.name("name"), SQLDataType.CLOB.nullable(false), this, "")
+    val NAME: TableField<UsersRecord, String?> = createField(DSL.name("NAME"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.users.avatar_url</code>.
+     * The column <code>USERS.AVATAR_URL</code>.
      */
-    val AVATAR_URL: TableField<UsersRecord, String?> = createField(DSL.name("avatar_url"), SQLDataType.CLOB, this, "")
+    val AVATAR_URL: TableField<UsersRecord, String?> = createField(DSL.name("AVATAR_URL"), SQLDataType.CLOB, this, "")
 
     /**
-     * The column <code>public.users.status</code>.
+     * The column <code>USERS.STATUS</code>.
      */
-    val STATUS: TableField<UsersRecord, UserStatusEnum?> = createField(DSL.name("status"), SQLDataType.VARCHAR.nullable(false).defaultValue(DSL.field(DSL.raw("'PENDING'::user_status_enum"), SQLDataType.VARCHAR)).asEnumDataType(UserStatusEnum::class.java), this, "")
+    val STATUS: TableField<UsersRecord, String?> = createField(DSL.name("STATUS"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'PENDING'"), SQLDataType.CLOB)), this, "")
 
     /**
-     * The column <code>public.users.created_at</code>.
+     * The column <code>USERS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<UsersRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<UsersRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     /**
-     * The column <code>public.users.updated_at</code>.
+     * The column <code>USERS.UPDATED_AT</code>.
      */
-    val UPDATED_AT: TableField<UsersRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val UPDATED_AT: TableField<UsersRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<UsersRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UsersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<UsersRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.users</code> table reference
+     * Create an aliased <code>USERS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.users</code> table reference
+     * Create an aliased <code>USERS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.users</code> table reference
+     * Create a <code>USERS</code> table reference
      */
-    constructor(): this(DSL.name("users"), null)
+    constructor(): this(DSL.name("USERS"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, UsersRecord>?, parentPath: InverseForeignKey<out Record, UsersRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, USERS, null, null)
 
@@ -156,20 +160,19 @@ open class Users(
         override fun `as`(alias: Name): UsersPath = UsersPath(alias, this)
         override fun `as`(alias: Table<*>): UsersPath = UsersPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIdentity(): Identity<UsersRecord, Long?> = super.getIdentity() as Identity<UsersRecord, Long?>
-    override fun getPrimaryKey(): UniqueKey<UsersRecord> = USERS_PKEY
-    override fun getUniqueKeys(): List<UniqueKey<UsersRecord>> = listOf(USERS_GOOGLE_ID_KEY)
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
+    override fun getIdentity(): Identity<UsersRecord, Int?> = super.getIdentity() as Identity<UsersRecord, Int?>
+    override fun getPrimaryKey(): UniqueKey<UsersRecord> = USERS__PK_USERS
+    override fun getUniqueKeys(): List<UniqueKey<UsersRecord>> = listOf(USERS__UK_USERS_1_34197334)
 
     private lateinit var _downloads: DownloadsPath
 
     /**
-     * Get the implicit to-many join path to the <code>public.downloads</code>
-     * table
+     * Get the implicit to-many join path to the <code>DOWNLOADS</code> table
      */
     fun downloads(): DownloadsPath {
         if (!this::_downloads.isInitialized)
-            _downloads = DownloadsPath(this, null, DOWNLOADS__FK_DOWNLOADS_USER.inverseKey)
+            _downloads = DownloadsPath(this, null, DOWNLOADS__FK_DOWNLOADS_PK_USERS.inverseKey)
 
         return _downloads;
     }
@@ -177,15 +180,47 @@ open class Users(
     val downloads: DownloadsPath
         get(): DownloadsPath = downloads()
 
+    private lateinit var _kindleDevices: KindleDevicesPath
+
+    /**
+     * Get the implicit to-many join path to the <code>KINDLE_DEVICES</code>
+     * table
+     */
+    fun kindleDevices(): KindleDevicesPath {
+        if (!this::_kindleDevices.isInitialized)
+            _kindleDevices = KindleDevicesPath(this, null, KINDLE_DEVICES__FK_KINDLE_DEVICES_PK_USERS.inverseKey)
+
+        return _kindleDevices;
+    }
+
+    val kindleDevices: KindleDevicesPath
+        get(): KindleDevicesPath = kindleDevices()
+
+    private lateinit var _kindleSendQueue: KindleSendQueuePath
+
+    /**
+     * Get the implicit to-many join path to the <code>KINDLE_SEND_QUEUE</code>
+     * table
+     */
+    fun kindleSendQueue(): KindleSendQueuePath {
+        if (!this::_kindleSendQueue.isInitialized)
+            _kindleSendQueue = KindleSendQueuePath(this, null, KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS.inverseKey)
+
+        return _kindleSendQueue;
+    }
+
+    val kindleSendQueue: KindleSendQueuePath
+        get(): KindleSendQueuePath = kindleSendQueue()
+
     private lateinit var _userComments: UserCommentsPath
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.user_comments</code> table
+     * Get the implicit to-many join path to the <code>USER_COMMENTS</code>
+     * table
      */
     fun userComments(): UserCommentsPath {
         if (!this::_userComments.isInitialized)
-            _userComments = UserCommentsPath(this, null, USER_COMMENTS__FK_USER_COMMENTS_USER.inverseKey)
+            _userComments = UserCommentsPath(this, null, USER_COMMENTS__FK_USER_COMMENTS_PK_USERS.inverseKey)
 
         return _userComments;
     }
@@ -196,12 +231,11 @@ open class Users(
     private lateinit var _userNotes: UserNotesPath
 
     /**
-     * Get the implicit to-many join path to the <code>public.user_notes</code>
-     * table
+     * Get the implicit to-many join path to the <code>USER_NOTES</code> table
      */
     fun userNotes(): UserNotesPath {
         if (!this::_userNotes.isInitialized)
-            _userNotes = UserNotesPath(this, null, USER_NOTES__FK_USER_NOTES_USER.inverseKey)
+            _userNotes = UserNotesPath(this, null, USER_NOTES__FK_USER_NOTES_PK_USERS.inverseKey)
 
         return _userNotes;
     }
@@ -212,12 +246,11 @@ open class Users(
     private lateinit var _userStars: UserStarsPath
 
     /**
-     * Get the implicit to-many join path to the <code>public.user_stars</code>
-     * table
+     * Get the implicit to-many join path to the <code>USER_STARS</code> table
      */
     fun userStars(): UserStarsPath {
         if (!this::_userStars.isInitialized)
-            _userStars = UserStarsPath(this, null, USER_STARS__FK_USER_STARS_USER.inverseKey)
+            _userStars = UserStarsPath(this, null, USER_STARS__FK_USER_STARS_PK_USERS.inverseKey)
 
         return _userStars;
     }
@@ -226,11 +259,13 @@ open class Users(
         get(): UserStarsPath = userStars()
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.books</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>BOOKS</code> table
      */
     val books: BooksPath
         get(): BooksPath = userStars().books()
+    override fun getChecks(): List<Check<UsersRecord>> = listOf(
+        Internal.createCheck(this, DSL.name(""), "STATUS in ('PENDING', 'APPROVED', 'REJECTED', 'DEACTIVATED')", true)
+    )
     override fun `as`(alias: String): Users = Users(DSL.name(alias), this)
     override fun `as`(alias: Name): Users = Users(alias, this)
     override fun `as`(alias: Table<*>): Users = Users(alias.qualifiedName, this)

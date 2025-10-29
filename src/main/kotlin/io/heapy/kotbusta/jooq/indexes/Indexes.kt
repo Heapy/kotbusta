@@ -9,6 +9,9 @@ import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
 import io.heapy.kotbusta.jooq.tables.ImportJobs
+import io.heapy.kotbusta.jooq.tables.KindleDevices
+import io.heapy.kotbusta.jooq.tables.KindleSendEvents
+import io.heapy.kotbusta.jooq.tables.KindleSendQueue
 import io.heapy.kotbusta.jooq.tables.UserComments
 
 import org.jooq.Index
@@ -21,14 +24,23 @@ import org.jooq.impl.Internal
 // INDEX definitions
 // -------------------------------------------------------------------------
 
-val IDX_AUTHORS_NAME: Index = Internal.createIndex(DSL.name("idx_authors_name"), Authors.AUTHORS, arrayOf(Authors.AUTHORS.LAST_NAME, Authors.AUTHORS.FIRST_NAME), false)
-val IDX_BOOKS_GENRE: Index = Internal.createIndex(DSL.name("idx_books_genre"), Books.BOOKS, arrayOf(Books.BOOKS.GENRE), false)
-val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("idx_books_language"), Books.BOOKS, arrayOf(Books.BOOKS.LANGUAGE), false)
-val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("idx_books_series"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)
-val IDX_BOOKS_TITLE: Index = Internal.createIndex(DSL.name("idx_books_title"), Books.BOOKS, arrayOf(Books.BOOKS.TITLE), false)
-val IDX_DOWNLOADS_RECENT: Index = Internal.createIndex(DSL.name("idx_downloads_recent"), Downloads.DOWNLOADS, arrayOf(Downloads.DOWNLOADS.CREATED_AT.desc()), false)
-val IDX_IMPORT_JOBS_STARTED: Index = Internal.createIndex(DSL.name("idx_import_jobs_started"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STARTED_AT.desc()), false)
-val IDX_IMPORT_JOBS_STATUS: Index = Internal.createIndex(DSL.name("idx_import_jobs_status"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STATUS), false)
-val IDX_IMPORT_JOBS_TYPE: Index = Internal.createIndex(DSL.name("idx_import_jobs_type"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.JOB_TYPE), false)
-val IDX_USER_COMMENTS_BOOK: Index = Internal.createIndex(DSL.name("idx_user_comments_book"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.BOOK_ID), false)
-val IDX_USER_COMMENTS_USER: Index = Internal.createIndex(DSL.name("idx_user_comments_user"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.USER_ID), false)
+val IDX_AUTHORS_NAME: Index = Internal.createIndex(DSL.name("IDX_AUTHORS_NAME"), Authors.AUTHORS, arrayOf(Authors.AUTHORS.LAST_NAME, Authors.AUTHORS.FIRST_NAME), false)
+val IDX_BOOKS_GENRE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_GENRE"), Books.BOOKS, arrayOf(Books.BOOKS.GENRE), false)
+val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_LANGUAGE"), Books.BOOKS, arrayOf(Books.BOOKS.LANGUAGE), false)
+val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("IDX_BOOKS_SERIES"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)
+val IDX_BOOKS_TITLE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_TITLE"), Books.BOOKS, arrayOf(Books.BOOKS.TITLE), false)
+val IDX_DOWNLOADS_RECENT: Index = Internal.createIndex(DSL.name("IDX_DOWNLOADS_RECENT"), Downloads.DOWNLOADS, arrayOf(Downloads.DOWNLOADS.CREATED_AT), false)
+val IDX_IMPORT_JOBS_STARTED: Index = Internal.createIndex(DSL.name("IDX_IMPORT_JOBS_STARTED"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STARTED_AT), false)
+val IDX_IMPORT_JOBS_STATUS: Index = Internal.createIndex(DSL.name("IDX_IMPORT_JOBS_STATUS"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STATUS), false)
+val IDX_IMPORT_JOBS_TYPE: Index = Internal.createIndex(DSL.name("IDX_IMPORT_JOBS_TYPE"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.JOB_TYPE), false)
+val IDX_KINDLE_DEVICES_EMAIL: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_EMAIL"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.EMAIL), false)
+val IDX_KINDLE_DEVICES_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_USER"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID), false)
+val IDX_KINDLE_SEND_EVENTS_QUEUE: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_EVENTS_QUEUE"), KindleSendEvents.KINDLE_SEND_EVENTS, arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.QUEUE_ID), false)
+val IDX_KINDLE_SEND_EVENTS_TYPE: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_EVENTS_TYPE"), KindleSendEvents.KINDLE_SEND_EVENTS, arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.EVENT_TYPE), false)
+val IDX_KINDLE_SEND_QUEUE_BOOK: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_BOOK"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.BOOK_ID), false)
+val IDX_KINDLE_SEND_QUEUE_DEVICE: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_DEVICE"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.DEVICE_ID), false)
+val IDX_KINDLE_SEND_QUEUE_NEXT_RUN: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_NEXT_RUN"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.NEXT_RUN_AT), false)
+val IDX_KINDLE_SEND_QUEUE_STATUS: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_STATUS"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.STATUS), false)
+val IDX_KINDLE_SEND_QUEUE_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_USER"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.USER_ID), false)
+val IDX_USER_COMMENTS_BOOK: Index = Internal.createIndex(DSL.name("IDX_USER_COMMENTS_BOOK"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.BOOK_ID), false)
+val IDX_USER_COMMENTS_USER: Index = Internal.createIndex(DSL.name("IDX_USER_COMMENTS_USER"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.USER_ID), false)

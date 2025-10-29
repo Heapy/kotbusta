@@ -4,6 +4,7 @@ import Configuration.dbPath
 import org.jooq.codegen.GenerationTool
 import org.jooq.meta.jaxb.Configuration
 import org.jooq.meta.jaxb.Database
+import org.jooq.meta.jaxb.ForcedType
 import org.jooq.meta.jaxb.Generate
 import org.jooq.meta.jaxb.Generator
 import org.jooq.meta.jaxb.Jdbc
@@ -44,6 +45,15 @@ fun jooq() {
                 name = "org.jooq.meta.sqlite.SQLiteDatabase"
                 includes = ".*"
                 excludes = "schema_version"
+
+                // Convert TEXT datetime columns to Instant
+                forcedTypes = listOf(
+                    ForcedType().apply {
+                        name = "INSTANT"
+                        includeExpression = ".*\\.(CREATED_AT|UPDATED_AT|STARTED_AT|COMPLETED_AT|DATE_ADDED|NEXT_RUN_AT)"
+                        includeTypes = ".*"
+                    }
+                )
             }
 
             generate = Generate().apply {

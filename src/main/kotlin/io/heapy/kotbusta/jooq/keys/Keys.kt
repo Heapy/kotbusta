@@ -10,6 +10,9 @@ import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
 import io.heapy.kotbusta.jooq.tables.ImportJobs
+import io.heapy.kotbusta.jooq.tables.KindleDevices
+import io.heapy.kotbusta.jooq.tables.KindleSendEvents
+import io.heapy.kotbusta.jooq.tables.KindleSendQueue
 import io.heapy.kotbusta.jooq.tables.Series
 import io.heapy.kotbusta.jooq.tables.UserComments
 import io.heapy.kotbusta.jooq.tables.UserNotes
@@ -20,6 +23,9 @@ import io.heapy.kotbusta.jooq.tables.records.BookAuthorsRecord
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
 import io.heapy.kotbusta.jooq.tables.records.DownloadsRecord
 import io.heapy.kotbusta.jooq.tables.records.ImportJobsRecord
+import io.heapy.kotbusta.jooq.tables.records.KindleDevicesRecord
+import io.heapy.kotbusta.jooq.tables.records.KindleSendEventsRecord
+import io.heapy.kotbusta.jooq.tables.records.KindleSendQueueRecord
 import io.heapy.kotbusta.jooq.tables.records.SeriesRecord
 import io.heapy.kotbusta.jooq.tables.records.UserCommentsRecord
 import io.heapy.kotbusta.jooq.tables.records.UserNotesRecord
@@ -38,30 +44,39 @@ import org.jooq.impl.QOM.ForeignKeyRule
 // UNIQUE and PRIMARY KEY definitions
 // -------------------------------------------------------------------------
 
-val AUTHORS_PKEY: UniqueKey<AuthorsRecord> = Internal.createUniqueKey(Authors.AUTHORS, DSL.name("authors_pkey"), arrayOf(Authors.AUTHORS.ID), true)
-val BOOK_AUTHORS_PKEY: UniqueKey<BookAuthorsRecord> = Internal.createUniqueKey(BookAuthors.BOOK_AUTHORS, DSL.name("book_authors_pkey"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID, BookAuthors.BOOK_AUTHORS.AUTHOR_ID), true)
-val BOOKS_PKEY: UniqueKey<BooksRecord> = Internal.createUniqueKey(Books.BOOKS, DSL.name("books_pkey"), arrayOf(Books.BOOKS.ID), true)
-val DOWNLOADS_PKEY: UniqueKey<DownloadsRecord> = Internal.createUniqueKey(Downloads.DOWNLOADS, DSL.name("downloads_pkey"), arrayOf(Downloads.DOWNLOADS.ID), true)
-val IMPORT_JOBS_PKEY: UniqueKey<ImportJobsRecord> = Internal.createUniqueKey(ImportJobs.IMPORT_JOBS, DSL.name("import_jobs_pkey"), arrayOf(ImportJobs.IMPORT_JOBS.ID), true)
-val SERIES_PKEY: UniqueKey<SeriesRecord> = Internal.createUniqueKey(Series.SERIES, DSL.name("series_pkey"), arrayOf(Series.SERIES.ID), true)
-val USER_COMMENTS_PKEY: UniqueKey<UserCommentsRecord> = Internal.createUniqueKey(UserComments.USER_COMMENTS, DSL.name("user_comments_pkey"), arrayOf(UserComments.USER_COMMENTS.ID), true)
-val USER_NOTES_PKEY: UniqueKey<UserNotesRecord> = Internal.createUniqueKey(UserNotes.USER_NOTES, DSL.name("user_notes_pkey"), arrayOf(UserNotes.USER_NOTES.ID), true)
-val USER_STARS_PKEY: UniqueKey<UserStarsRecord> = Internal.createUniqueKey(UserStars.USER_STARS, DSL.name("user_stars_pkey"), arrayOf(UserStars.USER_STARS.USER_ID, UserStars.USER_STARS.BOOK_ID), true)
-val USERS_GOOGLE_ID_KEY: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, DSL.name("users_google_id_key"), arrayOf(Users.USERS.GOOGLE_ID), true)
-val USERS_PKEY: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, DSL.name("users_pkey"), arrayOf(Users.USERS.ID), true)
+val AUTHORS__PK_AUTHORS: UniqueKey<AuthorsRecord> = Internal.createUniqueKey(Authors.AUTHORS, DSL.name("pk_AUTHORS"), arrayOf(Authors.AUTHORS.ID), true)
+val BOOK_AUTHORS__PK_BOOK_AUTHORS: UniqueKey<BookAuthorsRecord> = Internal.createUniqueKey(BookAuthors.BOOK_AUTHORS, DSL.name("pk_BOOK_AUTHORS"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID, BookAuthors.BOOK_AUTHORS.AUTHOR_ID), true)
+val BOOKS__PK_BOOKS: UniqueKey<BooksRecord> = Internal.createUniqueKey(Books.BOOKS, DSL.name("pk_BOOKS"), arrayOf(Books.BOOKS.ID), true)
+val DOWNLOADS__PK_DOWNLOADS: UniqueKey<DownloadsRecord> = Internal.createUniqueKey(Downloads.DOWNLOADS, DSL.name("pk_DOWNLOADS"), arrayOf(Downloads.DOWNLOADS.ID), true)
+val IMPORT_JOBS__PK_IMPORT_JOBS: UniqueKey<ImportJobsRecord> = Internal.createUniqueKey(ImportJobs.IMPORT_JOBS, DSL.name("pk_IMPORT_JOBS"), arrayOf(ImportJobs.IMPORT_JOBS.ID), true)
+val KINDLE_DEVICES__PK_KINDLE_DEVICES: UniqueKey<KindleDevicesRecord> = Internal.createUniqueKey(KindleDevices.KINDLE_DEVICES, DSL.name("pk_KINDLE_DEVICES"), arrayOf(KindleDevices.KINDLE_DEVICES.ID), true)
+val KINDLE_DEVICES__UK_KINDLE_DEVICES_1_13757864: UniqueKey<KindleDevicesRecord> = Internal.createUniqueKey(KindleDevices.KINDLE_DEVICES, DSL.name("uk_KINDLE_DEVICES_1_13757864"), arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID, KindleDevices.KINDLE_DEVICES.EMAIL), true)
+val KINDLE_SEND_EVENTS__PK_KINDLE_SEND_EVENTS: UniqueKey<KindleSendEventsRecord> = Internal.createUniqueKey(KindleSendEvents.KINDLE_SEND_EVENTS, DSL.name("pk_KINDLE_SEND_EVENTS"), arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.ID), true)
+val KINDLE_SEND_QUEUE__PK_KINDLE_SEND_QUEUE: UniqueKey<KindleSendQueueRecord> = Internal.createUniqueKey(KindleSendQueue.KINDLE_SEND_QUEUE, DSL.name("pk_KINDLE_SEND_QUEUE"), arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.ID), true)
+val SERIES__PK_SERIES: UniqueKey<SeriesRecord> = Internal.createUniqueKey(Series.SERIES, DSL.name("pk_SERIES"), arrayOf(Series.SERIES.ID), true)
+val USER_COMMENTS__PK_USER_COMMENTS: UniqueKey<UserCommentsRecord> = Internal.createUniqueKey(UserComments.USER_COMMENTS, DSL.name("pk_USER_COMMENTS"), arrayOf(UserComments.USER_COMMENTS.ID), true)
+val USER_NOTES__PK_USER_NOTES: UniqueKey<UserNotesRecord> = Internal.createUniqueKey(UserNotes.USER_NOTES, DSL.name("pk_USER_NOTES"), arrayOf(UserNotes.USER_NOTES.ID), true)
+val USER_STARS__PK_USER_STARS: UniqueKey<UserStarsRecord> = Internal.createUniqueKey(UserStars.USER_STARS, DSL.name("pk_USER_STARS"), arrayOf(UserStars.USER_STARS.USER_ID, UserStars.USER_STARS.BOOK_ID), true)
+val USERS__PK_USERS: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, DSL.name("pk_USERS"), arrayOf(Users.USERS.ID), true)
+val USERS__UK_USERS_1_34197334: UniqueKey<UsersRecord> = Internal.createUniqueKey(Users.USERS, DSL.name("uk_USERS_1_34197334"), arrayOf(Users.USERS.GOOGLE_ID), true)
 
 // -------------------------------------------------------------------------
 // FOREIGN KEY definitions
 // -------------------------------------------------------------------------
 
-val BOOK_AUTHORS__FK_BOOK_AUTHORS_AUTHOR: ForeignKey<BookAuthorsRecord, AuthorsRecord> = Internal.createForeignKey(BookAuthors.BOOK_AUTHORS, DSL.name("fk_book_authors_author"), arrayOf(BookAuthors.BOOK_AUTHORS.AUTHOR_ID), io.heapy.kotbusta.jooq.keys.AUTHORS_PKEY, arrayOf(Authors.AUTHORS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val BOOK_AUTHORS__FK_BOOK_AUTHORS_BOOK: ForeignKey<BookAuthorsRecord, BooksRecord> = Internal.createForeignKey(BookAuthors.BOOK_AUTHORS, DSL.name("fk_book_authors_book"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS_PKEY, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val BOOKS__FK_BOOKS_SERIES: ForeignKey<BooksRecord, SeriesRecord> = Internal.createForeignKey(Books.BOOKS, DSL.name("fk_books_series"), arrayOf(Books.BOOKS.SERIES_ID), io.heapy.kotbusta.jooq.keys.SERIES_PKEY, arrayOf(Series.SERIES.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
-val DOWNLOADS__FK_DOWNLOADS_BOOK: ForeignKey<DownloadsRecord, BooksRecord> = Internal.createForeignKey(Downloads.DOWNLOADS, DSL.name("fk_downloads_book"), arrayOf(Downloads.DOWNLOADS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS_PKEY, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val DOWNLOADS__FK_DOWNLOADS_USER: ForeignKey<DownloadsRecord, UsersRecord> = Internal.createForeignKey(Downloads.DOWNLOADS, DSL.name("fk_downloads_user"), arrayOf(Downloads.DOWNLOADS.USER_ID), io.heapy.kotbusta.jooq.keys.USERS_PKEY, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val USER_COMMENTS__FK_USER_COMMENTS_BOOK: ForeignKey<UserCommentsRecord, BooksRecord> = Internal.createForeignKey(UserComments.USER_COMMENTS, DSL.name("fk_user_comments_book"), arrayOf(UserComments.USER_COMMENTS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS_PKEY, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val USER_COMMENTS__FK_USER_COMMENTS_USER: ForeignKey<UserCommentsRecord, UsersRecord> = Internal.createForeignKey(UserComments.USER_COMMENTS, DSL.name("fk_user_comments_user"), arrayOf(UserComments.USER_COMMENTS.USER_ID), io.heapy.kotbusta.jooq.keys.USERS_PKEY, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val USER_NOTES__FK_USER_NOTES_BOOK: ForeignKey<UserNotesRecord, BooksRecord> = Internal.createForeignKey(UserNotes.USER_NOTES, DSL.name("fk_user_notes_book"), arrayOf(UserNotes.USER_NOTES.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS_PKEY, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val USER_NOTES__FK_USER_NOTES_USER: ForeignKey<UserNotesRecord, UsersRecord> = Internal.createForeignKey(UserNotes.USER_NOTES, DSL.name("fk_user_notes_user"), arrayOf(UserNotes.USER_NOTES.USER_ID), io.heapy.kotbusta.jooq.keys.USERS_PKEY, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val USER_STARS__FK_USER_STARS_BOOK: ForeignKey<UserStarsRecord, BooksRecord> = Internal.createForeignKey(UserStars.USER_STARS, DSL.name("fk_user_stars_book"), arrayOf(UserStars.USER_STARS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS_PKEY, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
-val USER_STARS__FK_USER_STARS_USER: ForeignKey<UserStarsRecord, UsersRecord> = Internal.createForeignKey(UserStars.USER_STARS, DSL.name("fk_user_stars_user"), arrayOf(UserStars.USER_STARS.USER_ID), io.heapy.kotbusta.jooq.keys.USERS_PKEY, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS: ForeignKey<BookAuthorsRecord, AuthorsRecord> = Internal.createForeignKey(BookAuthors.BOOK_AUTHORS, DSL.name("fk_BOOK_AUTHORS_pk_AUTHORS"), arrayOf(BookAuthors.BOOK_AUTHORS.AUTHOR_ID), io.heapy.kotbusta.jooq.keys.AUTHORS__PK_AUTHORS, arrayOf(Authors.AUTHORS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS: ForeignKey<BookAuthorsRecord, BooksRecord> = Internal.createForeignKey(BookAuthors.BOOK_AUTHORS, DSL.name("fk_BOOK_AUTHORS_pk_BOOKS"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val BOOKS__FK_BOOKS_PK_SERIES: ForeignKey<BooksRecord, SeriesRecord> = Internal.createForeignKey(Books.BOOKS, DSL.name("fk_BOOKS_pk_SERIES"), arrayOf(Books.BOOKS.SERIES_ID), io.heapy.kotbusta.jooq.keys.SERIES__PK_SERIES, arrayOf(Series.SERIES.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
+val DOWNLOADS__FK_DOWNLOADS_PK_BOOKS: ForeignKey<DownloadsRecord, BooksRecord> = Internal.createForeignKey(Downloads.DOWNLOADS, DSL.name("fk_DOWNLOADS_pk_BOOKS"), arrayOf(Downloads.DOWNLOADS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val DOWNLOADS__FK_DOWNLOADS_PK_USERS: ForeignKey<DownloadsRecord, UsersRecord> = Internal.createForeignKey(Downloads.DOWNLOADS, DSL.name("fk_DOWNLOADS_pk_USERS"), arrayOf(Downloads.DOWNLOADS.USER_ID), io.heapy.kotbusta.jooq.keys.USERS__PK_USERS, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val KINDLE_DEVICES__FK_KINDLE_DEVICES_PK_USERS: ForeignKey<KindleDevicesRecord, UsersRecord> = Internal.createForeignKey(KindleDevices.KINDLE_DEVICES, DSL.name("fk_KINDLE_DEVICES_pk_USERS"), arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID), io.heapy.kotbusta.jooq.keys.USERS__PK_USERS, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val KINDLE_SEND_EVENTS__FK_KINDLE_SEND_EVENTS_PK_KINDLE_SEND_QUEUE: ForeignKey<KindleSendEventsRecord, KindleSendQueueRecord> = Internal.createForeignKey(KindleSendEvents.KINDLE_SEND_EVENTS, DSL.name("fk_KINDLE_SEND_EVENTS_pk_KINDLE_SEND_QUEUE"), arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.QUEUE_ID), io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__PK_KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS: ForeignKey<KindleSendQueueRecord, BooksRecord> = Internal.createForeignKey(KindleSendQueue.KINDLE_SEND_QUEUE, DSL.name("fk_KINDLE_SEND_QUEUE_pk_BOOKS"), arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_KINDLE_DEVICES: ForeignKey<KindleSendQueueRecord, KindleDevicesRecord> = Internal.createForeignKey(KindleSendQueue.KINDLE_SEND_QUEUE, DSL.name("fk_KINDLE_SEND_QUEUE_pk_KINDLE_DEVICES"), arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.DEVICE_ID), io.heapy.kotbusta.jooq.keys.KINDLE_DEVICES__PK_KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS: ForeignKey<KindleSendQueueRecord, UsersRecord> = Internal.createForeignKey(KindleSendQueue.KINDLE_SEND_QUEUE, DSL.name("fk_KINDLE_SEND_QUEUE_pk_USERS"), arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.USER_ID), io.heapy.kotbusta.jooq.keys.USERS__PK_USERS, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS: ForeignKey<UserCommentsRecord, BooksRecord> = Internal.createForeignKey(UserComments.USER_COMMENTS, DSL.name("fk_USER_COMMENTS_pk_BOOKS"), arrayOf(UserComments.USER_COMMENTS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val USER_COMMENTS__FK_USER_COMMENTS_PK_USERS: ForeignKey<UserCommentsRecord, UsersRecord> = Internal.createForeignKey(UserComments.USER_COMMENTS, DSL.name("fk_USER_COMMENTS_pk_USERS"), arrayOf(UserComments.USER_COMMENTS.USER_ID), io.heapy.kotbusta.jooq.keys.USERS__PK_USERS, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val USER_NOTES__FK_USER_NOTES_PK_BOOKS: ForeignKey<UserNotesRecord, BooksRecord> = Internal.createForeignKey(UserNotes.USER_NOTES, DSL.name("fk_USER_NOTES_pk_BOOKS"), arrayOf(UserNotes.USER_NOTES.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val USER_NOTES__FK_USER_NOTES_PK_USERS: ForeignKey<UserNotesRecord, UsersRecord> = Internal.createForeignKey(UserNotes.USER_NOTES, DSL.name("fk_USER_NOTES_pk_USERS"), arrayOf(UserNotes.USER_NOTES.USER_ID), io.heapy.kotbusta.jooq.keys.USERS__PK_USERS, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val USER_STARS__FK_USER_STARS_PK_BOOKS: ForeignKey<UserStarsRecord, BooksRecord> = Internal.createForeignKey(UserStars.USER_STARS, DSL.name("fk_USER_STARS_pk_BOOKS"), arrayOf(UserStars.USER_STARS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val USER_STARS__FK_USER_STARS_PK_USERS: ForeignKey<UserStarsRecord, UsersRecord> = Internal.createForeignKey(UserStars.USER_STARS, DSL.name("fk_USER_STARS_pk_USERS"), arrayOf(UserStars.USER_STARS.USER_ID), io.heapy.kotbusta.jooq.keys.USERS__PK_USERS, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)

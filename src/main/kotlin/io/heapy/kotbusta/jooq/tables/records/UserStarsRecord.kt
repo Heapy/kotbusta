@@ -6,7 +6,7 @@ package io.heapy.kotbusta.jooq.tables.records
 
 import io.heapy.kotbusta.jooq.tables.UserStars
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import org.jooq.Record2
 import org.jooq.impl.UpdatableRecordImpl
@@ -18,28 +18,28 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class UserStarsRecord private constructor() : UpdatableRecordImpl<UserStarsRecord>(UserStars.USER_STARS) {
 
-    open var userId: Long
+    open var userId: Int
         set(value): Unit = set(0, value)
-        get(): Long = get(0) as Long
+        get(): Int = get(0) as Int
 
-    open var bookId: Long
+    open var bookId: Int
         set(value): Unit = set(1, value)
-        get(): Long = get(1) as Long
+        get(): Int = get(1) as Int
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant
         set(value): Unit = set(2, value)
-        get(): OffsetDateTime? = get(2) as OffsetDateTime?
+        get(): Instant = get(2) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record2<Long?, Long?> = super.key() as Record2<Long?, Long?>
+    override fun key(): Record2<Int?, Int?> = super.key() as Record2<Int?, Int?>
 
     /**
      * Create a detached, initialised UserStarsRecord
      */
-    constructor(userId: Long, bookId: Long, createdAt: OffsetDateTime? = null): this() {
+    constructor(userId: Int, bookId: Int, createdAt: Instant): this() {
         this.userId = userId
         this.bookId = bookId
         this.createdAt = createdAt

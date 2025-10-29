@@ -4,15 +4,15 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
-import io.heapy.kotbusta.jooq.keys.USER_STARS_PKEY
-import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_BOOK
-import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_USER
+import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_PK_USERS
+import io.heapy.kotbusta.jooq.keys.USER_STARS__PK_USER_STARS
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.UserStarsRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -54,7 +54,7 @@ open class UserStars(
     where: Condition?
 ): TableImpl<UserStarsRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -67,7 +67,7 @@ open class UserStars(
     companion object {
 
         /**
-         * The reference instance of <code>public.user_stars</code>
+         * The reference instance of <code>USER_STARS</code>
          */
         val USER_STARS: UserStars = UserStars()
     }
@@ -78,38 +78,38 @@ open class UserStars(
     override fun getRecordType(): Class<UserStarsRecord> = UserStarsRecord::class.java
 
     /**
-     * The column <code>public.user_stars.user_id</code>.
+     * The column <code>USER_STARS.USER_ID</code>.
      */
-    val USER_ID: TableField<UserStarsRecord, Long?> = createField(DSL.name("user_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val USER_ID: TableField<UserStarsRecord, Int?> = createField(DSL.name("USER_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_stars.book_id</code>.
+     * The column <code>USER_STARS.BOOK_ID</code>.
      */
-    val BOOK_ID: TableField<UserStarsRecord, Long?> = createField(DSL.name("book_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val BOOK_ID: TableField<UserStarsRecord, Int?> = createField(DSL.name("BOOK_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_stars.created_at</code>.
+     * The column <code>USER_STARS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<UserStarsRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<UserStarsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<UserStarsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UserStarsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<UserStarsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.user_stars</code> table reference
+     * Create an aliased <code>USER_STARS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.user_stars</code> table reference
+     * Create an aliased <code>USER_STARS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.user_stars</code> table reference
+     * Create a <code>USER_STARS</code> table reference
      */
-    constructor(): this(DSL.name("user_stars"), null)
+    constructor(): this(DSL.name("USER_STARS"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, UserStarsRecord>?, parentPath: InverseForeignKey<out Record, UserStarsRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, USER_STARS, null, null)
 
@@ -123,21 +123,21 @@ open class UserStars(
         override fun `as`(alias: Name): UserStarsPath = UserStarsPath(alias, this)
         override fun `as`(alias: Table<*>): UserStarsPath = UserStarsPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getPrimaryKey(): UniqueKey<UserStarsRecord> = USER_STARS_PKEY
-    override fun getReferences(): List<ForeignKey<UserStarsRecord, *>> = listOf(USER_STARS__FK_USER_STARS_BOOK, USER_STARS__FK_USER_STARS_USER)
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
+    override fun getPrimaryKey(): UniqueKey<UserStarsRecord> = USER_STARS__PK_USER_STARS
+    override fun getReferences(): List<ForeignKey<UserStarsRecord, *>> = listOf(USER_STARS__FK_USER_STARS_PK_BOOKS, USER_STARS__FK_USER_STARS_PK_USERS)
 
     /**
-     * Get the implicit join path to the <code>public.books</code> table.
+     * Get the implicit join path to the <code>BOOKS</code> table.
      */
     fun books(): BooksPath = books
-    val books: BooksPath by lazy { BooksPath(this, USER_STARS__FK_USER_STARS_BOOK, null) }
+    val books: BooksPath by lazy { BooksPath(this, USER_STARS__FK_USER_STARS_PK_BOOKS, null) }
 
     /**
-     * Get the implicit join path to the <code>public.users</code> table.
+     * Get the implicit join path to the <code>USERS</code> table.
      */
     fun users(): UsersPath = users
-    val users: UsersPath by lazy { UsersPath(this, USER_STARS__FK_USER_STARS_USER, null) }
+    val users: UsersPath by lazy { UsersPath(this, USER_STARS__FK_USER_STARS_PK_USERS, null) }
     override fun `as`(alias: String): UserStars = UserStars(DSL.name(alias), this)
     override fun `as`(alias: Name): UserStars = UserStars(alias, this)
     override fun `as`(alias: Table<*>): UserStars = UserStars(alias.qualifiedName, this)

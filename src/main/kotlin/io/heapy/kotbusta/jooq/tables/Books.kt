@@ -4,21 +4,23 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
+import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_GENRE
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_LANGUAGE
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_SERIES
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_TITLE
-import io.heapy.kotbusta.jooq.keys.BOOKS_PKEY
-import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_SERIES
-import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_BOOK
-import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_BOOK
-import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_BOOK
-import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_BOOK
-import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_BOOK
+import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_PK_SERIES
+import io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_PK_BOOKS
 import io.heapy.kotbusta.jooq.tables.Authors.AuthorsPath
 import io.heapy.kotbusta.jooq.tables.BookAuthors.BookAuthorsPath
 import io.heapy.kotbusta.jooq.tables.Downloads.DownloadsPath
+import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
 import io.heapy.kotbusta.jooq.tables.Series.SeriesPath
 import io.heapy.kotbusta.jooq.tables.UserComments.UserCommentsPath
 import io.heapy.kotbusta.jooq.tables.UserNotes.UserNotesPath
@@ -26,7 +28,7 @@ import io.heapy.kotbusta.jooq.tables.UserStars.UserStarsPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -69,7 +71,7 @@ open class Books(
     where: Condition?
 ): TableImpl<BooksRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -82,7 +84,7 @@ open class Books(
     companion object {
 
         /**
-         * The reference instance of <code>public.books</code>
+         * The reference instance of <code>BOOKS</code>
          */
         val BOOKS: Books = Books()
     }
@@ -93,88 +95,88 @@ open class Books(
     override fun getRecordType(): Class<BooksRecord> = BooksRecord::class.java
 
     /**
-     * The column <code>public.books.id</code>.
+     * The column <code>BOOKS.ID</code>.
      */
-    val ID: TableField<BooksRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val ID: TableField<BooksRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER, this, "")
 
     /**
-     * The column <code>public.books.title</code>.
+     * The column <code>BOOKS.TITLE</code>.
      */
-    val TITLE: TableField<BooksRecord, String?> = createField(DSL.name("title"), SQLDataType.CLOB.nullable(false), this, "")
+    val TITLE: TableField<BooksRecord, String?> = createField(DSL.name("TITLE"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.books.annotation</code>.
+     * The column <code>BOOKS.ANNOTATION</code>.
      */
-    val ANNOTATION: TableField<BooksRecord, String?> = createField(DSL.name("annotation"), SQLDataType.CLOB, this, "")
+    val ANNOTATION: TableField<BooksRecord, String?> = createField(DSL.name("ANNOTATION"), SQLDataType.CLOB, this, "")
 
     /**
-     * The column <code>public.books.genre</code>.
+     * The column <code>BOOKS.GENRE</code>.
      */
-    val GENRE: TableField<BooksRecord, String?> = createField(DSL.name("genre"), SQLDataType.CLOB, this, "")
+    val GENRE: TableField<BooksRecord, String?> = createField(DSL.name("GENRE"), SQLDataType.CLOB, this, "")
 
     /**
-     * The column <code>public.books.language</code>.
+     * The column <code>BOOKS.LANGUAGE</code>.
      */
-    val LANGUAGE: TableField<BooksRecord, String?> = createField(DSL.name("language"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'RU'::text"), SQLDataType.CLOB)), this, "")
+    val LANGUAGE: TableField<BooksRecord, String?> = createField(DSL.name("LANGUAGE"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'RU'"), SQLDataType.CLOB)), this, "")
 
     /**
-     * The column <code>public.books.series_id</code>.
+     * The column <code>BOOKS.SERIES_ID</code>.
      */
-    val SERIES_ID: TableField<BooksRecord, Long?> = createField(DSL.name("series_id"), SQLDataType.BIGINT, this, "")
+    val SERIES_ID: TableField<BooksRecord, Int?> = createField(DSL.name("SERIES_ID"), SQLDataType.INTEGER, this, "")
 
     /**
-     * The column <code>public.books.series_number</code>.
+     * The column <code>BOOKS.SERIES_NUMBER</code>.
      */
-    val SERIES_NUMBER: TableField<BooksRecord, Int?> = createField(DSL.name("series_number"), SQLDataType.INTEGER, this, "")
+    val SERIES_NUMBER: TableField<BooksRecord, Int?> = createField(DSL.name("SERIES_NUMBER"), SQLDataType.INTEGER, this, "")
 
     /**
-     * The column <code>public.books.file_path</code>.
+     * The column <code>BOOKS.FILE_PATH</code>.
      */
-    val FILE_PATH: TableField<BooksRecord, String?> = createField(DSL.name("file_path"), SQLDataType.CLOB.nullable(false), this, "")
+    val FILE_PATH: TableField<BooksRecord, String?> = createField(DSL.name("FILE_PATH"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.books.archive_path</code>.
+     * The column <code>BOOKS.ARCHIVE_PATH</code>.
      */
-    val ARCHIVE_PATH: TableField<BooksRecord, String?> = createField(DSL.name("archive_path"), SQLDataType.CLOB.nullable(false), this, "")
+    val ARCHIVE_PATH: TableField<BooksRecord, String?> = createField(DSL.name("ARCHIVE_PATH"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.books.file_size</code>.
+     * The column <code>BOOKS.FILE_SIZE</code>.
      */
-    val FILE_SIZE: TableField<BooksRecord, Long?> = createField(DSL.name("file_size"), SQLDataType.BIGINT, this, "")
+    val FILE_SIZE: TableField<BooksRecord, Int?> = createField(DSL.name("FILE_SIZE"), SQLDataType.INTEGER, this, "")
 
     /**
-     * The column <code>public.books.date_added</code>.
+     * The column <code>BOOKS.DATE_ADDED</code>.
      */
-    val DATE_ADDED: TableField<BooksRecord, OffsetDateTime?> = createField(DSL.name("date_added"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "")
+    val DATE_ADDED: TableField<BooksRecord, Instant?> = createField(DSL.name("DATE_ADDED"), SQLDataType.INSTANT.nullable(false), this, "")
 
     /**
-     * The column <code>public.books.cover_image</code>.
+     * The column <code>BOOKS.COVER_IMAGE</code>.
      */
-    val COVER_IMAGE: TableField<BooksRecord, ByteArray?> = createField(DSL.name("cover_image"), SQLDataType.BLOB, this, "")
+    val COVER_IMAGE: TableField<BooksRecord, ByteArray?> = createField(DSL.name("COVER_IMAGE"), SQLDataType.BLOB, this, "")
 
     /**
-     * The column <code>public.books.created_at</code>.
+     * The column <code>BOOKS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<BooksRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<BooksRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<BooksRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<BooksRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<BooksRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.books</code> table reference
+     * Create an aliased <code>BOOKS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.books</code> table reference
+     * Create an aliased <code>BOOKS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.books</code> table reference
+     * Create a <code>BOOKS</code> table reference
      */
-    constructor(): this(DSL.name("books"), null)
+    constructor(): this(DSL.name("BOOKS"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, BooksRecord>?, parentPath: InverseForeignKey<out Record, BooksRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, BOOKS, null, null)
 
@@ -188,26 +190,25 @@ open class Books(
         override fun `as`(alias: Name): BooksPath = BooksPath(alias, this)
         override fun `as`(alias: Table<*>): BooksPath = BooksPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
     override fun getIndexes(): List<Index> = listOf(IDX_BOOKS_GENRE, IDX_BOOKS_LANGUAGE, IDX_BOOKS_SERIES, IDX_BOOKS_TITLE)
-    override fun getPrimaryKey(): UniqueKey<BooksRecord> = BOOKS_PKEY
-    override fun getReferences(): List<ForeignKey<BooksRecord, *>> = listOf(BOOKS__FK_BOOKS_SERIES)
+    override fun getPrimaryKey(): UniqueKey<BooksRecord> = BOOKS__PK_BOOKS
+    override fun getReferences(): List<ForeignKey<BooksRecord, *>> = listOf(BOOKS__FK_BOOKS_PK_SERIES)
 
     /**
-     * Get the implicit join path to the <code>public.series</code> table.
+     * Get the implicit join path to the <code>SERIES</code> table.
      */
     fun series(): SeriesPath = series
-    val series: SeriesPath by lazy { SeriesPath(this, BOOKS__FK_BOOKS_SERIES, null) }
+    val series: SeriesPath by lazy { SeriesPath(this, BOOKS__FK_BOOKS_PK_SERIES, null) }
 
     private lateinit var _bookAuthors: BookAuthorsPath
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.book_authors</code> table
+     * Get the implicit to-many join path to the <code>BOOK_AUTHORS</code> table
      */
     fun bookAuthors(): BookAuthorsPath {
         if (!this::_bookAuthors.isInitialized)
-            _bookAuthors = BookAuthorsPath(this, null, BOOK_AUTHORS__FK_BOOK_AUTHORS_BOOK.inverseKey)
+            _bookAuthors = BookAuthorsPath(this, null, BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS.inverseKey)
 
         return _bookAuthors;
     }
@@ -218,12 +219,11 @@ open class Books(
     private lateinit var _downloads: DownloadsPath
 
     /**
-     * Get the implicit to-many join path to the <code>public.downloads</code>
-     * table
+     * Get the implicit to-many join path to the <code>DOWNLOADS</code> table
      */
     fun downloads(): DownloadsPath {
         if (!this::_downloads.isInitialized)
-            _downloads = DownloadsPath(this, null, DOWNLOADS__FK_DOWNLOADS_BOOK.inverseKey)
+            _downloads = DownloadsPath(this, null, DOWNLOADS__FK_DOWNLOADS_PK_BOOKS.inverseKey)
 
         return _downloads;
     }
@@ -231,15 +231,31 @@ open class Books(
     val downloads: DownloadsPath
         get(): DownloadsPath = downloads()
 
+    private lateinit var _kindleSendQueue: KindleSendQueuePath
+
+    /**
+     * Get the implicit to-many join path to the <code>KINDLE_SEND_QUEUE</code>
+     * table
+     */
+    fun kindleSendQueue(): KindleSendQueuePath {
+        if (!this::_kindleSendQueue.isInitialized)
+            _kindleSendQueue = KindleSendQueuePath(this, null, KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS.inverseKey)
+
+        return _kindleSendQueue;
+    }
+
+    val kindleSendQueue: KindleSendQueuePath
+        get(): KindleSendQueuePath = kindleSendQueue()
+
     private lateinit var _userComments: UserCommentsPath
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.user_comments</code> table
+     * Get the implicit to-many join path to the <code>USER_COMMENTS</code>
+     * table
      */
     fun userComments(): UserCommentsPath {
         if (!this::_userComments.isInitialized)
-            _userComments = UserCommentsPath(this, null, USER_COMMENTS__FK_USER_COMMENTS_BOOK.inverseKey)
+            _userComments = UserCommentsPath(this, null, USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS.inverseKey)
 
         return _userComments;
     }
@@ -250,12 +266,11 @@ open class Books(
     private lateinit var _userNotes: UserNotesPath
 
     /**
-     * Get the implicit to-many join path to the <code>public.user_notes</code>
-     * table
+     * Get the implicit to-many join path to the <code>USER_NOTES</code> table
      */
     fun userNotes(): UserNotesPath {
         if (!this::_userNotes.isInitialized)
-            _userNotes = UserNotesPath(this, null, USER_NOTES__FK_USER_NOTES_BOOK.inverseKey)
+            _userNotes = UserNotesPath(this, null, USER_NOTES__FK_USER_NOTES_PK_BOOKS.inverseKey)
 
         return _userNotes;
     }
@@ -266,12 +281,11 @@ open class Books(
     private lateinit var _userStars: UserStarsPath
 
     /**
-     * Get the implicit to-many join path to the <code>public.user_stars</code>
-     * table
+     * Get the implicit to-many join path to the <code>USER_STARS</code> table
      */
     fun userStars(): UserStarsPath {
         if (!this::_userStars.isInitialized)
-            _userStars = UserStarsPath(this, null, USER_STARS__FK_USER_STARS_BOOK.inverseKey)
+            _userStars = UserStarsPath(this, null, USER_STARS__FK_USER_STARS_PK_BOOKS.inverseKey)
 
         return _userStars;
     }
@@ -280,15 +294,13 @@ open class Books(
         get(): UserStarsPath = userStars()
 
     /**
-     * Get the implicit many-to-many join path to the
-     * <code>public.authors</code> table
+     * Get the implicit many-to-many join path to the <code>AUTHORS</code> table
      */
     val authors: AuthorsPath
         get(): AuthorsPath = bookAuthors().authors()
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.users</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>USERS</code> table
      */
     val users: UsersPath
         get(): UsersPath = userStars().users()

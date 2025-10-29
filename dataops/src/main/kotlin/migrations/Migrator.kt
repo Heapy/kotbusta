@@ -6,6 +6,8 @@ import migrations.model.MigrationResult
 import java.sql.Connection
 import javax.sql.DataSource
 
+const val next = "-- migrator separator --"
+
 class Migrator(
     private val dataSource: DataSource,
 ) {
@@ -97,19 +99,28 @@ class Migrator(
     }
 
     private fun applyMigration(connection: Connection, migration: Migration) {
+        // Split by separator and execute each statement
+        val statements = migration.script
+            .split(next)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+
         connection.createStatement().use { stmt ->
-            stmt.execute(migration.script)
+            statements.forEach { sql ->
+                stmt.execute(sql)
+            }
         }
     }
 
     private fun recordMigration(connection: Connection, migration: Migration) {
         val sql = """
             INSERT INTO $MIGRATION_TABLE (version, installed_at)
-            VALUES (?, datetime('now'))
+            VALUES (?, ?)
         """.trimIndent()
 
         connection.prepareStatement(sql).use { stmt ->
             stmt.setInt(1, migration.version)
+            stmt.setString(2, java.time.Instant.now().toString())
             stmt.executeUpdate()
         }
     }

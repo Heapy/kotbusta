@@ -4,17 +4,17 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
+import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.indexes.IDX_USER_COMMENTS_BOOK
 import io.heapy.kotbusta.jooq.indexes.IDX_USER_COMMENTS_USER
-import io.heapy.kotbusta.jooq.keys.USER_COMMENTS_PKEY
-import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_BOOK
-import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_USER
+import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_USERS
+import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__PK_USER_COMMENTS
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.UserCommentsRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -58,7 +58,7 @@ open class UserComments(
     where: Condition?
 ): TableImpl<UserCommentsRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -71,7 +71,7 @@ open class UserComments(
     companion object {
 
         /**
-         * The reference instance of <code>public.user_comments</code>
+         * The reference instance of <code>USER_COMMENTS</code>
          */
         val USER_COMMENTS: UserComments = UserComments()
     }
@@ -82,53 +82,53 @@ open class UserComments(
     override fun getRecordType(): Class<UserCommentsRecord> = UserCommentsRecord::class.java
 
     /**
-     * The column <code>public.user_comments.id</code>.
+     * The column <code>USER_COMMENTS.ID</code>.
      */
-    val ID: TableField<UserCommentsRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false).identity(true), this, "")
+    val ID: TableField<UserCommentsRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>public.user_comments.user_id</code>.
+     * The column <code>USER_COMMENTS.USER_ID</code>.
      */
-    val USER_ID: TableField<UserCommentsRecord, Long?> = createField(DSL.name("user_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val USER_ID: TableField<UserCommentsRecord, Int?> = createField(DSL.name("USER_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_comments.book_id</code>.
+     * The column <code>USER_COMMENTS.BOOK_ID</code>.
      */
-    val BOOK_ID: TableField<UserCommentsRecord, Long?> = createField(DSL.name("book_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val BOOK_ID: TableField<UserCommentsRecord, Int?> = createField(DSL.name("BOOK_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_comments.comment</code>.
+     * The column <code>USER_COMMENTS.COMMENT</code>.
      */
-    val COMMENT: TableField<UserCommentsRecord, String?> = createField(DSL.name("comment"), SQLDataType.CLOB.nullable(false), this, "")
+    val COMMENT: TableField<UserCommentsRecord, String?> = createField(DSL.name("COMMENT"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_comments.created_at</code>.
+     * The column <code>USER_COMMENTS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<UserCommentsRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<UserCommentsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_comments.updated_at</code>.
+     * The column <code>USER_COMMENTS.UPDATED_AT</code>.
      */
-    val UPDATED_AT: TableField<UserCommentsRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val UPDATED_AT: TableField<UserCommentsRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<UserCommentsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UserCommentsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<UserCommentsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.user_comments</code> table reference
+     * Create an aliased <code>USER_COMMENTS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.user_comments</code> table reference
+     * Create an aliased <code>USER_COMMENTS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.user_comments</code> table reference
+     * Create a <code>USER_COMMENTS</code> table reference
      */
-    constructor(): this(DSL.name("user_comments"), null)
+    constructor(): this(DSL.name("USER_COMMENTS"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, UserCommentsRecord>?, parentPath: InverseForeignKey<out Record, UserCommentsRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, USER_COMMENTS, null, null)
 
@@ -142,23 +142,23 @@ open class UserComments(
         override fun `as`(alias: Name): UserCommentsPath = UserCommentsPath(alias, this)
         override fun `as`(alias: Table<*>): UserCommentsPath = UserCommentsPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
     override fun getIndexes(): List<Index> = listOf(IDX_USER_COMMENTS_BOOK, IDX_USER_COMMENTS_USER)
-    override fun getIdentity(): Identity<UserCommentsRecord, Long?> = super.getIdentity() as Identity<UserCommentsRecord, Long?>
-    override fun getPrimaryKey(): UniqueKey<UserCommentsRecord> = USER_COMMENTS_PKEY
-    override fun getReferences(): List<ForeignKey<UserCommentsRecord, *>> = listOf(USER_COMMENTS__FK_USER_COMMENTS_BOOK, USER_COMMENTS__FK_USER_COMMENTS_USER)
+    override fun getIdentity(): Identity<UserCommentsRecord, Int?> = super.getIdentity() as Identity<UserCommentsRecord, Int?>
+    override fun getPrimaryKey(): UniqueKey<UserCommentsRecord> = USER_COMMENTS__PK_USER_COMMENTS
+    override fun getReferences(): List<ForeignKey<UserCommentsRecord, *>> = listOf(USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS, USER_COMMENTS__FK_USER_COMMENTS_PK_USERS)
 
     /**
-     * Get the implicit join path to the <code>public.books</code> table.
+     * Get the implicit join path to the <code>BOOKS</code> table.
      */
     fun books(): BooksPath = books
-    val books: BooksPath by lazy { BooksPath(this, USER_COMMENTS__FK_USER_COMMENTS_BOOK, null) }
+    val books: BooksPath by lazy { BooksPath(this, USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS, null) }
 
     /**
-     * Get the implicit join path to the <code>public.users</code> table.
+     * Get the implicit join path to the <code>USERS</code> table.
      */
     fun users(): UsersPath = users
-    val users: UsersPath by lazy { UsersPath(this, USER_COMMENTS__FK_USER_COMMENTS_USER, null) }
+    val users: UsersPath by lazy { UsersPath(this, USER_COMMENTS__FK_USER_COMMENTS_PK_USERS, null) }
     override fun `as`(alias: String): UserComments = UserComments(DSL.name(alias), this)
     override fun `as`(alias: Name): UserComments = UserComments(alias, this)
     override fun `as`(alias: Table<*>): UserComments = UserComments(alias.qualifiedName, this)

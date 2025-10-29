@@ -10,6 +10,9 @@ import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
 import io.heapy.kotbusta.jooq.tables.ImportJobs
+import io.heapy.kotbusta.jooq.tables.KindleDevices
+import io.heapy.kotbusta.jooq.tables.KindleSendEvents
+import io.heapy.kotbusta.jooq.tables.KindleSendQueue
 import io.heapy.kotbusta.jooq.tables.Series
 import io.heapy.kotbusta.jooq.tables.UserComments
 import io.heapy.kotbusta.jooq.tables.UserNotes
@@ -19,51 +22,66 @@ import io.heapy.kotbusta.jooq.tables.Users
 
 
 /**
- * The table <code>public.authors</code>.
+ * The table <code>AUTHORS</code>.
  */
 val AUTHORS: Authors = Authors.AUTHORS
 
 /**
- * The table <code>public.book_authors</code>.
+ * The table <code>BOOK_AUTHORS</code>.
  */
 val BOOK_AUTHORS: BookAuthors = BookAuthors.BOOK_AUTHORS
 
 /**
- * The table <code>public.books</code>.
+ * The table <code>BOOKS</code>.
  */
 val BOOKS: Books = Books.BOOKS
 
 /**
- * The table <code>public.downloads</code>.
+ * The table <code>DOWNLOADS</code>.
  */
 val DOWNLOADS: Downloads = Downloads.DOWNLOADS
 
 /**
- * The table <code>public.import_jobs</code>.
+ * The table <code>IMPORT_JOBS</code>.
  */
 val IMPORT_JOBS: ImportJobs = ImportJobs.IMPORT_JOBS
 
 /**
- * The table <code>public.series</code>.
+ * The table <code>KINDLE_DEVICES</code>.
+ */
+val KINDLE_DEVICES: KindleDevices = KindleDevices.KINDLE_DEVICES
+
+/**
+ * The table <code>KINDLE_SEND_EVENTS</code>.
+ */
+val KINDLE_SEND_EVENTS: KindleSendEvents = KindleSendEvents.KINDLE_SEND_EVENTS
+
+/**
+ * The table <code>KINDLE_SEND_QUEUE</code>.
+ */
+val KINDLE_SEND_QUEUE: KindleSendQueue = KindleSendQueue.KINDLE_SEND_QUEUE
+
+/**
+ * The table <code>SERIES</code>.
  */
 val SERIES: Series = Series.SERIES
 
 /**
- * The table <code>public.user_comments</code>.
+ * The table <code>USER_COMMENTS</code>.
  */
 val USER_COMMENTS: UserComments = UserComments.USER_COMMENTS
 
 /**
- * The table <code>public.user_notes</code>.
+ * The table <code>USER_NOTES</code>.
  */
 val USER_NOTES: UserNotes = UserNotes.USER_NOTES
 
 /**
- * The table <code>public.user_stars</code>.
+ * The table <code>USER_STARS</code>.
  */
 val USER_STARS: UserStars = UserStars.USER_STARS
 
 /**
- * The table <code>public.users</code>.
+ * The table <code>USERS</code>.
  */
 val USERS: Users = Users.USERS

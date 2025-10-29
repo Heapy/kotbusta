@@ -4,10 +4,10 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
-import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS_PKEY
-import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_AUTHOR
-import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_BOOK
+import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS
+import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__PK_BOOK_AUTHORS
 import io.heapy.kotbusta.jooq.tables.Authors.AuthorsPath
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.records.BookAuthorsRecord
@@ -52,7 +52,7 @@ open class BookAuthors(
     where: Condition?
 ): TableImpl<BookAuthorsRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -65,7 +65,7 @@ open class BookAuthors(
     companion object {
 
         /**
-         * The reference instance of <code>public.book_authors</code>
+         * The reference instance of <code>BOOK_AUTHORS</code>
          */
         val BOOK_AUTHORS: BookAuthors = BookAuthors()
     }
@@ -76,33 +76,33 @@ open class BookAuthors(
     override fun getRecordType(): Class<BookAuthorsRecord> = BookAuthorsRecord::class.java
 
     /**
-     * The column <code>public.book_authors.book_id</code>.
+     * The column <code>BOOK_AUTHORS.BOOK_ID</code>.
      */
-    val BOOK_ID: TableField<BookAuthorsRecord, Long?> = createField(DSL.name("book_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val BOOK_ID: TableField<BookAuthorsRecord, Int?> = createField(DSL.name("BOOK_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.book_authors.author_id</code>.
+     * The column <code>BOOK_AUTHORS.AUTHOR_ID</code>.
      */
-    val AUTHOR_ID: TableField<BookAuthorsRecord, Long?> = createField(DSL.name("author_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val AUTHOR_ID: TableField<BookAuthorsRecord, Int?> = createField(DSL.name("AUTHOR_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<BookAuthorsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<BookAuthorsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<BookAuthorsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.book_authors</code> table reference
+     * Create an aliased <code>BOOK_AUTHORS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.book_authors</code> table reference
+     * Create an aliased <code>BOOK_AUTHORS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.book_authors</code> table reference
+     * Create a <code>BOOK_AUTHORS</code> table reference
      */
-    constructor(): this(DSL.name("book_authors"), null)
+    constructor(): this(DSL.name("BOOK_AUTHORS"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, BookAuthorsRecord>?, parentPath: InverseForeignKey<out Record, BookAuthorsRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, BOOK_AUTHORS, null, null)
 
@@ -116,21 +116,21 @@ open class BookAuthors(
         override fun `as`(alias: Name): BookAuthorsPath = BookAuthorsPath(alias, this)
         override fun `as`(alias: Table<*>): BookAuthorsPath = BookAuthorsPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getPrimaryKey(): UniqueKey<BookAuthorsRecord> = BOOK_AUTHORS_PKEY
-    override fun getReferences(): List<ForeignKey<BookAuthorsRecord, *>> = listOf(BOOK_AUTHORS__FK_BOOK_AUTHORS_AUTHOR, BOOK_AUTHORS__FK_BOOK_AUTHORS_BOOK)
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
+    override fun getPrimaryKey(): UniqueKey<BookAuthorsRecord> = BOOK_AUTHORS__PK_BOOK_AUTHORS
+    override fun getReferences(): List<ForeignKey<BookAuthorsRecord, *>> = listOf(BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS, BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS)
 
     /**
-     * Get the implicit join path to the <code>public.authors</code> table.
+     * Get the implicit join path to the <code>AUTHORS</code> table.
      */
     fun authors(): AuthorsPath = authors
-    val authors: AuthorsPath by lazy { AuthorsPath(this, BOOK_AUTHORS__FK_BOOK_AUTHORS_AUTHOR, null) }
+    val authors: AuthorsPath by lazy { AuthorsPath(this, BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS, null) }
 
     /**
-     * Get the implicit join path to the <code>public.books</code> table.
+     * Get the implicit join path to the <code>BOOKS</code> table.
      */
     fun books(): BooksPath = books
-    val books: BooksPath by lazy { BooksPath(this, BOOK_AUTHORS__FK_BOOK_AUTHORS_BOOK, null) }
+    val books: BooksPath by lazy { BooksPath(this, BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS, null) }
     override fun `as`(alias: String): BookAuthors = BookAuthors(DSL.name(alias), this)
     override fun `as`(alias: Name): BookAuthors = BookAuthors(alias, this)
     override fun `as`(alias: Table<*>): BookAuthors = BookAuthors(alias.qualifiedName, this)

@@ -4,16 +4,16 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
+import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.indexes.IDX_DOWNLOADS_RECENT
-import io.heapy.kotbusta.jooq.keys.DOWNLOADS_PKEY
-import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_BOOK
-import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_USER
+import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_USERS
+import io.heapy.kotbusta.jooq.keys.DOWNLOADS__PK_DOWNLOADS
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.DownloadsRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -57,7 +57,7 @@ open class Downloads(
     where: Condition?
 ): TableImpl<DownloadsRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -70,7 +70,7 @@ open class Downloads(
     companion object {
 
         /**
-         * The reference instance of <code>public.downloads</code>
+         * The reference instance of <code>DOWNLOADS</code>
          */
         val DOWNLOADS: Downloads = Downloads()
     }
@@ -81,48 +81,48 @@ open class Downloads(
     override fun getRecordType(): Class<DownloadsRecord> = DownloadsRecord::class.java
 
     /**
-     * The column <code>public.downloads.id</code>.
+     * The column <code>DOWNLOADS.ID</code>.
      */
-    val ID: TableField<DownloadsRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false).identity(true), this, "")
+    val ID: TableField<DownloadsRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>public.downloads.user_id</code>.
+     * The column <code>DOWNLOADS.USER_ID</code>.
      */
-    val USER_ID: TableField<DownloadsRecord, Long?> = createField(DSL.name("user_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val USER_ID: TableField<DownloadsRecord, Int?> = createField(DSL.name("USER_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.downloads.book_id</code>.
+     * The column <code>DOWNLOADS.BOOK_ID</code>.
      */
-    val BOOK_ID: TableField<DownloadsRecord, Long?> = createField(DSL.name("book_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val BOOK_ID: TableField<DownloadsRecord, Int?> = createField(DSL.name("BOOK_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.downloads.format</code>.
+     * The column <code>DOWNLOADS.FORMAT</code>.
      */
-    val FORMAT: TableField<DownloadsRecord, String?> = createField(DSL.name("format"), SQLDataType.CLOB.nullable(false), this, "")
+    val FORMAT: TableField<DownloadsRecord, String?> = createField(DSL.name("FORMAT"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.downloads.created_at</code>.
+     * The column <code>DOWNLOADS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<DownloadsRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<DownloadsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<DownloadsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<DownloadsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<DownloadsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.downloads</code> table reference
+     * Create an aliased <code>DOWNLOADS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.downloads</code> table reference
+     * Create an aliased <code>DOWNLOADS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.downloads</code> table reference
+     * Create a <code>DOWNLOADS</code> table reference
      */
-    constructor(): this(DSL.name("downloads"), null)
+    constructor(): this(DSL.name("DOWNLOADS"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, DownloadsRecord>?, parentPath: InverseForeignKey<out Record, DownloadsRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, DOWNLOADS, null, null)
 
@@ -136,23 +136,23 @@ open class Downloads(
         override fun `as`(alias: Name): DownloadsPath = DownloadsPath(alias, this)
         override fun `as`(alias: Table<*>): DownloadsPath = DownloadsPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
     override fun getIndexes(): List<Index> = listOf(IDX_DOWNLOADS_RECENT)
-    override fun getIdentity(): Identity<DownloadsRecord, Long?> = super.getIdentity() as Identity<DownloadsRecord, Long?>
-    override fun getPrimaryKey(): UniqueKey<DownloadsRecord> = DOWNLOADS_PKEY
-    override fun getReferences(): List<ForeignKey<DownloadsRecord, *>> = listOf(DOWNLOADS__FK_DOWNLOADS_BOOK, DOWNLOADS__FK_DOWNLOADS_USER)
+    override fun getIdentity(): Identity<DownloadsRecord, Int?> = super.getIdentity() as Identity<DownloadsRecord, Int?>
+    override fun getPrimaryKey(): UniqueKey<DownloadsRecord> = DOWNLOADS__PK_DOWNLOADS
+    override fun getReferences(): List<ForeignKey<DownloadsRecord, *>> = listOf(DOWNLOADS__FK_DOWNLOADS_PK_BOOKS, DOWNLOADS__FK_DOWNLOADS_PK_USERS)
 
     /**
-     * Get the implicit join path to the <code>public.books</code> table.
+     * Get the implicit join path to the <code>BOOKS</code> table.
      */
     fun books(): BooksPath = books
-    val books: BooksPath by lazy { BooksPath(this, DOWNLOADS__FK_DOWNLOADS_BOOK, null) }
+    val books: BooksPath by lazy { BooksPath(this, DOWNLOADS__FK_DOWNLOADS_PK_BOOKS, null) }
 
     /**
-     * Get the implicit join path to the <code>public.users</code> table.
+     * Get the implicit join path to the <code>USERS</code> table.
      */
     fun users(): UsersPath = users
-    val users: UsersPath by lazy { UsersPath(this, DOWNLOADS__FK_DOWNLOADS_USER, null) }
+    val users: UsersPath by lazy { UsersPath(this, DOWNLOADS__FK_DOWNLOADS_PK_USERS, null) }
     override fun `as`(alias: String): Downloads = Downloads(DSL.name(alias), this)
     override fun `as`(alias: Name): Downloads = Downloads(alias, this)
     override fun `as`(alias: Table<*>): Downloads = Downloads(alias.qualifiedName, this)

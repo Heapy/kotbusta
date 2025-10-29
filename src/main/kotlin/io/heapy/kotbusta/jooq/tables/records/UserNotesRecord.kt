@@ -6,7 +6,7 @@ package io.heapy.kotbusta.jooq.tables.records
 
 import io.heapy.kotbusta.jooq.tables.UserNotes
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -18,17 +18,17 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class UserNotesRecord private constructor() : UpdatableRecordImpl<UserNotesRecord>(UserNotes.USER_NOTES) {
 
-    open var id: Long?
+    open var id: Int?
         set(value): Unit = set(0, value)
-        get(): Long? = get(0) as Long?
+        get(): Int? = get(0) as Int?
 
-    open var userId: Long
+    open var userId: Int
         set(value): Unit = set(1, value)
-        get(): Long = get(1) as Long
+        get(): Int = get(1) as Int
 
-    open var bookId: Long
+    open var bookId: Int
         set(value): Unit = set(2, value)
-        get(): Long = get(2) as Long
+        get(): Int = get(2) as Int
 
     open var note: String
         set(value): Unit = set(3, value)
@@ -36,28 +36,28 @@ open class UserNotesRecord private constructor() : UpdatableRecordImpl<UserNotes
 
     @Suppress("INAPPLICABLE_JVM_NAME")
     @set:JvmName("setIsPrivate")
-    open var isPrivate: Boolean?
+    open var isPrivate: Int?
         set(value): Unit = set(4, value)
-        get(): Boolean? = get(4) as Boolean?
+        get(): Int? = get(4) as Int?
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant
         set(value): Unit = set(5, value)
-        get(): OffsetDateTime? = get(5) as OffsetDateTime?
+        get(): Instant = get(5) as Instant
 
-    open var updatedAt: OffsetDateTime?
+    open var updatedAt: Instant
         set(value): Unit = set(6, value)
-        get(): OffsetDateTime? = get(6) as OffsetDateTime?
+        get(): Instant = get(6) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<Long?> = super.key() as Record1<Long?>
+    override fun key(): Record1<Int?> = super.key() as Record1<Int?>
 
     /**
      * Create a detached, initialised UserNotesRecord
      */
-    constructor(id: Long? = null, userId: Long, bookId: Long, note: String, isPrivate: Boolean? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: Int? = null, userId: Int, bookId: Int, note: String, isPrivate: Int? = null, createdAt: Instant, updatedAt: Instant): this() {
         this.id = id
         this.userId = userId
         this.bookId = bookId

@@ -4,15 +4,15 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
-import io.heapy.kotbusta.jooq.keys.USER_NOTES_PKEY
-import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_BOOK
-import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_USER
+import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_PK_USERS
+import io.heapy.kotbusta.jooq.keys.USER_NOTES__PK_USER_NOTES
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.UserNotesRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -55,7 +55,7 @@ open class UserNotes(
     where: Condition?
 ): TableImpl<UserNotesRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -68,7 +68,7 @@ open class UserNotes(
     companion object {
 
         /**
-         * The reference instance of <code>public.user_notes</code>
+         * The reference instance of <code>USER_NOTES</code>
          */
         val USER_NOTES: UserNotes = UserNotes()
     }
@@ -79,58 +79,58 @@ open class UserNotes(
     override fun getRecordType(): Class<UserNotesRecord> = UserNotesRecord::class.java
 
     /**
-     * The column <code>public.user_notes.id</code>.
+     * The column <code>USER_NOTES.ID</code>.
      */
-    val ID: TableField<UserNotesRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false).identity(true), this, "")
+    val ID: TableField<UserNotesRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>public.user_notes.user_id</code>.
+     * The column <code>USER_NOTES.USER_ID</code>.
      */
-    val USER_ID: TableField<UserNotesRecord, Long?> = createField(DSL.name("user_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val USER_ID: TableField<UserNotesRecord, Int?> = createField(DSL.name("USER_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_notes.book_id</code>.
+     * The column <code>USER_NOTES.BOOK_ID</code>.
      */
-    val BOOK_ID: TableField<UserNotesRecord, Long?> = createField(DSL.name("book_id"), SQLDataType.BIGINT.nullable(false), this, "")
+    val BOOK_ID: TableField<UserNotesRecord, Int?> = createField(DSL.name("BOOK_ID"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_notes.note</code>.
+     * The column <code>USER_NOTES.NOTE</code>.
      */
-    val NOTE: TableField<UserNotesRecord, String?> = createField(DSL.name("note"), SQLDataType.CLOB.nullable(false), this, "")
+    val NOTE: TableField<UserNotesRecord, String?> = createField(DSL.name("NOTE"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_notes.is_private</code>.
+     * The column <code>USER_NOTES.IS_PRIVATE</code>.
      */
-    val IS_PRIVATE: TableField<UserNotesRecord, Boolean?> = createField(DSL.name("is_private"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("true"), SQLDataType.BOOLEAN)), this, "")
+    val IS_PRIVATE: TableField<UserNotesRecord, Int?> = createField(DSL.name("IS_PRIVATE"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.user_notes.created_at</code>.
+     * The column <code>USER_NOTES.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<UserNotesRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<UserNotesRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     /**
-     * The column <code>public.user_notes.updated_at</code>.
+     * The column <code>USER_NOTES.UPDATED_AT</code>.
      */
-    val UPDATED_AT: TableField<UserNotesRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val UPDATED_AT: TableField<UserNotesRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<UserNotesRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UserNotesRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<UserNotesRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.user_notes</code> table reference
+     * Create an aliased <code>USER_NOTES</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.user_notes</code> table reference
+     * Create an aliased <code>USER_NOTES</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.user_notes</code> table reference
+     * Create a <code>USER_NOTES</code> table reference
      */
-    constructor(): this(DSL.name("user_notes"), null)
+    constructor(): this(DSL.name("USER_NOTES"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, UserNotesRecord>?, parentPath: InverseForeignKey<out Record, UserNotesRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, USER_NOTES, null, null)
 
@@ -144,22 +144,22 @@ open class UserNotes(
         override fun `as`(alias: Name): UserNotesPath = UserNotesPath(alias, this)
         override fun `as`(alias: Table<*>): UserNotesPath = UserNotesPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIdentity(): Identity<UserNotesRecord, Long?> = super.getIdentity() as Identity<UserNotesRecord, Long?>
-    override fun getPrimaryKey(): UniqueKey<UserNotesRecord> = USER_NOTES_PKEY
-    override fun getReferences(): List<ForeignKey<UserNotesRecord, *>> = listOf(USER_NOTES__FK_USER_NOTES_BOOK, USER_NOTES__FK_USER_NOTES_USER)
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
+    override fun getIdentity(): Identity<UserNotesRecord, Int?> = super.getIdentity() as Identity<UserNotesRecord, Int?>
+    override fun getPrimaryKey(): UniqueKey<UserNotesRecord> = USER_NOTES__PK_USER_NOTES
+    override fun getReferences(): List<ForeignKey<UserNotesRecord, *>> = listOf(USER_NOTES__FK_USER_NOTES_PK_BOOKS, USER_NOTES__FK_USER_NOTES_PK_USERS)
 
     /**
-     * Get the implicit join path to the <code>public.books</code> table.
+     * Get the implicit join path to the <code>BOOKS</code> table.
      */
     fun books(): BooksPath = books
-    val books: BooksPath by lazy { BooksPath(this, USER_NOTES__FK_USER_NOTES_BOOK, null) }
+    val books: BooksPath by lazy { BooksPath(this, USER_NOTES__FK_USER_NOTES_PK_BOOKS, null) }
 
     /**
-     * Get the implicit join path to the <code>public.users</code> table.
+     * Get the implicit join path to the <code>USERS</code> table.
      */
     fun users(): UsersPath = users
-    val users: UsersPath by lazy { UsersPath(this, USER_NOTES__FK_USER_NOTES_USER, null) }
+    val users: UsersPath by lazy { UsersPath(this, USER_NOTES__FK_USER_NOTES_PK_USERS, null) }
     override fun `as`(alias: String): UserNotes = UserNotes(DSL.name(alias), this)
     override fun `as`(alias: Name): UserNotes = UserNotes(alias, this)
     override fun `as`(alias: Table<*>): UserNotes = UserNotes(alias.qualifiedName, this)

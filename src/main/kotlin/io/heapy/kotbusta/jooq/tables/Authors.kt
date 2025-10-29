@@ -4,15 +4,15 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
+import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.indexes.IDX_AUTHORS_NAME
-import io.heapy.kotbusta.jooq.keys.AUTHORS_PKEY
-import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_AUTHOR
+import io.heapy.kotbusta.jooq.keys.AUTHORS__PK_AUTHORS
+import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS
 import io.heapy.kotbusta.jooq.tables.BookAuthors.BookAuthorsPath
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.records.AuthorsRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
@@ -56,7 +56,7 @@ open class Authors(
     where: Condition?
 ): TableImpl<AuthorsRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -69,7 +69,7 @@ open class Authors(
     companion object {
 
         /**
-         * The reference instance of <code>public.authors</code>
+         * The reference instance of <code>AUTHORS</code>
          */
         val AUTHORS: Authors = Authors()
     }
@@ -80,48 +80,48 @@ open class Authors(
     override fun getRecordType(): Class<AuthorsRecord> = AuthorsRecord::class.java
 
     /**
-     * The column <code>public.authors.id</code>.
+     * The column <code>AUTHORS.ID</code>.
      */
-    val ID: TableField<AuthorsRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false).identity(true), this, "")
+    val ID: TableField<AuthorsRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>public.authors.first_name</code>.
+     * The column <code>AUTHORS.FIRST_NAME</code>.
      */
-    val FIRST_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("first_name"), SQLDataType.CLOB, this, "")
+    val FIRST_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("FIRST_NAME"), SQLDataType.CLOB, this, "")
 
     /**
-     * The column <code>public.authors.last_name</code>.
+     * The column <code>AUTHORS.LAST_NAME</code>.
      */
-    val LAST_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("last_name"), SQLDataType.CLOB.nullable(false), this, "")
+    val LAST_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("LAST_NAME"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.authors.full_name</code>.
+     * The column <code>AUTHORS.FULL_NAME</code>.
      */
-    val FULL_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("full_name"), SQLDataType.CLOB.nullable(false), this, "")
+    val FULL_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("FULL_NAME"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.authors.created_at</code>.
+     * The column <code>AUTHORS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<AuthorsRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<AuthorsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<AuthorsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<AuthorsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<AuthorsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.authors</code> table reference
+     * Create an aliased <code>AUTHORS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.authors</code> table reference
+     * Create an aliased <code>AUTHORS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.authors</code> table reference
+     * Create a <code>AUTHORS</code> table reference
      */
-    constructor(): this(DSL.name("authors"), null)
+    constructor(): this(DSL.name("AUTHORS"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, AuthorsRecord>?, parentPath: InverseForeignKey<out Record, AuthorsRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, AUTHORS, null, null)
 
@@ -135,20 +135,19 @@ open class Authors(
         override fun `as`(alias: Name): AuthorsPath = AuthorsPath(alias, this)
         override fun `as`(alias: Table<*>): AuthorsPath = AuthorsPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
     override fun getIndexes(): List<Index> = listOf(IDX_AUTHORS_NAME)
-    override fun getIdentity(): Identity<AuthorsRecord, Long?> = super.getIdentity() as Identity<AuthorsRecord, Long?>
-    override fun getPrimaryKey(): UniqueKey<AuthorsRecord> = AUTHORS_PKEY
+    override fun getIdentity(): Identity<AuthorsRecord, Int?> = super.getIdentity() as Identity<AuthorsRecord, Int?>
+    override fun getPrimaryKey(): UniqueKey<AuthorsRecord> = AUTHORS__PK_AUTHORS
 
     private lateinit var _bookAuthors: BookAuthorsPath
 
     /**
-     * Get the implicit to-many join path to the
-     * <code>public.book_authors</code> table
+     * Get the implicit to-many join path to the <code>BOOK_AUTHORS</code> table
      */
     fun bookAuthors(): BookAuthorsPath {
         if (!this::_bookAuthors.isInitialized)
-            _bookAuthors = BookAuthorsPath(this, null, BOOK_AUTHORS__FK_BOOK_AUTHORS_AUTHOR.inverseKey)
+            _bookAuthors = BookAuthorsPath(this, null, BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS.inverseKey)
 
         return _bookAuthors;
     }
@@ -157,8 +156,7 @@ open class Authors(
         get(): BookAuthorsPath = bookAuthors()
 
     /**
-     * Get the implicit many-to-many join path to the <code>public.books</code>
-     * table
+     * Get the implicit many-to-many join path to the <code>BOOKS</code> table
      */
     val books: BooksPath
         get(): BooksPath = bookAuthors().books()

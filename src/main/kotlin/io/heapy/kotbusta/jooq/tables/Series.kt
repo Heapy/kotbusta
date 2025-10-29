@@ -4,13 +4,13 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
-import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_SERIES
-import io.heapy.kotbusta.jooq.keys.SERIES_PKEY
+import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_PK_SERIES
+import io.heapy.kotbusta.jooq.keys.SERIES__PK_SERIES
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.records.SeriesRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 
@@ -52,7 +52,7 @@ open class Series(
     where: Condition?
 ): TableImpl<SeriesRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -65,7 +65,7 @@ open class Series(
     companion object {
 
         /**
-         * The reference instance of <code>public.series</code>
+         * The reference instance of <code>SERIES</code>
          */
         val SERIES: Series = Series()
     }
@@ -76,38 +76,38 @@ open class Series(
     override fun getRecordType(): Class<SeriesRecord> = SeriesRecord::class.java
 
     /**
-     * The column <code>public.series.id</code>.
+     * The column <code>SERIES.ID</code>.
      */
-    val ID: TableField<SeriesRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false).identity(true), this, "")
+    val ID: TableField<SeriesRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>public.series.name</code>.
+     * The column <code>SERIES.NAME</code>.
      */
-    val NAME: TableField<SeriesRecord, String?> = createField(DSL.name("name"), SQLDataType.CLOB.nullable(false), this, "")
+    val NAME: TableField<SeriesRecord, String?> = createField(DSL.name("NAME"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.series.created_at</code>.
+     * The column <code>SERIES.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<SeriesRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<SeriesRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<SeriesRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<SeriesRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<SeriesRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.series</code> table reference
+     * Create an aliased <code>SERIES</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.series</code> table reference
+     * Create an aliased <code>SERIES</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.series</code> table reference
+     * Create a <code>SERIES</code> table reference
      */
-    constructor(): this(DSL.name("series"), null)
+    constructor(): this(DSL.name("SERIES"), null)
 
     constructor(path: Table<out Record>, childPath: ForeignKey<out Record, SeriesRecord>?, parentPath: InverseForeignKey<out Record, SeriesRecord>?): this(Internal.createPathAlias(path, childPath, parentPath), path, childPath, parentPath, SERIES, null, null)
 
@@ -121,18 +121,18 @@ open class Series(
         override fun `as`(alias: Name): SeriesPath = SeriesPath(alias, this)
         override fun `as`(alias: Table<*>): SeriesPath = SeriesPath(alias.qualifiedName, this)
     }
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIdentity(): Identity<SeriesRecord, Long?> = super.getIdentity() as Identity<SeriesRecord, Long?>
-    override fun getPrimaryKey(): UniqueKey<SeriesRecord> = SERIES_PKEY
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
+    override fun getIdentity(): Identity<SeriesRecord, Int?> = super.getIdentity() as Identity<SeriesRecord, Int?>
+    override fun getPrimaryKey(): UniqueKey<SeriesRecord> = SERIES__PK_SERIES
 
     private lateinit var _books: BooksPath
 
     /**
-     * Get the implicit to-many join path to the <code>public.books</code> table
+     * Get the implicit to-many join path to the <code>BOOKS</code> table
      */
     fun books(): BooksPath {
         if (!this::_books.isInitialized)
-            _books = BooksPath(this, null, BOOKS__FK_BOOKS_SERIES.inverseKey)
+            _books = BooksPath(this, null, BOOKS__FK_BOOKS_PK_SERIES.inverseKey)
 
         return _books;
     }

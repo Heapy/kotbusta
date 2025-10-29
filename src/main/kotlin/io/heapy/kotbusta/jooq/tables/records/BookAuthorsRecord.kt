@@ -16,24 +16,24 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class BookAuthorsRecord private constructor() : UpdatableRecordImpl<BookAuthorsRecord>(BookAuthors.BOOK_AUTHORS) {
 
-    open var bookId: Long
+    open var bookId: Int
         set(value): Unit = set(0, value)
-        get(): Long = get(0) as Long
+        get(): Int = get(0) as Int
 
-    open var authorId: Long
+    open var authorId: Int
         set(value): Unit = set(1, value)
-        get(): Long = get(1) as Long
+        get(): Int = get(1) as Int
 
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record2<Long?, Long?> = super.key() as Record2<Long?, Long?>
+    override fun key(): Record2<Int?, Int?> = super.key() as Record2<Int?, Int?>
 
     /**
      * Create a detached, initialised BookAuthorsRecord
      */
-    constructor(bookId: Long, authorId: Long): this() {
+    constructor(bookId: Int, authorId: Int): this() {
         this.bookId = bookId
         this.authorId = authorId
         resetTouchedOnNotNull()

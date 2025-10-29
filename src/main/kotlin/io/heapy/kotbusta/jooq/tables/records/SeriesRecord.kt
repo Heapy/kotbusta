@@ -6,7 +6,7 @@ package io.heapy.kotbusta.jooq.tables.records
 
 import io.heapy.kotbusta.jooq.tables.Series
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -18,28 +18,28 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class SeriesRecord private constructor() : UpdatableRecordImpl<SeriesRecord>(Series.SERIES) {
 
-    open var id: Long?
+    open var id: Int?
         set(value): Unit = set(0, value)
-        get(): Long? = get(0) as Long?
+        get(): Int? = get(0) as Int?
 
     open var name: String
         set(value): Unit = set(1, value)
         get(): String = get(1) as String
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant
         set(value): Unit = set(2, value)
-        get(): OffsetDateTime? = get(2) as OffsetDateTime?
+        get(): Instant = get(2) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<Long?> = super.key() as Record1<Long?>
+    override fun key(): Record1<Int?> = super.key() as Record1<Int?>
 
     /**
      * Create a detached, initialised SeriesRecord
      */
-    constructor(id: Long? = null, name: String, createdAt: OffsetDateTime? = null): this() {
+    constructor(id: Int? = null, name: String, createdAt: Instant): this() {
         this.id = id
         this.name = name
         this.createdAt = createdAt

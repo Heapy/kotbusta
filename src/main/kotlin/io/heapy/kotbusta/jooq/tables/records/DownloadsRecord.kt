@@ -6,7 +6,7 @@ package io.heapy.kotbusta.jooq.tables.records
 
 import io.heapy.kotbusta.jooq.tables.Downloads
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -18,36 +18,36 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class DownloadsRecord private constructor() : UpdatableRecordImpl<DownloadsRecord>(Downloads.DOWNLOADS) {
 
-    open var id: Long?
+    open var id: Int?
         set(value): Unit = set(0, value)
-        get(): Long? = get(0) as Long?
+        get(): Int? = get(0) as Int?
 
-    open var userId: Long
+    open var userId: Int
         set(value): Unit = set(1, value)
-        get(): Long = get(1) as Long
+        get(): Int = get(1) as Int
 
-    open var bookId: Long
+    open var bookId: Int
         set(value): Unit = set(2, value)
-        get(): Long = get(2) as Long
+        get(): Int = get(2) as Int
 
     open var format: String
         set(value): Unit = set(3, value)
         get(): String = get(3) as String
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant
         set(value): Unit = set(4, value)
-        get(): OffsetDateTime? = get(4) as OffsetDateTime?
+        get(): Instant = get(4) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<Long?> = super.key() as Record1<Long?>
+    override fun key(): Record1<Int?> = super.key() as Record1<Int?>
 
     /**
      * Create a detached, initialised DownloadsRecord
      */
-    constructor(id: Long? = null, userId: Long, bookId: Long, format: String, createdAt: OffsetDateTime? = null): this() {
+    constructor(id: Int? = null, userId: Int, bookId: Int, format: String, createdAt: Instant): this() {
         this.id = id
         this.userId = userId
         this.bookId = bookId

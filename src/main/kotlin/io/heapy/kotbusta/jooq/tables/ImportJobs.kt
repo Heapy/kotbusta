@@ -4,20 +4,19 @@
 package io.heapy.kotbusta.jooq.tables
 
 
-import io.heapy.kotbusta.jooq.Public
-import io.heapy.kotbusta.jooq.enums.JobStatusEnum
-import io.heapy.kotbusta.jooq.enums.JobTypeEnum
+import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.indexes.IDX_IMPORT_JOBS_STARTED
 import io.heapy.kotbusta.jooq.indexes.IDX_IMPORT_JOBS_STATUS
 import io.heapy.kotbusta.jooq.indexes.IDX_IMPORT_JOBS_TYPE
-import io.heapy.kotbusta.jooq.keys.IMPORT_JOBS_PKEY
+import io.heapy.kotbusta.jooq.keys.IMPORT_JOBS__PK_IMPORT_JOBS
 import io.heapy.kotbusta.jooq.tables.records.ImportJobsRecord
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import kotlin.collections.Collection
 import kotlin.collections.List
 
+import org.jooq.Check
 import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.ForeignKey
@@ -37,6 +36,7 @@ import org.jooq.TableField
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
+import org.jooq.impl.Internal
 import org.jooq.impl.SQLDataType
 import org.jooq.impl.TableImpl
 
@@ -55,7 +55,7 @@ open class ImportJobs(
     where: Condition?
 ): TableImpl<ImportJobsRecord>(
     alias,
-    Public.PUBLIC,
+    DefaultSchema.DEFAULT_SCHEMA,
     path,
     childPath,
     parentPath,
@@ -68,7 +68,7 @@ open class ImportJobs(
     companion object {
 
         /**
-         * The reference instance of <code>public.import_jobs</code>
+         * The reference instance of <code>IMPORT_JOBS</code>
          */
         val IMPORT_JOBS: ImportJobs = ImportJobs()
     }
@@ -79,102 +79,105 @@ open class ImportJobs(
     override fun getRecordType(): Class<ImportJobsRecord> = ImportJobsRecord::class.java
 
     /**
-     * The column <code>public.import_jobs.id</code>.
+     * The column <code>IMPORT_JOBS.ID</code>.
      */
-    val ID: TableField<ImportJobsRecord, Long?> = createField(DSL.name("id"), SQLDataType.BIGINT.nullable(false).identity(true), this, "")
+    val ID: TableField<ImportJobsRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>public.import_jobs.job_type</code>.
+     * The column <code>IMPORT_JOBS.JOB_TYPE</code>.
      */
-    val JOB_TYPE: TableField<ImportJobsRecord, JobTypeEnum?> = createField(DSL.name("job_type"), SQLDataType.VARCHAR.nullable(false).asEnumDataType(JobTypeEnum::class.java), this, "")
+    val JOB_TYPE: TableField<ImportJobsRecord, String?> = createField(DSL.name("JOB_TYPE"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.import_jobs.status</code>.
+     * The column <code>IMPORT_JOBS.STATUS</code>.
      */
-    val STATUS: TableField<ImportJobsRecord, JobStatusEnum?> = createField(DSL.name("status"), SQLDataType.VARCHAR.nullable(false).asEnumDataType(JobStatusEnum::class.java), this, "")
+    val STATUS: TableField<ImportJobsRecord, String?> = createField(DSL.name("STATUS"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>public.import_jobs.progress</code>.
+     * The column <code>IMPORT_JOBS.PROGRESS</code>.
      */
-    val PROGRESS: TableField<ImportJobsRecord, String?> = createField(DSL.name("progress"), SQLDataType.CLOB, this, "")
+    val PROGRESS: TableField<ImportJobsRecord, String?> = createField(DSL.name("PROGRESS"), SQLDataType.CLOB, this, "")
 
     /**
-     * The column <code>public.import_jobs.inp_files_processed</code>.
+     * The column <code>IMPORT_JOBS.INP_FILES_PROCESSED</code>.
      */
-    val INP_FILES_PROCESSED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("inp_files_processed"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val INP_FILES_PROCESSED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("INP_FILES_PROCESSED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.import_jobs.books_added</code>.
+     * The column <code>IMPORT_JOBS.BOOKS_ADDED</code>.
      */
-    val BOOKS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("books_added"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOKS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_ADDED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.import_jobs.books_updated</code>.
+     * The column <code>IMPORT_JOBS.BOOKS_UPDATED</code>.
      */
-    val BOOKS_UPDATED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("books_updated"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOKS_UPDATED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_UPDATED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.import_jobs.books_deleted</code>.
+     * The column <code>IMPORT_JOBS.BOOKS_DELETED</code>.
      */
-    val BOOKS_DELETED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("books_deleted"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOKS_DELETED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_DELETED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.import_jobs.covers_added</code>.
+     * The column <code>IMPORT_JOBS.COVERS_ADDED</code>.
      */
-    val COVERS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("covers_added"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val COVERS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("COVERS_ADDED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.import_jobs.book_errors</code>.
+     * The column <code>IMPORT_JOBS.BOOK_ERRORS</code>.
      */
-    val BOOK_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("book_errors"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOK_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOK_ERRORS"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.import_jobs.cover_errors</code>.
+     * The column <code>IMPORT_JOBS.COVER_ERRORS</code>.
      */
-    val COVER_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("cover_errors"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val COVER_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("COVER_ERRORS"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
 
     /**
-     * The column <code>public.import_jobs.error_message</code>.
+     * The column <code>IMPORT_JOBS.ERROR_MESSAGE</code>.
      */
-    val ERROR_MESSAGE: TableField<ImportJobsRecord, String?> = createField(DSL.name("error_message"), SQLDataType.CLOB, this, "")
+    val ERROR_MESSAGE: TableField<ImportJobsRecord, String?> = createField(DSL.name("ERROR_MESSAGE"), SQLDataType.CLOB, this, "")
 
     /**
-     * The column <code>public.import_jobs.started_at</code>.
+     * The column <code>IMPORT_JOBS.STARTED_AT</code>.
      */
-    val STARTED_AT: TableField<ImportJobsRecord, OffsetDateTime?> = createField(DSL.name("started_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val STARTED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("STARTED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     /**
-     * The column <code>public.import_jobs.completed_at</code>.
+     * The column <code>IMPORT_JOBS.COMPLETED_AT</code>.
      */
-    val COMPLETED_AT: TableField<ImportJobsRecord, OffsetDateTime?> = createField(DSL.name("completed_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "")
+    val COMPLETED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("COMPLETED_AT"), SQLDataType.INSTANT, this, "")
 
     /**
-     * The column <code>public.import_jobs.created_at</code>.
+     * The column <code>IMPORT_JOBS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<ImportJobsRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("now()"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
+    val CREATED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
 
     private constructor(alias: Name, aliased: Table<ImportJobsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<ImportJobsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
     private constructor(alias: Name, aliased: Table<ImportJobsRecord>?, where: Condition?): this(alias, null, null, null, aliased, null, where)
 
     /**
-     * Create an aliased <code>public.import_jobs</code> table reference
+     * Create an aliased <code>IMPORT_JOBS</code> table reference
      */
     constructor(alias: String): this(DSL.name(alias))
 
     /**
-     * Create an aliased <code>public.import_jobs</code> table reference
+     * Create an aliased <code>IMPORT_JOBS</code> table reference
      */
     constructor(alias: Name): this(alias, null)
 
     /**
-     * Create a <code>public.import_jobs</code> table reference
+     * Create a <code>IMPORT_JOBS</code> table reference
      */
-    constructor(): this(DSL.name("import_jobs"), null)
-    override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    constructor(): this(DSL.name("IMPORT_JOBS"), null)
+    override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
     override fun getIndexes(): List<Index> = listOf(IDX_IMPORT_JOBS_STARTED, IDX_IMPORT_JOBS_STATUS, IDX_IMPORT_JOBS_TYPE)
-    override fun getIdentity(): Identity<ImportJobsRecord, Long?> = super.getIdentity() as Identity<ImportJobsRecord, Long?>
-    override fun getPrimaryKey(): UniqueKey<ImportJobsRecord> = IMPORT_JOBS_PKEY
+    override fun getIdentity(): Identity<ImportJobsRecord, Int?> = super.getIdentity() as Identity<ImportJobsRecord, Int?>
+    override fun getPrimaryKey(): UniqueKey<ImportJobsRecord> = IMPORT_JOBS__PK_IMPORT_JOBS
+    override fun getChecks(): List<Check<ImportJobsRecord>> = listOf(
+        Internal.createCheck(this, DSL.name(""), "STATUS in ('RUNNING', 'COMPLETED', 'FAILED')", true)
+    )
     override fun `as`(alias: String): ImportJobs = ImportJobs(DSL.name(alias), this)
     override fun `as`(alias: Name): ImportJobs = ImportJobs(alias, this)
     override fun `as`(alias: Table<*>): ImportJobs = ImportJobs(alias.qualifiedName, this)

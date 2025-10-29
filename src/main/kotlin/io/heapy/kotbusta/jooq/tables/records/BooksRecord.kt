@@ -6,7 +6,7 @@ package io.heapy.kotbusta.jooq.tables.records
 
 import io.heapy.kotbusta.jooq.tables.Books
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -18,9 +18,9 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(Books.BOOKS) {
 
-    open var id: Long
+    open var id: Int?
         set(value): Unit = set(0, value)
-        get(): Long = get(0) as Long
+        get(): Int? = get(0) as Int?
 
     open var title: String
         set(value): Unit = set(1, value)
@@ -38,9 +38,9 @@ open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(
         set(value): Unit = set(4, value)
         get(): String? = get(4) as String?
 
-    open var seriesId: Long?
+    open var seriesId: Int?
         set(value): Unit = set(5, value)
-        get(): Long? = get(5) as Long?
+        get(): Int? = get(5) as Int?
 
     open var seriesNumber: Int?
         set(value): Unit = set(6, value)
@@ -54,32 +54,32 @@ open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(
         set(value): Unit = set(8, value)
         get(): String = get(8) as String
 
-    open var fileSize: Long?
+    open var fileSize: Int?
         set(value): Unit = set(9, value)
-        get(): Long? = get(9) as Long?
+        get(): Int? = get(9) as Int?
 
-    open var dateAdded: OffsetDateTime
+    open var dateAdded: Instant
         set(value): Unit = set(10, value)
-        get(): OffsetDateTime = get(10) as OffsetDateTime
+        get(): Instant = get(10) as Instant
 
     open var coverImage: ByteArray?
         set(value): Unit = set(11, value)
         get(): ByteArray? = get(11) as ByteArray?
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant
         set(value): Unit = set(12, value)
-        get(): OffsetDateTime? = get(12) as OffsetDateTime?
+        get(): Instant = get(12) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<Long?> = super.key() as Record1<Long?>
+    override fun key(): Record1<Int?> = super.key() as Record1<Int?>
 
     /**
      * Create a detached, initialised BooksRecord
      */
-    constructor(id: Long, title: String, `annotation`: String? = null, genre: String? = null, language: String? = null, seriesId: Long? = null, seriesNumber: Int? = null, filePath: String, archivePath: String, fileSize: Long? = null, dateAdded: OffsetDateTime, coverImage: ByteArray? = null, createdAt: OffsetDateTime? = null): this() {
+    constructor(id: Int? = null, title: String, `annotation`: String? = null, genre: String? = null, language: String? = null, seriesId: Int? = null, seriesNumber: Int? = null, filePath: String, archivePath: String, fileSize: Int? = null, dateAdded: Instant, coverImage: ByteArray? = null, createdAt: Instant): this() {
         this.id = id
         this.title = title
         this.`annotation` = `annotation`

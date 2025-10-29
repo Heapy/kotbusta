@@ -4,11 +4,9 @@
 package io.heapy.kotbusta.jooq.tables.records
 
 
-import io.heapy.kotbusta.jooq.enums.JobStatusEnum
-import io.heapy.kotbusta.jooq.enums.JobTypeEnum
 import io.heapy.kotbusta.jooq.tables.ImportJobs
 
-import java.time.OffsetDateTime
+import java.time.Instant
 
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
@@ -20,17 +18,17 @@ import org.jooq.impl.UpdatableRecordImpl
 @Suppress("warnings")
 open class ImportJobsRecord private constructor() : UpdatableRecordImpl<ImportJobsRecord>(ImportJobs.IMPORT_JOBS) {
 
-    open var id: Long?
+    open var id: Int?
         set(value): Unit = set(0, value)
-        get(): Long? = get(0) as Long?
+        get(): Int? = get(0) as Int?
 
-    open var jobType: JobTypeEnum
+    open var jobType: String
         set(value): Unit = set(1, value)
-        get(): JobTypeEnum = get(1) as JobTypeEnum
+        get(): String = get(1) as String
 
-    open var status: JobStatusEnum
+    open var status: String
         set(value): Unit = set(2, value)
-        get(): JobStatusEnum = get(2) as JobStatusEnum
+        get(): String = get(2) as String
 
     open var progress: String?
         set(value): Unit = set(3, value)
@@ -68,28 +66,28 @@ open class ImportJobsRecord private constructor() : UpdatableRecordImpl<ImportJo
         set(value): Unit = set(11, value)
         get(): String? = get(11) as String?
 
-    open var startedAt: OffsetDateTime?
+    open var startedAt: Instant
         set(value): Unit = set(12, value)
-        get(): OffsetDateTime? = get(12) as OffsetDateTime?
+        get(): Instant = get(12) as Instant
 
-    open var completedAt: OffsetDateTime?
+    open var completedAt: Instant?
         set(value): Unit = set(13, value)
-        get(): OffsetDateTime? = get(13) as OffsetDateTime?
+        get(): Instant? = get(13) as Instant?
 
-    open var createdAt: OffsetDateTime?
+    open var createdAt: Instant
         set(value): Unit = set(14, value)
-        get(): OffsetDateTime? = get(14) as OffsetDateTime?
+        get(): Instant = get(14) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
 
-    override fun key(): Record1<Long?> = super.key() as Record1<Long?>
+    override fun key(): Record1<Int?> = super.key() as Record1<Int?>
 
     /**
      * Create a detached, initialised ImportJobsRecord
      */
-    constructor(id: Long? = null, jobType: JobTypeEnum, status: JobStatusEnum, progress: String? = null, inpFilesProcessed: Int? = null, booksAdded: Int? = null, booksUpdated: Int? = null, booksDeleted: Int? = null, coversAdded: Int? = null, bookErrors: Int? = null, coverErrors: Int? = null, errorMessage: String? = null, startedAt: OffsetDateTime? = null, completedAt: OffsetDateTime? = null, createdAt: OffsetDateTime? = null): this() {
+    constructor(id: Int? = null, jobType: String, status: String, progress: String? = null, inpFilesProcessed: Int? = null, booksAdded: Int? = null, booksUpdated: Int? = null, booksDeleted: Int? = null, coversAdded: Int? = null, bookErrors: Int? = null, coverErrors: Int? = null, errorMessage: String? = null, startedAt: Instant, completedAt: Instant? = null, createdAt: Instant): this() {
         this.id = id
         this.jobType = jobType
         this.status = status
