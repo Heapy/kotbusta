@@ -5,6 +5,7 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_USER_COMMENTS_BOOK
 import io.heapy.kotbusta.jooq.indexes.IDX_USER_COMMENTS_USER
 import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS
@@ -14,10 +15,9 @@ import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.UserCommentsRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
 import kotlin.collections.List
+import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -104,12 +104,12 @@ open class UserComments(
     /**
      * The column <code>USER_COMMENTS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<UserCommentsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<UserCommentsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     /**
      * The column <code>USER_COMMENTS.UPDATED_AT</code>.
      */
-    val UPDATED_AT: TableField<UserCommentsRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val UPDATED_AT: TableField<UserCommentsRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<UserCommentsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<UserCommentsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

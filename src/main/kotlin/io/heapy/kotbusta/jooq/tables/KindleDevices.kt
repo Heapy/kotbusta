@@ -5,6 +5,7 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_DEVICES_EMAIL
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_DEVICES_USER
 import io.heapy.kotbusta.jooq.keys.KINDLE_DEVICES__FK_KINDLE_DEVICES_PK_USERS
@@ -15,10 +16,9 @@ import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.KindleDevicesRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
 import kotlin.collections.List
+import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -105,12 +105,12 @@ open class KindleDevices(
     /**
      * The column <code>KINDLE_DEVICES.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<KindleDevicesRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<KindleDevicesRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     /**
      * The column <code>KINDLE_DEVICES.UPDATED_AT</code>.
      */
-    val UPDATED_AT: TableField<KindleDevicesRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val UPDATED_AT: TableField<KindleDevicesRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<KindleDevicesRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<KindleDevicesRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

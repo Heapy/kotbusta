@@ -6,7 +6,7 @@ package io.heapy.kotbusta.jooq.tables.records
 
 import io.heapy.kotbusta.jooq.tables.UserStars
 
-import java.time.Instant
+import kotlin.time.Instant
 
 import org.jooq.Record2
 import org.jooq.impl.UpdatableRecordImpl

@@ -5,6 +5,7 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_DOWNLOADS_RECENT
 import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_USERS
@@ -13,10 +14,9 @@ import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.DownloadsRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
 import kotlin.collections.List
+import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -103,7 +103,7 @@ open class Downloads(
     /**
      * The column <code>DOWNLOADS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<DownloadsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<DownloadsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<DownloadsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<DownloadsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

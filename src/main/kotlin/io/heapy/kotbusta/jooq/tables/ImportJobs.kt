@@ -5,16 +5,16 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_IMPORT_JOBS_STARTED
 import io.heapy.kotbusta.jooq.indexes.IDX_IMPORT_JOBS_STATUS
 import io.heapy.kotbusta.jooq.indexes.IDX_IMPORT_JOBS_TYPE
 import io.heapy.kotbusta.jooq.keys.IMPORT_JOBS__PK_IMPORT_JOBS
 import io.heapy.kotbusta.jooq.tables.records.ImportJobsRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
 import kotlin.collections.List
+import kotlin.time.Instant
 
 import org.jooq.Check
 import org.jooq.Condition
@@ -141,17 +141,17 @@ open class ImportJobs(
     /**
      * The column <code>IMPORT_JOBS.STARTED_AT</code>.
      */
-    val STARTED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("STARTED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val STARTED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("STARTED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     /**
      * The column <code>IMPORT_JOBS.COMPLETED_AT</code>.
      */
-    val COMPLETED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("COMPLETED_AT"), SQLDataType.INSTANT, this, "")
+    val COMPLETED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("COMPLETED_AT"), SQLDataType.CLOB, this, "", KotlinInstantConverter())
 
     /**
      * The column <code>IMPORT_JOBS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<ImportJobsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<ImportJobsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<ImportJobsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

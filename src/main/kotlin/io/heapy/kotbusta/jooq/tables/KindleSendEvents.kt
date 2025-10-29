@@ -5,6 +5,7 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_EVENTS_QUEUE
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_EVENTS_TYPE
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_EVENTS__FK_KINDLE_SEND_EVENTS_PK_KINDLE_SEND_QUEUE
@@ -12,10 +13,9 @@ import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_EVENTS__PK_KINDLE_SEND_EVENTS
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
 import io.heapy.kotbusta.jooq.tables.records.KindleSendEventsRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
 import kotlin.collections.List
+import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -102,7 +102,7 @@ open class KindleSendEvents(
     /**
      * The column <code>KINDLE_SEND_EVENTS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<KindleSendEventsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<KindleSendEventsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<KindleSendEventsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<KindleSendEventsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

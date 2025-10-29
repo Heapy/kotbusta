@@ -5,6 +5,7 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_QUEUE_BOOK
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_QUEUE_DEVICE
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_QUEUE_NEXT_RUN
@@ -21,10 +22,9 @@ import io.heapy.kotbusta.jooq.tables.KindleSendEvents.KindleSendEventsPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.KindleSendQueueRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
 import kotlin.collections.List
+import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -126,7 +126,7 @@ open class KindleSendQueue(
     /**
      * The column <code>KINDLE_SEND_QUEUE.NEXT_RUN_AT</code>.
      */
-    val NEXT_RUN_AT: TableField<KindleSendQueueRecord, Instant?> = createField(DSL.name("NEXT_RUN_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val NEXT_RUN_AT: TableField<KindleSendQueueRecord, Instant?> = createField(DSL.name("NEXT_RUN_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     /**
      * The column <code>KINDLE_SEND_QUEUE.LAST_ERROR</code>.
@@ -136,12 +136,12 @@ open class KindleSendQueue(
     /**
      * The column <code>KINDLE_SEND_QUEUE.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<KindleSendQueueRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<KindleSendQueueRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     /**
      * The column <code>KINDLE_SEND_QUEUE.UPDATED_AT</code>.
      */
-    val UPDATED_AT: TableField<KindleSendQueueRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val UPDATED_AT: TableField<KindleSendQueueRecord, Instant?> = createField(DSL.name("UPDATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<KindleSendQueueRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<KindleSendQueueRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

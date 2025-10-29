@@ -5,14 +5,14 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_PK_SERIES
 import io.heapy.kotbusta.jooq.keys.SERIES__PK_SERIES
 import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.records.SeriesRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
+import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -88,7 +88,7 @@ open class Series(
     /**
      * The column <code>SERIES.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<SeriesRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<SeriesRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<SeriesRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<SeriesRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

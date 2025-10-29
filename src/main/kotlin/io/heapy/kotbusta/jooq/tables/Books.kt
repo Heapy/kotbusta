@@ -5,6 +5,7 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_GENRE
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_LANGUAGE
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_SERIES
@@ -28,10 +29,9 @@ import io.heapy.kotbusta.jooq.tables.UserStars.UserStarsPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
 
-import java.time.Instant
-
 import kotlin.collections.Collection
 import kotlin.collections.List
+import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -147,7 +147,7 @@ open class Books(
     /**
      * The column <code>BOOKS.DATE_ADDED</code>.
      */
-    val DATE_ADDED: TableField<BooksRecord, Instant?> = createField(DSL.name("DATE_ADDED"), SQLDataType.INSTANT.nullable(false), this, "")
+    val DATE_ADDED: TableField<BooksRecord, Instant?> = createField(DSL.name("DATE_ADDED"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     /**
      * The column <code>BOOKS.COVER_IMAGE</code>.
@@ -157,7 +157,7 @@ open class Books(
     /**
      * The column <code>BOOKS.CREATED_AT</code>.
      */
-    val CREATED_AT: TableField<BooksRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.INSTANT.nullable(false), this, "")
+    val CREATED_AT: TableField<BooksRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<BooksRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<BooksRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)
