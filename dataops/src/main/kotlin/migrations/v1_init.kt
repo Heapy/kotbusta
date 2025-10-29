@@ -1,3 +1,10 @@
+package migrations
+
+import migrations.model.Migration
+import org.intellij.lang.annotations.Language
+
+@Language("SQLite")
+private val sql = """
 -- Users table with status enum as text with check constraint
 CREATE TABLE IF NOT EXISTS USERS
 (
@@ -108,3 +115,10 @@ CREATE INDEX IF NOT EXISTS IDX_AUTHORS_NAME ON AUTHORS (LAST_NAME, FIRST_NAME);
 CREATE INDEX IF NOT EXISTS IDX_USER_COMMENTS_BOOK ON USER_COMMENTS (BOOK_ID);
 CREATE INDEX IF NOT EXISTS IDX_USER_COMMENTS_USER ON USER_COMMENTS (USER_ID);
 CREATE INDEX IF NOT EXISTS IDX_DOWNLOADS_RECENT ON DOWNLOADS (CREATED_AT DESC);
+""".trimIndent()
+
+val v1: Migration
+    get() = Migration(
+        version = 1,
+        script = sql,
+    )

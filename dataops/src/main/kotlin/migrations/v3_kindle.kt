@@ -1,3 +1,10 @@
+package migrations
+
+import migrations.model.Migration
+import org.intellij.lang.annotations.Language
+
+@Language("SQLite")
+private val sql = """
 -- Kindle Devices Table
 CREATE TABLE IF NOT EXISTS KINDLE_DEVICES
 (
@@ -52,3 +59,10 @@ CREATE TABLE IF NOT EXISTS KINDLE_SEND_EVENTS
 
 CREATE INDEX IF NOT EXISTS IDX_KINDLE_SEND_EVENTS_QUEUE ON KINDLE_SEND_EVENTS (QUEUE_ID);
 CREATE INDEX IF NOT EXISTS IDX_KINDLE_SEND_EVENTS_TYPE ON KINDLE_SEND_EVENTS (EVENT_TYPE);
+""".trimIndent()
+
+val v3: Migration
+    get() = Migration(
+        version = 3,
+        script = sql,
+    )

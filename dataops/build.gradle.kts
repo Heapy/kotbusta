@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     alias(libs.plugins.kotlin.jvm)
 }
@@ -11,8 +9,8 @@ repositories {
 dependencies {
     api(libs.jooq.core)
     implementation(libs.jooq.codegen)
-    implementation(libs.flyway.core)
     api(libs.sqlite.jdbc)
+    implementation(libs.komok.tech.logging)
     implementation(libs.komok.tech.config.dotenv)
     implementation(libs.logback.classic)
 }

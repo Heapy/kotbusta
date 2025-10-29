@@ -1,3 +1,10 @@
+package migrations
+
+import migrations.model.Migration
+import org.intellij.lang.annotations.Language
+
+@Language("SQLite")
+private val sql = """
 -- Import Jobs table with enum types as text with check constraints
 CREATE TABLE IF NOT EXISTS IMPORT_JOBS
 (
@@ -21,3 +28,10 @@ CREATE TABLE IF NOT EXISTS IMPORT_JOBS
 CREATE INDEX IF NOT EXISTS IDX_IMPORT_JOBS_STATUS ON IMPORT_JOBS (STATUS);
 CREATE INDEX IF NOT EXISTS IDX_IMPORT_JOBS_TYPE ON IMPORT_JOBS (JOB_TYPE);
 CREATE INDEX IF NOT EXISTS IDX_IMPORT_JOBS_STARTED ON IMPORT_JOBS (STARTED_AT DESC);
+""".trimIndent()
+
+val v2: Migration
+    get() = Migration(
+        version = 2,
+        script = sql,
+    )
