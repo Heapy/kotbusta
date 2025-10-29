@@ -142,12 +142,12 @@ fun listPendingUsers(
 }
 
 context(_: TransactionContext)
-fun countPendingUsers(): Int = useTx { dslContext ->
+fun countPendingUsers(): Long = useTx { dslContext ->
     dslContext
         .selectCount()
         .from(USERS)
         .where(USERS.STATUS.eq(UserStatus.PENDING.mapUsing(UserStatusMapper)))
-        .fetchOne(0, Int::class.java)
+        .fetchOne(0, Long::class.java)
         ?: 0
 }
 
