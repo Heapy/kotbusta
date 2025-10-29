@@ -24,3 +24,11 @@ tasks.register<JavaExec>("migrate") {
 kotlin {
     jvmToolchain(25)
 }
+
+testing {
+    suites {
+        val test by getting(JvmTestSuite::class) {
+            useJUnitJupiter(libs.versions.junit)
+        }
+    }
+}
