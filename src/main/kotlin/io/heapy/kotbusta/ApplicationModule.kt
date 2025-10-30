@@ -1,6 +1,5 @@
 package io.heapy.kotbusta
 
-import Configuration.dbPath
 import aws.sdk.kotlin.services.ses.SesClient
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -45,9 +44,10 @@ class ApplicationModule(
 ) {
     private val workerScope = CoroutineScope(SupervisorJob() + dispatchersModule.ioDispatcher.value)
     val staticFilesConfig by bean {
+        val staticFilesPath = env["KOTBUSTA_STATIC_FILES_PATH"]
         StaticFilesConfig(
-            filesPath = env["KOTBUSTA_STATIC_FILES_PATH"] ?: "static",
-            useResources = env["KOTBUSTA_STATIC_FILES_USE_RESOURCES"]?.toBooleanStrictOrNull() ?: true
+            filesPath = staticFilesPath ?: "static",
+            useResources = staticFilesPath == null,
         )
     }
 
@@ -229,6 +229,10 @@ class ApplicationModule(
         )
     }
 
+    val dbPath by bean {
+        env["KOTBUSTA_DB_PATH"] ?: "kotbusta.db"
+    }
+
     val hikariConfig by bean {
         HikariConfig().apply {
             poolName = "kotbusta-hikari-pool"
@@ -241,32 +245,55 @@ class ApplicationModule(
         HikariDataSource(hikariConfig.value)
     }
 
-    fun initialize() {
+    fun initializeDatabase() {
         runMigrations(hikariDataSource.value)
+    }
 
-        // Start Kindle send worker
+    fun initializeKindleSendWorker() {
         kindleSendWorker.value.start(
             scope = workerScope,
             intervalMillis = kindleWorkerIntervalMs.value,
         )
-        log.info("Kindle send worker started")
+    }
 
+    fun stopKindleSendWorker() {
+        // Stop Kindle send worker
+        if (kindleSendWorker.isInitialized) {
+            kindleSendWorker.value.stop()
+        }
+        workerScope.cancel()
+    }
+
+    fun stopHttpClient() {
+        if (httpClient.isInitialized) {
+            httpClient.value.close()
+        }
+    }
+
+    fun stopHikariPool() {
+        if (hikariDataSource.isInitialized) {
+            hikariDataSource.value.close()
+        }
+    }
+
+    fun close() {
+        stopKindleSendWorker()
+        stopHttpClient()
+        stopHikariPool()
+    }
+
+    fun initializeShutdownHook() {
         Runtime.getRuntime().addShutdownHook(
             thread(start = false) {
-                // Stop Kindle send worker
-                if (kindleSendWorker.isInitialized) {
-                    kindleSendWorker.value.stop()
-                }
-                workerScope.cancel()
-
-                if (httpClient.isInitialized) {
-                    httpClient.value.use {}
-                }
-                if (hikariDataSource.isInitialized) {
-                    hikariDataSource.value.use {}
-                }
+                close()
             },
         )
+    }
+
+    fun initialize() {
+        initializeDatabase()
+        initializeKindleSendWorker()
+        initializeShutdownHook()
     }
 
     private companion object : Logger()
