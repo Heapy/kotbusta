@@ -1,8 +1,6 @@
 package io.heapy.kotbusta
 
 import aws.sdk.kotlin.services.ses.SesClient
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import io.heapy.komok.tech.config.dotenv.dotenv
 import io.heapy.komok.tech.di.delegate.MutableBean
 import io.heapy.komok.tech.di.delegate.bean
@@ -217,7 +215,7 @@ class ApplicationModule(
     val dslContext by bean {
         System.setProperty("org.jooq.no-logo", "true")
         System.setProperty("org.jooq.no-tips", "true")
-        DSL.using(hikariDataSource.value, SQLDialect.SQLITE)
+        DSL.using(dataSource.value, SQLDialect.SQLITE)
     }
 
     val transactionProvider by bean {
@@ -231,20 +229,14 @@ class ApplicationModule(
         env["KOTBUSTA_DB_PATH"] ?: "kotbusta.db"
     }
 
-    val hikariConfig by bean {
-        HikariConfig().apply {
-            poolName = "kotbusta-hikari-pool"
-            dataSourceClassName = SQLiteDataSource::class.qualifiedName
-            dataSourceProperties["url"] = "jdbc:sqlite:$dbPath"
+    val dataSource by bean {
+        SQLiteDataSource().apply {
+            url = "jdbc:sqlite:${dbPath.value}"
         }
     }
 
-    val hikariDataSource by bean {
-        HikariDataSource(hikariConfig.value)
-    }
-
     fun initializeDatabase() {
-        runMigrations(hikariDataSource.value)
+        runMigrations(dataSource.value)
     }
 
     fun initializeKindleSendWorker() {
@@ -255,7 +247,6 @@ class ApplicationModule(
     }
 
     fun stopKindleSendWorker() {
-        // Stop Kindle send worker
         if (kindleSendWorker.isInitialized) {
             kindleSendWorker.value.stop()
         }
@@ -268,16 +259,9 @@ class ApplicationModule(
         }
     }
 
-    fun stopHikariPool() {
-        if (hikariDataSource.isInitialized) {
-            hikariDataSource.value.close()
-        }
-    }
-
     fun close() {
         stopKindleSendWorker()
         stopHttpClient()
-        stopHikariPool()
     }
 
     fun initializeShutdownHook() {

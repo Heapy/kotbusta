@@ -10,7 +10,6 @@ repositories {
 
 dependencies {
     implementation(project(":dataops"))
-    implementation(libs.hikari)
 
     implementation(ktorLibs.server.cio)
     implementation(ktorLibs.server.contentNegotiation)

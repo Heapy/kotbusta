@@ -1,5 +1,4 @@
 [versions]
-hikari = "7.0.2"
 jooq = "3.20.8"
 komok = "1.0.13"
 kotlin = "2.3.0-Beta2"
@@ -11,8 +10,6 @@ junit = "6.0.0"
 aws-sdk = "1.5.69"
 
 [libraries]
-hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
-
 jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
 jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
 
