@@ -164,9 +164,7 @@ class ApplicationModule(
 
     // Kindle Configuration
     val sesClient by bean {
-        SesClient {
-            region = env["KOTBUSTA_AWS_REGION"] ?: "us-east-1"
-        }
+        SesClient {}
     }
 
     val sesSenderEmail by bean {
