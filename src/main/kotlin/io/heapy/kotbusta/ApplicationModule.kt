@@ -57,9 +57,13 @@ class ApplicationModule(
         System.getenv()
     }
 
+    val envOverrides: MutableBean<Map<String, String>> by bean {
+        emptyMap()
+    }
+
     // Lazy is ok here, since value is derived from systemEnv and dotenv
     val env by lazy {
-        systemEnv.value + dotenv.value.properties
+        systemEnv.value + dotenv.value.properties + envOverrides.value
     }
 
     val timeService: MutableBean<TimeService> by bean {
