@@ -111,17 +111,17 @@ open class KindleSendQueue(
     /**
      * The column <code>KINDLE_SEND_QUEUE.FORMAT</code>.
      */
-    val FORMAT: TableField<KindleSendQueueRecord, String?> = createField(DSL.name("FORMAT"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'EPUB'"), SQLDataType.CLOB)), this, "")
+    val FORMAT: TableField<KindleSendQueueRecord, String?> = createField(DSL.name("FORMAT"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
      * The column <code>KINDLE_SEND_QUEUE.STATUS</code>.
      */
-    val STATUS: TableField<KindleSendQueueRecord, String?> = createField(DSL.name("STATUS"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'PENDING'"), SQLDataType.CLOB)), this, "")
+    val STATUS: TableField<KindleSendQueueRecord, String?> = createField(DSL.name("STATUS"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
      * The column <code>KINDLE_SEND_QUEUE.ATTEMPTS</code>.
      */
-    val ATTEMPTS: TableField<KindleSendQueueRecord, Int?> = createField(DSL.name("ATTEMPTS"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val ATTEMPTS: TableField<KindleSendQueueRecord, Int?> = createField(DSL.name("ATTEMPTS"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>KINDLE_SEND_QUEUE.NEXT_RUN_AT</code>.

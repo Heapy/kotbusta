@@ -34,9 +34,9 @@ open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(
         set(value): Unit = set(3, value)
         get(): String? = get(3) as String?
 
-    open var language: String?
+    open var language: String
         set(value): Unit = set(4, value)
-        get(): String? = get(4) as String?
+        get(): String = get(4) as String
 
     open var seriesId: Int?
         set(value): Unit = set(5, value)
@@ -79,7 +79,7 @@ open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(
     /**
      * Create a detached, initialised BooksRecord
      */
-    constructor(id: Int? = null, title: String, `annotation`: String? = null, genre: String? = null, language: String? = null, seriesId: Int? = null, seriesNumber: Int? = null, filePath: String, archivePath: String, fileSize: Int? = null, dateAdded: Instant, coverImage: ByteArray? = null, createdAt: Instant): this() {
+    constructor(id: Int? = null, title: String, `annotation`: String? = null, genre: String? = null, language: String, seriesId: Int? = null, seriesNumber: Int? = null, filePath: String, archivePath: String, fileSize: Int? = null, dateAdded: Instant, coverImage: ByteArray? = null, createdAt: Instant): this() {
         this.id = id
         this.title = title
         this.`annotation` = `annotation`

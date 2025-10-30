@@ -34,33 +34,33 @@ open class ImportJobsRecord private constructor() : UpdatableRecordImpl<ImportJo
         set(value): Unit = set(3, value)
         get(): String? = get(3) as String?
 
-    open var inpFilesProcessed: Int?
+    open var inpFilesProcessed: Int
         set(value): Unit = set(4, value)
-        get(): Int? = get(4) as Int?
+        get(): Int = get(4) as Int
 
-    open var booksAdded: Int?
+    open var booksAdded: Int
         set(value): Unit = set(5, value)
-        get(): Int? = get(5) as Int?
+        get(): Int = get(5) as Int
 
-    open var booksUpdated: Int?
+    open var booksUpdated: Int
         set(value): Unit = set(6, value)
-        get(): Int? = get(6) as Int?
+        get(): Int = get(6) as Int
 
-    open var booksDeleted: Int?
+    open var booksDeleted: Int
         set(value): Unit = set(7, value)
-        get(): Int? = get(7) as Int?
+        get(): Int = get(7) as Int
 
-    open var coversAdded: Int?
+    open var coversAdded: Int
         set(value): Unit = set(8, value)
-        get(): Int? = get(8) as Int?
+        get(): Int = get(8) as Int
 
-    open var bookErrors: Int?
+    open var bookErrors: Int
         set(value): Unit = set(9, value)
-        get(): Int? = get(9) as Int?
+        get(): Int = get(9) as Int
 
-    open var coverErrors: Int?
+    open var coverErrors: Int
         set(value): Unit = set(10, value)
-        get(): Int? = get(10) as Int?
+        get(): Int = get(10) as Int
 
     open var errorMessage: String?
         set(value): Unit = set(11, value)
@@ -87,7 +87,7 @@ open class ImportJobsRecord private constructor() : UpdatableRecordImpl<ImportJo
     /**
      * Create a detached, initialised ImportJobsRecord
      */
-    constructor(id: Int? = null, jobType: String, status: String, progress: String? = null, inpFilesProcessed: Int? = null, booksAdded: Int? = null, booksUpdated: Int? = null, booksDeleted: Int? = null, coversAdded: Int? = null, bookErrors: Int? = null, coverErrors: Int? = null, errorMessage: String? = null, startedAt: Instant, completedAt: Instant? = null, createdAt: Instant): this() {
+    constructor(id: Int? = null, jobType: String, status: String, progress: String? = null, inpFilesProcessed: Int, booksAdded: Int, booksUpdated: Int, booksDeleted: Int, coversAdded: Int, bookErrors: Int, coverErrors: Int, errorMessage: String? = null, startedAt: Instant, completedAt: Instant? = null, createdAt: Instant): this() {
         this.id = id
         this.jobType = jobType
         this.status = status

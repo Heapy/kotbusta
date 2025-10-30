@@ -101,37 +101,37 @@ open class ImportJobs(
     /**
      * The column <code>IMPORT_JOBS.INP_FILES_PROCESSED</code>.
      */
-    val INP_FILES_PROCESSED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("INP_FILES_PROCESSED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val INP_FILES_PROCESSED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("INP_FILES_PROCESSED"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>IMPORT_JOBS.BOOKS_ADDED</code>.
      */
-    val BOOKS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_ADDED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOKS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_ADDED"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>IMPORT_JOBS.BOOKS_UPDATED</code>.
      */
-    val BOOKS_UPDATED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_UPDATED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOKS_UPDATED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_UPDATED"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>IMPORT_JOBS.BOOKS_DELETED</code>.
      */
-    val BOOKS_DELETED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_DELETED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOKS_DELETED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOKS_DELETED"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>IMPORT_JOBS.COVERS_ADDED</code>.
      */
-    val COVERS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("COVERS_ADDED"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val COVERS_ADDED: TableField<ImportJobsRecord, Int?> = createField(DSL.name("COVERS_ADDED"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>IMPORT_JOBS.BOOK_ERRORS</code>.
      */
-    val BOOK_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOK_ERRORS"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val BOOK_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("BOOK_ERRORS"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>IMPORT_JOBS.COVER_ERRORS</code>.
      */
-    val COVER_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("COVER_ERRORS"), SQLDataType.INTEGER.defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "")
+    val COVER_ERRORS: TableField<ImportJobsRecord, Int?> = createField(DSL.name("COVER_ERRORS"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>IMPORT_JOBS.ERROR_MESSAGE</code>.

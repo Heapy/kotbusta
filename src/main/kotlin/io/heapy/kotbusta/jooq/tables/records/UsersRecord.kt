@@ -38,9 +38,9 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
         set(value): Unit = set(4, value)
         get(): String? = get(4) as String?
 
-    open var status: String?
+    open var status: String
         set(value): Unit = set(5, value)
-        get(): String? = get(5) as String?
+        get(): String = get(5) as String
 
     open var createdAt: Instant
         set(value): Unit = set(6, value)
@@ -59,7 +59,7 @@ open class UsersRecord private constructor() : UpdatableRecordImpl<UsersRecord>(
     /**
      * Create a detached, initialised UsersRecord
      */
-    constructor(id: Int? = null, googleId: String, email: String, name: String, avatarUrl: String? = null, status: String? = null, createdAt: Instant, updatedAt: Instant): this() {
+    constructor(id: Int? = null, googleId: String, email: String, name: String, avatarUrl: String? = null, status: String, createdAt: Instant, updatedAt: Instant): this() {
         this.id = id
         this.googleId = googleId
         this.email = email

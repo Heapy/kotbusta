@@ -34,17 +34,17 @@ open class KindleSendQueueRecord private constructor() : UpdatableRecordImpl<Kin
         set(value): Unit = set(3, value)
         get(): Int = get(3) as Int
 
-    open var format: String?
+    open var format: String
         set(value): Unit = set(4, value)
-        get(): String? = get(4) as String?
+        get(): String = get(4) as String
 
-    open var status: String?
+    open var status: String
         set(value): Unit = set(5, value)
-        get(): String? = get(5) as String?
+        get(): String = get(5) as String
 
-    open var attempts: Int?
+    open var attempts: Int
         set(value): Unit = set(6, value)
-        get(): Int? = get(6) as Int?
+        get(): Int = get(6) as Int
 
     open var nextRunAt: Instant
         set(value): Unit = set(7, value)
@@ -71,7 +71,7 @@ open class KindleSendQueueRecord private constructor() : UpdatableRecordImpl<Kin
     /**
      * Create a detached, initialised KindleSendQueueRecord
      */
-    constructor(id: Int? = null, userId: Int, deviceId: Int, bookId: Int, format: String? = null, status: String? = null, attempts: Int? = null, nextRunAt: Instant, lastError: String? = null, createdAt: Instant, updatedAt: Instant): this() {
+    constructor(id: Int? = null, userId: Int, deviceId: Int, bookId: Int, format: String, status: String, attempts: Int, nextRunAt: Instant, lastError: String? = null, createdAt: Instant, updatedAt: Instant): this() {
         this.id = id
         this.userId = userId
         this.deviceId = deviceId

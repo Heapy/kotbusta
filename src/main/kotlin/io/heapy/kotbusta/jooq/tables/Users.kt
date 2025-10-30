@@ -117,7 +117,7 @@ open class Users(
     /**
      * The column <code>USERS.STATUS</code>.
      */
-    val STATUS: TableField<UsersRecord, String?> = createField(DSL.name("STATUS"), SQLDataType.CLOB.nullable(false).defaultValue(DSL.field(DSL.raw("'PENDING'"), SQLDataType.CLOB)), this, "")
+    val STATUS: TableField<UsersRecord, String?> = createField(DSL.name("STATUS"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
      * The column <code>USERS.CREATED_AT</code>.

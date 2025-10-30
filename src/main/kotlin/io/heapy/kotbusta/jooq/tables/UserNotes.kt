@@ -101,7 +101,7 @@ open class UserNotes(
     /**
      * The column <code>USER_NOTES.IS_PRIVATE</code>.
      */
-    val IS_PRIVATE: TableField<UserNotesRecord, Int?> = createField(DSL.name("IS_PRIVATE"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("1"), SQLDataType.INTEGER)), this, "")
+    val IS_PRIVATE: TableField<UserNotesRecord, Int?> = createField(DSL.name("IS_PRIVATE"), SQLDataType.INTEGER.nullable(false), this, "")
 
     /**
      * The column <code>USER_NOTES.CREATED_AT</code>.
