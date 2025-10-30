@@ -13,6 +13,8 @@ import io.heapy.kotbusta.model.RecentActivity
 import io.heapy.kotbusta.model.UserComment
 import io.heapy.kotbusta.model.UserNote
 import java.time.OffsetDateTime
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 class UserService {
     context(_: TransactionContext, userSession: UserSession)
@@ -189,15 +191,16 @@ class UserService {
 
     context(_: TransactionContext, userSession: UserSession)
     fun recordDownload(
-        bookId: Long,
+        bookId: Int,
         format: String,
+        createdAt: Instant = Clock.System.now()
     ): Boolean = useTx { dslContext ->
         val inserted = dslContext
             .insertInto(DOWNLOADS)
             .set(DOWNLOADS.USER_ID, userSession.userId)
             .set(DOWNLOADS.BOOK_ID, bookId)
             .set(DOWNLOADS.FORMAT, format)
-            .set(DOWNLOADS.CREATED_AT, OffsetDateTime.now())
+            .set(DOWNLOADS.CREATED_AT, createdAt)
             .execute()
 
         inserted > 0

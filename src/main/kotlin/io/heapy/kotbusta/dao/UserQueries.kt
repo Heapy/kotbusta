@@ -4,12 +4,13 @@ import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.records.UsersRecord
 import io.heapy.kotbusta.jooq.tables.references.USERS
+import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.mapper.TypeMapper
 import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.User
 import io.heapy.kotbusta.model.UserInfo
 import io.heapy.kotbusta.model.UserStatus
-import java.time.OffsetDateTime
+import io.heapy.kotbusta.model.UserStatus.PENDING
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -34,8 +35,8 @@ fun insertUser(
     email: String,
     name: String,
     avatarUrl: String?,
-    createdAt: Instant,
-    updatedAt: Instant,
+    createdAt: Instant = Clock.System.now(),
+    updatedAt: Instant = Clock.System.now(),
 ): Int = useTx { dslContext ->
     dslContext
         .insertInto(USERS)
@@ -43,7 +44,7 @@ fun insertUser(
         .set(USERS.EMAIL, email)
         .set(USERS.NAME, name)
         .set(USERS.AVATAR_URL, avatarUrl)
-        .set(USERS.STATUS, UserStatus.PENDING.mapUsing(UserStatusMapper))
+        .set(USERS.STATUS, PENDING mapUsing UserStatusMapper)
         .set(USERS.CREATED_AT, createdAt)
         .set(USERS.UPDATED_AT, updatedAt)
         .returningResult(USERS.ID)
@@ -57,7 +58,7 @@ fun updateUser(
     email: String,
     name: String,
     avatarUrl: String?,
-    updatedAt: Instant,
+    updatedAt: Instant = Clock.System.now(),
 ): Int = useTx { dslContext ->
     dslContext
         .update(USERS)
@@ -80,10 +81,8 @@ fun validateUserSession(
         .fetchOne() != null
 }
 
-context(_: TransactionContext)
-fun getUserInfo(
-    userId: Int,
-): UserInfo? = useTx { dslContext ->
+context(_: TransactionContext, userSession: UserSession)
+fun getUserInfo(): UserInfo? = useTx { dslContext ->
     dslContext
         .select(
             USERS.ID,
@@ -93,14 +92,14 @@ fun getUserInfo(
             USERS.STATUS,
         )
         .from(USERS)
-        .where(USERS.ID.eq(userId))
+        .where(USERS.ID.eq(userSession.userId))
         .fetchOne { record ->
             UserInfo(
-                userId = record.get(USERS.ID)!!,
-                email = record.get(USERS.EMAIL)!!,
-                name = record.get(USERS.NAME)!!,
+                userId = record.get(USERS.ID),
+                email = record.get(USERS.EMAIL),
+                name = record.get(USERS.NAME),
                 avatarUrl = record.get(USERS.AVATAR_URL),
-                status = record.get(USERS.STATUS)!!.mapUsing(UserStatusMapper),
+                status = record.get(USERS.STATUS) mapUsing UserStatusMapper,
             )
         }
 }
@@ -123,20 +122,20 @@ fun listPendingUsers(
             USERS.UPDATED_AT,
         )
         .from(USERS)
-        .where(USERS.STATUS.eq(UserStatus.PENDING.mapUsing(UserStatusMapper)))
+        .where(USERS.STATUS.eq(PENDING mapUsing UserStatusMapper))
         .orderBy(USERS.CREATED_AT.desc())
         .limit(limit)
         .offset(offset)
         .fetch { record ->
             User(
-                id = record.get(USERS.ID)!!,
-                googleId = record.get(USERS.GOOGLE_ID)!!,
-                email = record.get(USERS.EMAIL)!!,
-                name = record.get(USERS.NAME)!!,
+                id = record.get(USERS.ID),
+                googleId = record.get(USERS.GOOGLE_ID),
+                email = record.get(USERS.EMAIL),
+                name = record.get(USERS.NAME),
                 avatarUrl = record.get(USERS.AVATAR_URL),
-                status = record.get(USERS.STATUS)!!.mapUsing(UserStatusMapper),
-                createdAt = record.get(USERS.CREATED_AT)!!,
-                updatedAt = record.get(USERS.UPDATED_AT)!!,
+                status = record.get(USERS.STATUS) mapUsing UserStatusMapper,
+                createdAt = record.get(USERS.CREATED_AT),
+                updatedAt = record.get(USERS.UPDATED_AT),
             )
         }
 }
@@ -146,7 +145,7 @@ fun countPendingUsers(): Long = useTx { dslContext ->
     dslContext
         .selectCount()
         .from(USERS)
-        .where(USERS.STATUS.eq(UserStatus.PENDING.mapUsing(UserStatusMapper)))
+        .where(USERS.STATUS.eq(PENDING mapUsing UserStatusMapper))
         .fetchOne(0, Long::class.java)
         ?: 0
 }
@@ -160,7 +159,7 @@ fun updateUserStatus(
 ): Boolean = useTx { dslContext ->
     val updated = dslContext
         .update(USERS)
-        .set(USERS.STATUS, status.mapUsing(UserStatusMapper))
+        .set(USERS.STATUS, status mapUsing UserStatusMapper)
         .set(USERS.UPDATED_AT, updatedAt)
         .where(USERS.ID.eq(userId))
         .execute()

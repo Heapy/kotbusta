@@ -7,7 +7,6 @@ import io.heapy.kotbusta.ktor.configureAuthentication
 import io.heapy.kotbusta.ktor.configureRouting
 import io.heapy.kotbusta.ktor.configureSerialization
 import io.heapy.kotbusta.ktor.configureStatusPages
-import io.heapy.kotbusta.repository.RepositoryModule
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -18,7 +17,7 @@ fun main() {
 }
 
 fun Application.module() {
-    context(ApplicationModule(DispatchersModule(), RepositoryModule())) {
+    context(ApplicationModule(DispatchersModule())) {
         contextOf<ApplicationModule>().initialize()
         configureSerialization()
         configureStatusPages()

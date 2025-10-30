@@ -1,12 +1,13 @@
 package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
+import io.heapy.kotbusta.dao.getBookById
+import io.heapy.kotbusta.database.TransactionType.READ_ONLY
+import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.badRequestError
 import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
-import io.heapy.kotbusta.database.TransactionType.READ_ONLY
-import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.service.ConversionFormat
 import io.heapy.kotbusta.service.PandocConversionService
@@ -19,7 +20,6 @@ import kotlin.io.path.exists
 
 context(applicationModule: ApplicationModule)
 fun Route.downloadBookRoute() {
-    val bookService = applicationModule.bookService.value
     val userService = applicationModule.userService.value
     val booksDataPath = applicationModule.booksDataPath.value
     val transactionProvider = applicationModule.transactionProvider.value
@@ -27,7 +27,7 @@ fun Route.downloadBookRoute() {
 
     get("/books/{id}/download/{format}") {
         requireApprovedUser {
-            val bookId = call.requiredParameter<Long>("id")
+            val bookId = call.requiredParameter<Int>("id")
             val format = call.requiredParameter<String>("format")
 
             val supportedFormats = listOf("fb2") + conversionService.getSupportedFormats()
@@ -37,7 +37,7 @@ fun Route.downloadBookRoute() {
 
             val book = transactionProvider
                 .transaction(READ_ONLY) {
-                    bookService.getBookById(bookId)
+                    getBookById(bookId)
                 }
                 ?: notFoundError("Book $bookId not found")
 

@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.ktor.routes
 
 import io.heapy.kotbusta.ApplicationModule
+import io.heapy.kotbusta.dao.getUserInfo
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.ApiResponse.Error
@@ -27,7 +28,6 @@ suspend fun requireApprovedUser(
     }
 
     val adminService = applicationModule.adminService.value
-    val userApprovalService = applicationModule.userApprovalService.value
     val transactionProvider = applicationModule.transactionProvider.value
 
     // Check if user is admin (admins bypass approval check)
@@ -40,7 +40,9 @@ suspend fun requireApprovedUser(
 
     // Check if user is approved
     val userInfo = transactionProvider.transaction(READ_ONLY) {
-        userApprovalService.getUserInfo(userSession.userId)
+        context(userSession) {
+            getUserInfo()
+        }
     }
 
     if (userInfo?.status == APPROVED) {

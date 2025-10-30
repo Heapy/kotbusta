@@ -316,7 +316,7 @@ fun getSimilarBooks(
     val results = query
         .where(condition)
         .orderBy(
-            DSL.field("genre_match_score", Integer::class.java).desc(),
+            DSL.field("genre_match_score", Int::class.java).desc(),
             BOOKS.ID.desc(),
         )
         .limit(limit)
@@ -445,4 +445,86 @@ fun getSearchResultsCount(query: SearchQuery): Long = useTx { dslContext ->
     } else {
         countQuery
     }.fetchOne(0, Long::class.java) ?: 0L
+}
+
+context(_: TransactionContext)
+fun updateBookCover(
+    bookId: Int,
+    coverImage: ByteArray,
+) = useTx { dslContext ->
+    dslContext
+        .update(BOOKS)
+        .set(BOOKS.COVER_IMAGE, coverImage)
+        .where(BOOKS.ID.eq(bookId))
+        .execute()
+}
+
+context(_: TransactionContext)
+fun updateBookAnnotation(
+    bookId: Int,
+    annotation: String,
+) = useTx { dslContext ->
+    dslContext
+        .update(BOOKS)
+        .set(BOOKS.ANNOTATION, annotation)
+        .where(BOOKS.ID.eq(bookId))
+        .execute()
+}
+
+context(_: TransactionContext)
+fun insertBook(
+    bookId: Int,
+    title: String,
+    authors: List<Author>,
+    series: Series?,
+    seriesNumber: Int?,
+    genre: String?,
+    language: String,
+    filePath: String,
+    archivePath: String,
+    fileSize: Int?,
+    dateAdded: Instant,
+) = useTx { dslContext ->
+    // Insert or get series
+    val seriesId = series?.let { insertOrGetSeries(it.name) }
+
+    // Insert or get authors
+    val authorIds = authors.map { insertOrGetAuthor(it) }
+
+    // Insert book using jOOQ with ON CONFLICT (SQLite UPSERT)
+    dslContext
+        .insertInto(BOOKS)
+        .set(BOOKS.ID, bookId)
+        .set(BOOKS.TITLE, title)
+        .set(BOOKS.GENRE, genre)
+        .set(BOOKS.LANGUAGE, language)
+        .set(BOOKS.SERIES_ID, seriesId)
+        .set(BOOKS.SERIES_NUMBER, seriesNumber)
+        .set(BOOKS.FILE_PATH, filePath)
+        .set(BOOKS.ARCHIVE_PATH, archivePath)
+        .set(BOOKS.FILE_SIZE, fileSize)
+        .set(BOOKS.DATE_ADDED, dateAdded)
+        .onConflict(BOOKS.ID)
+        .doUpdate()
+        .set(BOOKS.TITLE, title)
+        .set(BOOKS.GENRE, genre)
+        .set(BOOKS.LANGUAGE, language)
+        .set(BOOKS.SERIES_ID, seriesId)
+        .set(BOOKS.SERIES_NUMBER, seriesNumber)
+        .set(BOOKS.FILE_PATH, filePath)
+        .set(BOOKS.ARCHIVE_PATH, archivePath)
+        .set(BOOKS.FILE_SIZE, fileSize)
+        .set(BOOKS.DATE_ADDED, dateAdded)
+        .execute()
+
+    // Insert book-author relationships
+    authorIds.forEach { authorId ->
+        dslContext
+            .insertInto(BOOK_AUTHORS)
+            .set(BOOK_AUTHORS.BOOK_ID, bookId)
+            .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+            .onConflict(BOOK_AUTHORS.BOOK_ID, BOOK_AUTHORS.AUTHOR_ID)
+            .doNothing()
+            .execute()
+    }
 }

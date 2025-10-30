@@ -13,6 +13,8 @@ import io.heapy.kotbusta.mapper.TypeMapper
 import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.KindleFormat
 import io.heapy.kotbusta.model.KindleSendStatus
+import io.heapy.kotbusta.model.KindleSendStatus.PENDING
+import io.heapy.kotbusta.model.KindleSendStatus.PROCESSING
 import io.heapy.kotbusta.model.SendHistoryResponse
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -45,7 +47,8 @@ fun createKindleDevice(
         .set(KINDLE_DEVICES.CREATED_AT, createdAt)
         .set(KINDLE_DEVICES.UPDATED_AT, updatedAt)
         .returning()
-        .fetchOne()!!
+        .fetchOne()
+        ?: error("Failed to create device")
 }
 
 context(_: TransactionContext)
@@ -137,14 +140,15 @@ fun createQueueItem(
         .set(KINDLE_SEND_QUEUE.USER_ID, userId)
         .set(KINDLE_SEND_QUEUE.DEVICE_ID, deviceId)
         .set(KINDLE_SEND_QUEUE.BOOK_ID, bookId)
-        .set(KINDLE_SEND_QUEUE.FORMAT, format.mapUsing(KindleFormatMapper))
-        .set(KINDLE_SEND_QUEUE.STATUS, KindleSendStatus.PENDING.mapUsing(KindleSendStatusMapper))
+        .set(KINDLE_SEND_QUEUE.FORMAT, format mapUsing KindleFormatMapper)
+        .set(KINDLE_SEND_QUEUE.STATUS, PENDING mapUsing KindleSendStatusMapper)
         .set(KINDLE_SEND_QUEUE.ATTEMPTS, 0)
         .set(KINDLE_SEND_QUEUE.NEXT_RUN_AT, createdAt)
         .set(KINDLE_SEND_QUEUE.CREATED_AT, createdAt)
         .set(KINDLE_SEND_QUEUE.UPDATED_AT, updatedAt)
         .returning()
-        .fetchOne()!!
+        .fetchOne()
+        ?: error("Failed to create queue item")
 }
 
 context(_: TransactionContext)
@@ -172,7 +176,8 @@ fun findQueueItemsByUserId(
             KINDLE_SEND_QUEUE.LAST_ERROR,
         )
         .from(KINDLE_SEND_QUEUE)
-        .join(KINDLE_DEVICES).on(KINDLE_SEND_QUEUE.DEVICE_ID.eq(KINDLE_DEVICES.ID))
+        .join(KINDLE_DEVICES)
+        .on(KINDLE_SEND_QUEUE.DEVICE_ID.eq(KINDLE_DEVICES.ID))
         .join(BOOKS).on(KINDLE_SEND_QUEUE.BOOK_ID.eq(BOOKS.ID))
         .where(KINDLE_SEND_QUEUE.USER_ID.eq(userId))
         .orderBy(KINDLE_SEND_QUEUE.CREATED_AT.desc())
@@ -180,12 +185,12 @@ fun findQueueItemsByUserId(
         .offset(offset)
         .fetch().map { record ->
             SendHistoryResponse(
-                id = record.get(KINDLE_SEND_QUEUE.ID)!!,
-                deviceName = record.get(KINDLE_DEVICES.NAME)!!,
-                bookTitle = record.get(BOOKS.TITLE)!!,
-                format = record.get(KINDLE_SEND_QUEUE.FORMAT)!!.mapUsing(KindleFormatMapper),
-                status = record.get(KINDLE_SEND_QUEUE.STATUS)!!.mapUsing(KindleSendStatusMapper),
-                createdAt = record.get(KINDLE_SEND_QUEUE.CREATED_AT)!!,
+                id = record.get(KINDLE_SEND_QUEUE.ID),
+                deviceName = record.get(KINDLE_DEVICES.NAME),
+                bookTitle = record.get(BOOKS.TITLE),
+                format = record.get(KINDLE_SEND_QUEUE.FORMAT) mapUsing KindleFormatMapper,
+                status = record.get(KINDLE_SEND_QUEUE.STATUS) mapUsing KindleSendStatusMapper,
+                createdAt = record.get(KINDLE_SEND_QUEUE.CREATED_AT),
                 lastError = record.get(KINDLE_SEND_QUEUE.LAST_ERROR),
             )
         }
@@ -199,7 +204,7 @@ fun findPendingQueueItems(
     dslContext
         .selectFrom(KINDLE_SEND_QUEUE)
         .where(
-            KINDLE_SEND_QUEUE.STATUS.eq(KindleSendStatus.PENDING.mapUsing(KindleSendStatusMapper))
+            KINDLE_SEND_QUEUE.STATUS.eq(PENDING mapUsing KindleSendStatusMapper)
                 .and(KINDLE_SEND_QUEUE.NEXT_RUN_AT.le(now)),
         )
         .orderBy(KINDLE_SEND_QUEUE.NEXT_RUN_AT.asc())
@@ -211,11 +216,14 @@ context(_: TransactionContext)
 fun markQueueItemAsProcessing(id: Int): Boolean = useTx { dslContext ->
     val updatedRows = dslContext
         .update(KINDLE_SEND_QUEUE)
-        .set(KINDLE_SEND_QUEUE.STATUS, KindleSendStatus.PROCESSING.mapUsing(KindleSendStatusMapper))
+        .set(
+            KINDLE_SEND_QUEUE.STATUS,
+            PROCESSING mapUsing KindleSendStatusMapper,
+        )
         .set(KINDLE_SEND_QUEUE.UPDATED_AT, Clock.System.now())
         .where(
             KINDLE_SEND_QUEUE.ID.eq(id)
-                .and(KINDLE_SEND_QUEUE.STATUS.eq(KindleSendStatus.PENDING.mapUsing(KindleSendStatusMapper))),
+                .and(KINDLE_SEND_QUEUE.STATUS.eq(PENDING mapUsing KindleSendStatusMapper)),
         )
         .execute()
     updatedRows > 0
@@ -230,7 +238,7 @@ fun updateQueueItemStatus(
 ): Boolean = useTx { dslContext ->
     val updatedRows = dslContext
         .update(KINDLE_SEND_QUEUE)
-        .set(KINDLE_SEND_QUEUE.STATUS, status.mapUsing(KindleSendStatusMapper))
+        .set(KINDLE_SEND_QUEUE.STATUS, status mapUsing KindleSendStatusMapper)
         .set(KINDLE_SEND_QUEUE.LAST_ERROR, error)
         .set(KINDLE_SEND_QUEUE.UPDATED_AT, updatedAt)
         .where(KINDLE_SEND_QUEUE.ID.eq(id))
@@ -294,5 +302,6 @@ fun createKindleSendEvent(
         .set(KINDLE_SEND_EVENTS.DETAILS, details)
         .set(KINDLE_SEND_EVENTS.CREATED_AT, createdAt)
         .returning()
-        .fetchOne()!!
+        .fetchOne()
+        ?: error("Failed to create event")
 }

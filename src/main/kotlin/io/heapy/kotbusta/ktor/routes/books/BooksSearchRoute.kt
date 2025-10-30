@@ -1,8 +1,9 @@
 package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.ktor.routes.requireApprovedUser
+import io.heapy.kotbusta.dao.searchBooks
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
+import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.heapy.kotbusta.model.SearchQuery
 import io.ktor.server.response.*
@@ -10,7 +11,6 @@ import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.bookSearchRoute() {
-    val bookService = applicationModule.bookService.value
     val transactionProvider = applicationModule.transactionProvider.value
 
     get("/books/search") {
@@ -35,7 +35,7 @@ fun Route.bookSearchRoute() {
                 offset,
             )
             val result = transactionProvider.transaction(READ_ONLY) {
-                bookService.searchBooks(
+                searchBooks(
                     query = searchQuery,
                 )
             }

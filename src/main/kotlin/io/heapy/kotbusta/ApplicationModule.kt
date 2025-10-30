@@ -1,85 +1,54 @@
 package io.heapy.kotbusta
 
-import Configuration.pgDatabase
-import Configuration.pgHost
-import Configuration.pgPassword
-import Configuration.pgPort
-import Configuration.pgUser
+import Configuration.dbPath
+import aws.sdk.kotlin.services.ses.SesClient
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import io.heapy.komok.tech.config.dotenv.dotenv
+import io.heapy.komok.tech.di.delegate.MutableBean
 import io.heapy.komok.tech.di.delegate.bean
 import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.coroutines.DispatchersModule
+import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.ktor.GoogleOauthConfig
 import io.heapy.kotbusta.ktor.SessionConfig
-import io.heapy.kotbusta.coroutines.DispatchersModule
-import io.heapy.kotbusta.dao.auth.FindUserByGoogleIdQuery
-import io.heapy.kotbusta.dao.auth.InsertUserQuery
-import io.heapy.kotbusta.dao.auth.UpdateUserQuery
-import io.heapy.kotbusta.dao.auth.ValidateUserSessionQuery
-import io.heapy.kotbusta.dao.user.GetUserInfoQuery
-import io.heapy.kotbusta.dao.user.ListPendingUsersQuery
-import io.heapy.kotbusta.dao.user.UpdateUserStatusQuery
-import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
-import io.heapy.kotbusta.repository.RepositoryModule
 import io.heapy.kotbusta.service.AdminService
-import io.heapy.kotbusta.service.BookService
+import io.heapy.kotbusta.service.DefaultTimeService
+import io.heapy.kotbusta.service.EmailService
 import io.heapy.kotbusta.service.ImportJobService
-import io.heapy.kotbusta.service.UserApprovalService
+import io.heapy.kotbusta.service.KindleService
+import io.heapy.kotbusta.service.TimeService
 import io.heapy.kotbusta.service.UserService
+import io.heapy.kotbusta.worker.KindleSendWorker
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
-import org.postgresql.ds.PGSimpleDataSource
+import org.sqlite.SQLiteDataSource
 import runMigrations
+import java.io.File
 import java.security.SecureRandom
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
 
 class ApplicationModule(
     val dispatchersModule: DispatchersModule,
-    val repositoryModule: RepositoryModule,
 ) {
+    private val workerScope = CoroutineScope(SupervisorJob() + dispatchersModule.ioDispatcher.value)
     val staticFilesConfig by bean {
         StaticFilesConfig(
             filesPath = env["KOTBUSTA_STATIC_FILES_PATH"] ?: "static",
             useResources = env["KOTBUSTA_STATIC_FILES_USE_RESOURCES"]?.toBooleanStrictOrNull() ?: true
         )
-    }
-
-    val insertUserQuery by bean {
-        InsertUserQuery()
-    }
-
-    val updateUserQuery by bean {
-        UpdateUserQuery()
-    }
-
-    val findUserByGoogleIdQuery by bean {
-        FindUserByGoogleIdQuery()
-    }
-
-    val validateUserSessionQuery by bean {
-        ValidateUserSessionQuery()
-    }
-
-    val listPendingUsersQuery by bean {
-        ListPendingUsersQuery()
-    }
-
-    val updateUserStatusQuery by bean {
-        UpdateUserStatusQuery()
-    }
-
-    val getUserInfoQuery by bean {
-        GetUserInfoQuery()
     }
 
     val dotenv by bean {
@@ -93,6 +62,10 @@ class ApplicationModule(
     // Lazy is ok here, since value is derived from systemEnv and dotenv
     val env by lazy {
         systemEnv.value + dotenv.value.properties
+    }
+
+    val timeService: MutableBean<TimeService> by bean {
+        DefaultTimeService()
     }
 
     val adminEmail by bean {
@@ -158,12 +131,6 @@ class ApplicationModule(
         }
     }
 
-    val bookService by bean {
-        BookService(
-            bookRepository = repositoryModule.bookRepository.value,
-        )
-    }
-
     val userService by bean {
         UserService()
     }
@@ -177,6 +144,7 @@ class ApplicationModule(
     val inpxParser by bean {
         InpxParser(
             transactionProvider = transactionProvider.value,
+            timeService = timeService.value,
         )
     }
 
@@ -186,27 +154,72 @@ class ApplicationModule(
         )
     }
 
-    val userApprovalService by bean {
-        UserApprovalService(
-            listPendingUsersQuery = listPendingUsersQuery.value,
-            updateUserStatusQuery = updateUserStatusQuery.value,
-            getUserInfoQuery = getUserInfoQuery.value,
-        )
-    }
-
     val importJobService by bean {
         ImportJobService(
-            importJobRepository = repositoryModule.importJobRepository.value,
             booksDataPath = booksDataPath.value,
             fb2Parser = fb2Parser.value,
             inpxParser = inpxParser.value,
         )
     }
 
+    // Kindle Configuration
+    val sesClient by bean {
+        SesClient {
+            region = env["KOTBUSTA_AWS_REGION"] ?: "us-east-1"
+        }
+    }
+
+    val sesSenderEmail by bean {
+        env["KOTBUSTA_SES_SENDER_EMAIL"]
+            ?: error("KOTBUSTA_SES_SENDER_EMAIL not configured")
+    }
+
+    val kindleDailyQuota by bean {
+        env["KOTBUSTA_KINDLE_DAILY_QUOTA"]?.toIntOrNull() ?: 20
+    }
+
+    val kindleWorkerBatchSize by bean {
+        env["KOTBUSTA_KINDLE_WORKER_BATCH_SIZE"]?.toIntOrNull() ?: 10
+    }
+
+    val kindleWorkerMaxRetries by bean {
+        env["KOTBUSTA_KINDLE_WORKER_MAX_RETRIES"]?.toIntOrNull() ?: 5
+    }
+
+    val kindleWorkerIntervalMs by bean {
+        env["KOTBUSTA_KINDLE_WORKER_INTERVAL_MS"]?.toLongOrNull() ?: 30_000L
+    }
+
+    val emailService by bean {
+        EmailService(
+            sesClient = sesClient.value,
+            senderEmail = sesSenderEmail.value,
+        )
+    }
+
+    val kindleService by bean {
+        KindleService(
+            dailyQuotaLimit = kindleDailyQuota.value,
+        )
+    }
+
+    val kindleSendWorker by bean {
+        KindleSendWorker(
+            emailService = emailService.value,
+            transactionProvider = transactionProvider.value,
+            batchSize = kindleWorkerBatchSize.value,
+            maxRetries = kindleWorkerMaxRetries.value,
+            getBookFile = { bookId, format ->
+                // TODO: Implement proper book file resolution
+                File(booksDataPath.value.toFile(), "$bookId.$format")
+            },
+        )
+    }
+
     val dslContext by bean {
         System.setProperty("org.jooq.no-logo", "true")
         System.setProperty("org.jooq.no-tips", "true")
-        DSL.using(hikariDataSource.value, SQLDialect.POSTGRES)
+        DSL.using(hikariDataSource.value, SQLDialect.SQLITE)
     }
 
     val transactionProvider by bean {
@@ -219,12 +232,8 @@ class ApplicationModule(
     val hikariConfig by bean {
         HikariConfig().apply {
             poolName = "kotbusta-hikari-pool"
-            dataSourceClassName = PGSimpleDataSource::class.qualifiedName
-            username = pgUser
-            password = pgPassword
-            dataSourceProperties["databaseName"] = pgDatabase
-            dataSourceProperties["serverName"] = pgHost
-            dataSourceProperties["portNumber"] = pgPort
+            dataSourceClassName = SQLiteDataSource::class.qualifiedName
+            dataSourceProperties["url"] = "jdbc:sqlite:$dbPath"
         }
     }
 
@@ -235,8 +244,21 @@ class ApplicationModule(
     fun initialize() {
         runMigrations(hikariDataSource.value)
 
+        // Start Kindle send worker
+        kindleSendWorker.value.start(
+            scope = workerScope,
+            intervalMillis = kindleWorkerIntervalMs.value,
+        )
+        log.info("Kindle send worker started")
+
         Runtime.getRuntime().addShutdownHook(
             thread(start = false) {
+                // Stop Kindle send worker
+                if (kindleSendWorker.isInitialized) {
+                    kindleSendWorker.value.stop()
+                }
+                workerScope.cancel()
+
                 if (httpClient.isInitialized) {
                     httpClient.value.use {}
                 }

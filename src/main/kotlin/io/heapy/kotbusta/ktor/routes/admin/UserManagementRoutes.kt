@@ -1,12 +1,16 @@
 package io.heapy.kotbusta.ktor.routes.admin
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.database.TransactionType
+import io.heapy.kotbusta.dao.countPendingUsers
+import io.heapy.kotbusta.dao.listPendingUsers
+import io.heapy.kotbusta.dao.updateUserStatus
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.ApiResponse.Success
+import io.heapy.kotbusta.model.PendingUsersResponse
+import io.heapy.kotbusta.model.UserStatus
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -14,7 +18,6 @@ import io.ktor.server.routing.*
 context(applicationModule: ApplicationModule)
 fun Route.userManagementRoutes() {
     val adminService = applicationModule.adminService.value
-    val userApprovalService = applicationModule.userApprovalService.value
     val transactionProvider = applicationModule.transactionProvider.value
 
     get("/users/pending") {
@@ -23,7 +26,15 @@ fun Route.userManagementRoutes() {
             val offset = call.requiredParameter<Int>("offset")
 
             val response = transactionProvider.transaction(READ_ONLY) {
-                userApprovalService.listPending(limit, offset)
+                val users = listPendingUsers(limit, offset)
+                val total = countPendingUsers()
+                val hasMore = (offset + limit) < total
+
+                PendingUsersResponse(
+                    users = users,
+                    total = total,
+                    hasMore = hasMore
+                )
             }
 
             call.respond(Success(data = response))
@@ -32,10 +43,10 @@ fun Route.userManagementRoutes() {
 
     post("/users/{userId}/approve") {
         adminService.requireAdminRights {
-            val userId = call.requiredParameter<Long>("userId")
+            val userId = call.requiredParameter<Int>("userId")
 
             val success = transactionProvider.transaction(READ_WRITE) {
-                userApprovalService.approve(userId)
+                updateUserStatus(userId, UserStatus.APPROVED)
             }
 
             if (success) {
@@ -57,10 +68,10 @@ fun Route.userManagementRoutes() {
 
     post("/users/{userId}/reject") {
         adminService.requireAdminRights {
-            val userId = call.requiredParameter<Long>("userId")
+            val userId = call.requiredParameter<Int>("userId")
 
             val success = transactionProvider.transaction(READ_WRITE) {
-                userApprovalService.reject(userId)
+                updateUserStatus(userId, UserStatus.REJECTED)
             }
 
             if (success) {
@@ -82,10 +93,10 @@ fun Route.userManagementRoutes() {
 
     post("/users/{userId}/deactivate") {
         adminService.requireAdminRights {
-            val userId = call.requiredParameter<Long>("userId")
+            val userId = call.requiredParameter<Int>("userId")
 
             val success = transactionProvider.transaction(READ_WRITE) {
-                userApprovalService.deactivate(userId)
+                updateUserStatus(userId, UserStatus.DEACTIVATED)
             }
 
             if (success) {

@@ -2,10 +2,16 @@ package io.heapy.kotbusta.ktor
 
 import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationModule
+import io.heapy.kotbusta.dao.UserStatusMapper
+import io.heapy.kotbusta.dao.findUserByGoogleId
+import io.heapy.kotbusta.dao.insertUser
+import io.heapy.kotbusta.dao.updateUser
+import io.heapy.kotbusta.dao.validateUserSession
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.User
+import io.heapy.kotbusta.model.UserStatus.PENDING
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -15,14 +21,13 @@ import io.ktor.server.sessions.*
 import io.ktor.util.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.time.OffsetDateTime
 import kotlin.time.Duration.Companion.days
 
 @Serializable
 data class UserSession(
-    val userId: Long,
+    val userId: Int,
     val email: String,
-    val name: String
+    val name: String,
 )
 
 @Serializable
@@ -30,7 +35,7 @@ data class GoogleUserInfo(
     val id: String,
     val email: String,
     val name: String,
-    @SerialName("picture") val avatarUrl: String?
+    @SerialName("picture") val avatarUrl: String?,
 )
 
 data class SessionConfig(
@@ -44,7 +49,6 @@ fun Application.configureAuthentication() {
     val httpClient = applicationModule.httpClient.value
     val transactionProvider = applicationModule.transactionProvider.value
     val sessionConfig = applicationModule.sessionConfig.value
-    val validateUserSessionDao = applicationModule.validateUserSessionQuery.value
 
     install(Sessions) {
         cookie<UserSession>("user_session") {
@@ -56,7 +60,7 @@ fun Application.configureAuthentication() {
                 SessionTransportTransformerEncrypt(
                     encryptionKey = hex(sessionConfig.secretEncryptKey),
                     signKey = hex(sessionConfig.secretEncryptKey),
-                )
+                ),
             )
         }
     }
@@ -67,14 +71,20 @@ fun Application.configureAuthentication() {
             validate { session ->
                 // Validate session by checking if user exists in database
                 transactionProvider.transaction(READ_ONLY) {
-                    val exists = validateUserSessionDao.userExists(session.userId)
+                    val exists = validateUserSession(session.userId)
                     if (exists) session else null
                 }
             }
         }
 
         logger {}
-            .info("Configuring Google OAuth with client ID: ${googleOauthConfig.clientId.take(10)}...")
+            .info(
+                "Configuring Google OAuth with client ID: ${
+                    googleOauthConfig.clientId.take(
+                        10,
+                    )
+                }...",
+            )
         oauth("google-oauth") {
             urlProvider = { googleOauthConfig.redirectUri }
             providerLookup = {
@@ -86,7 +96,7 @@ fun Application.configureAuthentication() {
                     clientId = googleOauthConfig.clientId,
                     clientSecret = googleOauthConfig.clientSecret,
                     defaultScopes = listOf("profile", "email"),
-                    extraAuthParameters = listOf("access_type" to "online")
+                    extraAuthParameters = listOf("access_type" to "online"),
                 )
             }
             client = httpClient
@@ -103,7 +113,10 @@ suspend fun handleGoogleCallback(
     val userInfo: GoogleUserInfo = httpClient
         .get("https://www.googleapis.com/oauth2/v1/userinfo") {
             headers {
-                append(HttpHeaders.Authorization, "Bearer ${principal.accessToken}")
+                append(
+                    HttpHeaders.Authorization,
+                    "Bearer ${principal.accessToken}",
+                )
             }
         }
         .body()
@@ -114,66 +127,61 @@ suspend fun handleGoogleCallback(
     return UserSession(
         userId = user.id,
         email = user.email,
-        name = user.name
+        name = user.name,
     )
 }
 
 context(applicationModule: ApplicationModule)
-private suspend fun insertOrUpdateUser(userInfo: GoogleUserInfo): User {
+private suspend fun insertOrUpdateUser(
+    googleUserInfo: GoogleUserInfo,
+): User {
     val transactionProvider = applicationModule.transactionProvider.value
-    val findUserByGoogleIdDao = applicationModule.findUserByGoogleIdQuery.value
-    val updateUserDao = applicationModule.updateUserQuery.value
-    val insertUserDao = applicationModule.insertUserQuery.value
+    val timeService = applicationModule.timeService.value
 
     return transactionProvider.transaction(READ_WRITE) {
         // Try to find existing user
-        val existingUser = findUserByGoogleIdDao.findByGoogleId(userInfo.id)
+        val existingUser = findUserByGoogleId(googleUserInfo.id)
+        val now = timeService.now()
 
         if (existingUser != null) {
             // Update existing user
             val userId = existingUser.id!!
-            val now = OffsetDateTime.now()
 
-            updateUserDao.updateUser(
+            updateUser(
                 userId = userId,
-                email = userInfo.email,
-                name = userInfo.name,
-                avatarUrl = userInfo.avatarUrl,
-                updatedAt = now
+                email = googleUserInfo.email,
+                name = googleUserInfo.name,
+                avatarUrl = googleUserInfo.avatarUrl,
             )
 
             User(
                 id = userId,
-                googleId = userInfo.id,
-                email = userInfo.email,
-                name = userInfo.name,
-                avatarUrl = userInfo.avatarUrl,
-                status = existingUser.status!!.mapUsing(io.heapy.kotbusta.dao.user.UserStatusMapper),
-                createdAt = existingUser.createdAt!!.toEpochSecond(),
-                updatedAt = now.toEpochSecond()
+                googleId = googleUserInfo.id,
+                email = googleUserInfo.email,
+                name = googleUserInfo.name,
+                avatarUrl = googleUserInfo.avatarUrl,
+                status = existingUser.status mapUsing UserStatusMapper,
+                createdAt = existingUser.createdAt,
+                updatedAt = now,
             )
         } else {
             // Insert new user
-            val now = OffsetDateTime.now()
-
-            val userId = insertUserDao.insertUser(
-                googleId = userInfo.id,
-                email = userInfo.email,
-                name = userInfo.name,
-                avatarUrl = userInfo.avatarUrl,
-                createdAt = now,
-                updatedAt = now
+            val userId = insertUser(
+                googleId = googleUserInfo.id,
+                email = googleUserInfo.email,
+                name = googleUserInfo.name,
+                avatarUrl = googleUserInfo.avatarUrl,
             )
 
             User(
                 id = userId,
-                googleId = userInfo.id,
-                email = userInfo.email,
-                name = userInfo.name,
-                avatarUrl = userInfo.avatarUrl,
-                status = io.heapy.kotbusta.model.UserStatus.PENDING,
-                createdAt = now.toEpochSecond(),
-                updatedAt = now.toEpochSecond(),
+                googleId = googleUserInfo.id,
+                email = googleUserInfo.email,
+                name = googleUserInfo.name,
+                avatarUrl = googleUserInfo.avatarUrl,
+                status = PENDING,
+                createdAt = now,
+                updatedAt = now,
             )
         }
     }

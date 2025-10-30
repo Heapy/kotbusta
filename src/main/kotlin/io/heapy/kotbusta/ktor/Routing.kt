@@ -23,6 +23,12 @@ import io.heapy.kotbusta.ktor.routes.notes.addOrUpdateNoteRoute
 import io.heapy.kotbusta.ktor.routes.notes.deleteNoteRoute
 import io.heapy.kotbusta.ktor.routes.staticFilesRoute
 import io.heapy.kotbusta.ktor.routes.user.userInfoRoute
+import io.heapy.kotbusta.ktor.routes.kindle.getDevicesRoute
+import io.heapy.kotbusta.ktor.routes.kindle.createDeviceRoute
+import io.heapy.kotbusta.ktor.routes.kindle.updateDeviceRoute
+import io.heapy.kotbusta.ktor.routes.kindle.deleteDeviceRoute
+import io.heapy.kotbusta.ktor.routes.kindle.sendToKindleRoute
+import io.heapy.kotbusta.ktor.routes.kindle.getSendHistoryRoute
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.routing.*
@@ -55,6 +61,12 @@ fun Application.configureRouting() {
                 addOrUpdateNoteRoute()
                 deleteNoteRoute()
                 downloadBookRoute()
+                getDevicesRoute()
+                createDeviceRoute()
+                updateDeviceRoute()
+                deleteDeviceRoute()
+                sendToKindleRoute()
+                getSendHistoryRoute()
             }
         }
     }

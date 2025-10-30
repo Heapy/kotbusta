@@ -1,14 +1,15 @@
 package io.heapy.kotbusta.parser
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.database.TransactionContext
+import io.heapy.kotbusta.dao.updateBookCover
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.database.useTx
-import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.service.ImportJobService
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -43,7 +44,7 @@ class Fb2Parser(
                     val results = chunk.map { entry ->
                         async(Dispatchers.IO) {
                             try {
-                                val bookId = entry.name.removeSuffix(".fb2").toLongOrNull()
+                                val bookId = entry.name.removeSuffix(".fb2").toIntOrNull()
                                 if (bookId != null) {
                                     val bytes = zipFile.getInputStream(entry).use { it.readAllBytes() }
                                     val cleanedInputStream = cleanInputStream(ByteArrayInputStream(bytes))
@@ -270,24 +271,6 @@ class Fb2Parser(
             log.error("Error parsing book metadata: ${e.message}", e)
             return null
         }
-    }
-
-    context(_: TransactionContext)
-    private fun updateBookCover(bookId: Long, coverImage: ByteArray) = useTx { dslContext ->
-        dslContext
-            .update(BOOKS)
-            .set(BOOKS.COVER_IMAGE, coverImage)
-            .where(BOOKS.ID.eq(bookId))
-            .execute()
-    }
-
-    context(_: TransactionContext)
-    private fun updateBookAnnotation(bookId: Long, annotation: String) = useTx { dslContext ->
-        dslContext
-            .update(BOOKS)
-            .set(BOOKS.ANNOTATION, annotation)
-            .where(BOOKS.ID.eq(bookId))
-            .execute()
     }
 
     private companion object : Logger()
