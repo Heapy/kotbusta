@@ -10,6 +10,8 @@ import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.ImportJob
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.model.JobStatus
+import io.heapy.kotbusta.model.JobStatus.COMPLETED
+import io.heapy.kotbusta.model.JobStatus.FAILED
 import io.heapy.kotbusta.model.JobStatus.RUNNING
 import io.heapy.kotbusta.model.JobType
 import kotlin.time.Clock
@@ -114,7 +116,7 @@ fun completeJob(
 ): Int = useTx { dslContext ->
     dslContext
         .update(IMPORT_JOBS)
-        .set(IMPORT_JOBS.STATUS, JobStatus.COMPLETED.mapUsing(JobStatusMapper))
+        .set(IMPORT_JOBS.STATUS, COMPLETED mapUsing JobStatusMapper)
         .set(IMPORT_JOBS.PROGRESS, finalMessage)
         .set(IMPORT_JOBS.COMPLETED_AT, completedAt)
         .where(IMPORT_JOBS.ID.eq(jobId))
@@ -129,7 +131,7 @@ fun failJob(
 ): Int = useTx { dslContext ->
     dslContext
         .update(IMPORT_JOBS)
-        .set(IMPORT_JOBS.STATUS, JobStatus.FAILED.mapUsing(JobStatusMapper))
+        .set(IMPORT_JOBS.STATUS, FAILED mapUsing JobStatusMapper)
         .set(IMPORT_JOBS.ERROR_MESSAGE, errorMessage)
         .set(IMPORT_JOBS.COMPLETED_AT, completedAt)
         .where(IMPORT_JOBS.ID.eq(jobId))

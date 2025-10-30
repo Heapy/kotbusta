@@ -9,7 +9,8 @@ import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
-import java.util.*
+import java.nio.file.Files
+import javax.sql.DataSource
 
 /**
  * JUnit 5 extension that provides test database setup using ApplicationModule.
@@ -30,8 +31,12 @@ import java.util.*
  */
 class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolver {
     override fun beforeEach(context: ExtensionContext) {
-        val dbName = "test-kotbusta-${UUID.randomUUID()}"
-        val dbUrl = "file:$dbName?mode=memory&cache=shared"
+        // Use a temporary file-based database instead of in-memory
+        // This ensures proper persistence across connections
+        val dbUrl = Files
+            .createTempFile("test-kotbusta-", ".db")
+            .toAbsolutePath()
+            .toString()
 
         val testEnv = mapOf(
             "KOTBUSTA_DB_PATH" to dbUrl,
@@ -56,6 +61,9 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         // Initialize database (runs migrations)
         applicationModule.initializeDatabase()
 
+        // Load test fixtures using the same data source
+        loadTestFixtures(applicationModule.dataSource.value)
+
         // Store in test context
         context.getStore(NAMESPACE).put(APP_MODULE_KEY, applicationModule)
     }
@@ -63,6 +71,8 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
     override fun afterEach(context: ExtensionContext) {
         val applicationModule = context.getStore(NAMESPACE)
             .get(APP_MODULE_KEY, ApplicationModule::class.java)
+
+        // Close the application module
         applicationModule?.close()
     }
 
@@ -91,6 +101,23 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
             DSLContext::class.java -> applicationModule.dslContext.value
             TransactionProvider::class.java -> applicationModule.transactionProvider.value
             else -> error("Unsupported parameter type: ${parameterContext.parameter.type}")
+        }
+    }
+
+    private fun loadTestFixtures(dataSource: DataSource) {
+        // Load the test fixtures SQL file from test resources
+        val fixturesStream = this::class.java.classLoader
+            .getResourceAsStream("sql/test-fixtures.sql")
+            ?: throw IllegalStateException("test-fixtures.sql file not found in test resources")
+
+        val sql = fixturesStream.bufferedReader().use { it.readText() }
+
+        // Use JDBC connection directly to execute the SQL script
+        // This allows SQLite to handle multiple statements more reliably
+        dataSource.connection.use { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeUpdate(sql)
+            }
         }
     }
 
