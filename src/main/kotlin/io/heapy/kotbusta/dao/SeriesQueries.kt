@@ -20,6 +20,7 @@ fun insertOrGetSeries(name: String): Int = useTx { dslContext ->
     dslContext
         .insertInto(SERIES)
         .set(SERIES.NAME, name)
+        .set(SERIES.CREATED_AT, kotlin.time.Clock.System.now())
         .returning(SERIES.ID)
         .fetchOne(SERIES.ID)
         ?: error("Failed to insert series: $name")

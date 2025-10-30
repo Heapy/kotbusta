@@ -24,6 +24,7 @@ fun insertOrGetAuthor(author: Author): Int = useTx { dslContext ->
         .set(AUTHORS.FIRST_NAME, author.firstName)
         .set(AUTHORS.LAST_NAME, author.lastName)
         .set(AUTHORS.FULL_NAME, author.fullName)
+        .set(AUTHORS.CREATED_AT, kotlin.time.Clock.System.now())
         .returning(AUTHORS.ID)
         .fetchOne(AUTHORS.ID)
         ?: error("Failed to insert author: ${author.fullName}")

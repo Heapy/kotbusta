@@ -492,6 +492,7 @@ fun insertBook(
     val authorIds = authors.map { insertOrGetAuthor(it) }
 
     // Insert book using jOOQ with ON CONFLICT (SQLite UPSERT)
+    val createdAt = Clock.System.now()
     dslContext
         .insertInto(BOOKS)
         .set(BOOKS.ID, bookId)
@@ -504,6 +505,7 @@ fun insertBook(
         .set(BOOKS.ARCHIVE_PATH, archivePath)
         .set(BOOKS.FILE_SIZE, fileSize)
         .set(BOOKS.DATE_ADDED, dateAdded)
+        .set(BOOKS.CREATED_AT, createdAt)
         .onConflict(BOOKS.ID)
         .doUpdate()
         .set(BOOKS.TITLE, title)

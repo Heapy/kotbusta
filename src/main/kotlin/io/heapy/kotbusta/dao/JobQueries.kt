@@ -53,12 +53,21 @@ fun createImportJob(
     progress: String,
     startedAt: Instant = Clock.System.now(),
 ): Int = useTx { dslContext ->
+    val createdAt = Clock.System.now()
     dslContext
         .insertInto(IMPORT_JOBS)
         .set(IMPORT_JOBS.JOB_TYPE, jobType mapUsing JobTypeMapper)
         .set(IMPORT_JOBS.STATUS, RUNNING mapUsing JobStatusMapper)
         .set(IMPORT_JOBS.PROGRESS, progress)
         .set(IMPORT_JOBS.STARTED_AT, startedAt)
+        .set(IMPORT_JOBS.INP_FILES_PROCESSED, 0)
+        .set(IMPORT_JOBS.BOOKS_ADDED, 0)
+        .set(IMPORT_JOBS.BOOKS_UPDATED, 0)
+        .set(IMPORT_JOBS.BOOKS_DELETED, 0)
+        .set(IMPORT_JOBS.COVERS_ADDED, 0)
+        .set(IMPORT_JOBS.BOOK_ERRORS, 0)
+        .set(IMPORT_JOBS.COVER_ERRORS, 0)
+        .set(IMPORT_JOBS.CREATED_AT, createdAt)
         .returning(IMPORT_JOBS.ID)
         .fetchOne(IMPORT_JOBS.ID)
         ?: error("Failed to create import job")
