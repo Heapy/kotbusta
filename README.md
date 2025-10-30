@@ -1,6 +1,6 @@
-# Kotbusta - Digital Library for Flibusta Books
+# Kotbusta - Digital Books Library
 
-A modern web application for browsing, searching, and downloading books from Flibusta torrent archives. Built with Kotlin/Ktor backend and Preact frontend.
+A modern web application for browsing, searching, and downloading books that using Flibusta (MyHomeLib) digital library format. Built with Kotlin/Ktor backend and Preact frontend.
 
 ## Features
 
@@ -36,7 +36,7 @@ A modern web application for browsing, searching, and downloading books from Fli
 ### Prerequisites
 
 - Docker and Docker Compose
-- Flibusta torrent data (FB2 files and INPX metadata)
+- Your digital library in Flibusta format (FB2 files and INPX metadata)
 - Google OAuth credentials
 
 ### Deployment
@@ -258,7 +258,7 @@ This project is licensed under the AGPL-3.0 - see the [LICENSE](LICENSE) file fo
 
 ## Acknowledgments
 
-- Flibusta library for book archives
+- Flibusta for the original digital library format
 - Pandoc for format conversion
 - Preact team for the lightweight framework
 - Ktor team for the excellent Kotlin framework
