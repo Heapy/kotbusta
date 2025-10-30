@@ -74,7 +74,7 @@ class KindleService(
                 id = device.id!!,
                 email = device.email,
                 name = device.name,
-                createdAt = device.createdAt!!,
+                createdAt = device.createdAt,
             )
         } catch (e: DataAccessException) {
             // Handle race condition: concurrent requests may both pass the pre-check
@@ -114,7 +114,7 @@ class KindleService(
             id = device.id!!,
             email = device.email,
             name = request.name,
-            createdAt = device.createdAt!!,
+            createdAt = device.createdAt,
         )
     }
 
