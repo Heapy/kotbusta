@@ -3,6 +3,7 @@ package io.heapy.kotbusta.ktor.routes.kindle
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
+import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.heapy.kotbusta.model.SendToKindleRequest
@@ -20,11 +21,7 @@ fun Route.sendToKindleRoute() {
     post("/books/{bookId}/send-to-kindle") {
         requireApprovedUser {
             try {
-                val bookId = call.parameters["bookId"]?.toLongOrNull()
-                    ?: return@requireApprovedUser call.respond(
-                        HttpStatusCode.BadRequest,
-                        Error("Invalid book ID")
-                    )
+                val bookId = call.requiredParameter<Int>("bookId")
 
                 val request = call.receive<SendToKindleRequest>()
                 val result = transactionProvider.transaction(READ_WRITE) {

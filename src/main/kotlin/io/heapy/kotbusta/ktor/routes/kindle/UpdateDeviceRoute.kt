@@ -3,6 +3,7 @@ package io.heapy.kotbusta.ktor.routes.kindle
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
+import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.heapy.kotbusta.model.UpdateDeviceRequest
@@ -19,11 +20,7 @@ fun Route.updateDeviceRoute() {
     put("/kindle/devices/{deviceId}") {
         requireApprovedUser {
             try {
-                val deviceId = call.parameters["deviceId"]?.toLongOrNull()
-                    ?: return@requireApprovedUser call.respond(
-                        HttpStatusCode.BadRequest,
-                        Error("Invalid device ID")
-                    )
+                val deviceId = call.requiredParameter<Int>("deviceId")
 
                 val request = call.receive<UpdateDeviceRequest>()
                 val device = transactionProvider.transaction(READ_WRITE) {
