@@ -15,7 +15,7 @@ fun Route.deleteNoteRoute() {
 
     delete("/books/{id}/notes") {
         requireApprovedUser {
-            val bookId = call.requiredParameter<Long>("id")
+            val bookId = call.requiredParameter<Int>("id")
 
             val success = transactionProvider.transaction(READ_WRITE) {
                 userService.deleteNote(bookId)

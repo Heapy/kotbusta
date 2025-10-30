@@ -25,7 +25,7 @@ fun Route.addOrUpdateNoteRoute() {
 
     post("/books/{id}/notes") {
         requireApprovedUser {
-            val bookId = call.requiredParameter<Long>("id")
+            val bookId = call.requiredParameter<Int>("id")
             val request = call.receive<NoteRequest>()
             val note = transactionProvider.transaction(READ_WRITE) {
                 userService.addOrUpdateNote(
