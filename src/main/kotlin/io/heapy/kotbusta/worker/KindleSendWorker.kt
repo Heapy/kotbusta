@@ -81,13 +81,13 @@ class KindleSendWorker(
     context(_: TransactionContext)
     private suspend fun processQueueItem(queueId: Int) {
         // Mark as processing with optimistic locking
-        val marked = markAsProcessing(queueId)
+        val marked = markQueueItemAsProcessing(queueId)
         if (!marked) {
             log.debug("Queue item $queueId already being processed")
             return
         }
 
-        createSendEvent(queueId, KindleSendStatus.PROCESSING.name)
+        createKindleSendEvent(queueId, KindleSendStatus.PROCESSING.name)
 
         // Fetch the specific queue item that was just locked
         val queueItem = findQueueItemById(queueId)
@@ -96,25 +96,22 @@ class KindleSendWorker(
             return
         }
 
-        val deviceId = queueItem.deviceId!!
-        val userId = queueItem.userId!!
-        val bookId = queueItem.bookId!!
-        val format = queueItem.format ?: run {
-            log.warn("Format null for queue item $queueId")
-            return
-        }
+        val deviceId = queueItem.deviceId
+        val userId = queueItem.userId
+        val bookId = queueItem.bookId
+        val format = queueItem.format
 
         // Fetch device, book info (we need to join these manually or add a query)
-        val device = findDeviceByIdAndUserId(deviceId, userId)
+        val device = findKindleDeviceByIdAndUserId(deviceId, userId)
 
         if (device == null) {
             log.warn("Device $deviceId not found for queue item $queueId")
-            updateQueueStatus(
+            updateQueueItemStatus(
                 queueId,
-                KindleSendStatus.FAILED.name,
+                KindleSendStatus.FAILED,
                 "Device not found",
             )
-            createSendEvent(
+            createKindleSendEvent(
                 queueId,
                 KindleSendStatus.FAILED.name,
                 Json.encodeToString(FailedEventDetails(reason = "Device not found")),
@@ -127,12 +124,12 @@ class KindleSendWorker(
             getBookFile(bookId.toString(), format)
         } catch (e: Exception) {
             log.error("Failed to resolve book file for queue item $queueId", e)
-            updateQueueStatus(
+            updateQueueItemStatus(
                 queueId,
-                KindleSendStatus.FAILED.name,
+                KindleSendStatus.FAILED,
                 "Failed to resolve book file: ${e.message}",
             )
-            createSendEvent(
+            createKindleSendEvent(
                 queueId,
                 KindleSendStatus.FAILED.name,
                 Json.encodeToString(
@@ -147,12 +144,12 @@ class KindleSendWorker(
 
         if (!bookFile.exists()) {
             log.warn("Book file not found: ${bookFile.absolutePath}")
-            updateQueueStatus(
+            updateQueueItemStatus(
                 queueId,
-                KindleSendStatus.FAILED.name,
+                KindleSendStatus.FAILED,
                 "Book file not found",
             )
-            createSendEvent(
+            createKindleSendEvent(
                 queueId,
                 KindleSendStatus.FAILED.name,
                 Json.encodeToString(FailedEventDetails(reason = "Book file not found")),
@@ -170,11 +167,11 @@ class KindleSendWorker(
 
         when (result) {
             is EmailResult.Success -> {
-                updateQueueStatus(
+                updateQueueItemStatus(
                     queueId,
-                    KindleSendStatus.COMPLETED.name,
+                    KindleSendStatus.COMPLETED,
                 )
-                createSendEvent(
+                createKindleSendEvent(
                     queueId,
                     KindleSendStatus.COMPLETED.name,
                     Json.encodeToString(SentEventDetails(messageId = result.messageId)),
@@ -183,16 +180,16 @@ class KindleSendWorker(
             }
 
             is EmailResult.RetryableFailure -> {
-                val attempts = (queueItem.attempts ?: 0) + 1
+                val attempts = queueItem.attempts + 1
                 if (attempts < maxRetries) {
                     val nextRunAt = calculateNextRunTime(attempts)
-                    incrementAttempts(queueId, nextRunAt)
-                    updateQueueStatus(
+                    incrementQueueItemAttempts(queueId, nextRunAt)
+                    updateQueueItemStatus(
                         queueId,
-                        KindleSendStatus.PENDING.name,
+                        KindleSendStatus.PENDING,
                         result.error,
                     )
-                    createSendEvent(
+                    createKindleSendEvent(
                         queueId,
                         KindleSendStatus.PENDING.name,
                         Json.encodeToString(
@@ -205,12 +202,12 @@ class KindleSendWorker(
                     )
                     log.warn("Retryable failure for queue item $queueId, attempt $attempts: ${result.error}")
                 } else {
-                    updateQueueStatus(
+                    updateQueueItemStatus(
                         queueId,
-                        KindleSendStatus.FAILED.name,
+                        KindleSendStatus.FAILED,
                         "Max retries exceeded: ${result.error}",
                     )
-                    createSendEvent(
+                    createKindleSendEvent(
                         queueId,
                         KindleSendStatus.FAILED.name,
                         Json.encodeToString(
@@ -225,12 +222,12 @@ class KindleSendWorker(
             }
 
             is EmailResult.PermanentFailure -> {
-                updateQueueStatus(
+                updateQueueItemStatus(
                     queueId,
-                    KindleSendStatus.FAILED.name,
+                    KindleSendStatus.FAILED,
                     result.error,
                 )
-                createSendEvent(
+                createKindleSendEvent(
                     queueId,
                     KindleSendStatus.FAILED.name,
                     Json.encodeToString(
