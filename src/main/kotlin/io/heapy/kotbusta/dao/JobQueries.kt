@@ -10,6 +10,7 @@ import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.ImportJob
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.model.JobStatus
+import io.heapy.kotbusta.model.JobStatus.RUNNING
 import io.heapy.kotbusta.model.JobType
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -28,16 +29,16 @@ val ImportJobRecordMapper =
     LeftTypeMapper<ImportJobsRecord, ImportJob> { output ->
         ImportJob(
             id = output.id!!,
-            jobType = output.jobType.mapUsing(JobTypeMapper),
-            status = output.status.mapUsing(JobStatusMapper),
+            jobType = output.jobType mapUsing JobTypeMapper,
+            status = output.status mapUsing JobStatusMapper,
             progress = output.progress,
-            inpFilesProcessed = output.inpFilesProcessed ?: 0,
-            booksAdded = output.booksAdded ?: 0,
-            booksUpdated = output.booksUpdated ?: 0,
-            booksDeleted = output.booksDeleted ?: 0,
-            coversAdded = output.coversAdded ?: 0,
-            bookErrors = output.bookErrors ?: 0,
-            coverErrors = output.coverErrors ?: 0,
+            inpFilesProcessed = output.inpFilesProcessed,
+            booksAdded = output.booksAdded,
+            booksUpdated = output.booksUpdated,
+            booksDeleted = output.booksDeleted,
+            coversAdded = output.coversAdded,
+            bookErrors = output.bookErrors,
+            coverErrors = output.coverErrors,
             errorMessage = output.errorMessage,
             startedAt = output.startedAt,
             completedAt = output.completedAt,
@@ -53,7 +54,7 @@ fun createImportJob(
     dslContext
         .insertInto(IMPORT_JOBS)
         .set(IMPORT_JOBS.JOB_TYPE, jobType mapUsing JobTypeMapper)
-        .set(IMPORT_JOBS.STATUS, JobStatus.RUNNING mapUsing JobStatusMapper)
+        .set(IMPORT_JOBS.STATUS, RUNNING mapUsing JobStatusMapper)
         .set(IMPORT_JOBS.PROGRESS, progress)
         .set(IMPORT_JOBS.STARTED_AT, startedAt)
         .returning(IMPORT_JOBS.ID)
