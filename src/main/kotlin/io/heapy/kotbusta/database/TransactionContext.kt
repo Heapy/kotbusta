@@ -2,6 +2,7 @@ package io.heapy.kotbusta.database
 
 import io.heapy.kotbusta.coroutines.runBlockingVirtual
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.jooq.DSLContext
 
@@ -46,6 +47,16 @@ interface TransactionProvider {
         type: TransactionType,
         block: suspend context(TransactionContext) () -> T,
     ): T
+}
+
+context(transactionProvider: TransactionProvider)
+fun transaction(
+    type: TransactionType = TransactionType.READ_WRITE,
+    block: context(TransactionContext) () -> Unit,
+) {
+    runBlocking {
+        transactionProvider.transaction(type, block)
+    }
 }
 
 class JooqTransactionProvider(
