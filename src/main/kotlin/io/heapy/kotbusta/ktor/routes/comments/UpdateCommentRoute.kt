@@ -22,7 +22,7 @@ fun Route.updateCommentRoute() {
 
     put("/comments/{id}") {
         requireApprovedUser {
-            val commentId = call.requiredParameter<Long>("id")
+            val commentId = call.requiredParameter<Int>("id")
             val request = call.receive<CommentRequest>()
             val success = transactionProvider.transaction(READ_WRITE) {
                 userService.updateComment(

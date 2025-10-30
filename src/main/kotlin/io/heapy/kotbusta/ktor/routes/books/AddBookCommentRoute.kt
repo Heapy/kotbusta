@@ -24,7 +24,7 @@ fun Route.addBookCommentRoute() {
 
     post("/books/{id}/comments") {
         requireApprovedUser {
-            val bookId = call.requiredParameter<Long>("id")
+            val bookId = call.requiredParameter<Int>("id")
 
             val request = call.receive<CommentRequest>()
             val comment = transactionProvider.transaction(READ_WRITE) {

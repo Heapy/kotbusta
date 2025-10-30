@@ -15,7 +15,7 @@ fun Route.getBookCommentsRoute() {
 
     get("/books/{id}/comments") {
         requireApprovedUser {
-            val bookId = call.requiredParameter<Long>("id")
+            val bookId = call.requiredParameter<Int>("id")
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 20
             val offset = call.request.queryParameters["offset"]?.toIntOrNull() ?: 0
             val comments = transactionProvider.transaction(READ_ONLY) {

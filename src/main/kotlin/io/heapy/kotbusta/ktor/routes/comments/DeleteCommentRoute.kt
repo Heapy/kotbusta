@@ -15,7 +15,7 @@ fun Route.deleteCommentRoute() {
 
     delete("/comments/{id}") {
         requireApprovedUser {
-            val commentId = call.requiredParameter<Long>("id")
+            val commentId = call.requiredParameter<Int>("id")
             val success = transactionProvider.transaction(READ_WRITE) {
                 userService.deleteComment(commentId)
             }
