@@ -18,6 +18,7 @@ import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
 import io.heapy.kotbusta.service.ImportJobService
+import io.heapy.kotbusta.service.JobStatsService
 import io.heapy.kotbusta.service.KindleService
 import io.heapy.kotbusta.service.TimeService
 import io.heapy.kotbusta.service.UserService
@@ -158,11 +159,16 @@ class ApplicationModule(
         )
     }
 
+    val jobStatsService by bean {
+        JobStatsService()
+    }
+
     val importJobService by bean {
         ImportJobService(
             booksDataPath = booksDataPath.value,
             fb2Parser = fb2Parser.value,
             inpxParser = inpxParser.value,
+            jobStatsService = jobStatsService.value,
         )
     }
 

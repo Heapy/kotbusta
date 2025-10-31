@@ -2,12 +2,6 @@ package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.coroutines.Loom
-import io.heapy.kotbusta.dao.completeJob
-import io.heapy.kotbusta.dao.createImportJob
-import io.heapy.kotbusta.dao.failJob
-import io.heapy.kotbusta.dao.updateJobProgress
-import io.heapy.kotbusta.dao.updateJobStats
-import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.model.JobType
 import io.heapy.kotbusta.parser.Fb2Parser
@@ -24,53 +18,53 @@ class ImportJobService(
     private val booksDataPath: Path,
     private val fb2Parser: Fb2Parser,
     private val inpxParser: InpxParser,
+    private val jobStatsService: JobStatsService,
 ) {
-    context(_: TransactionContext)
     fun startImport(applicationScope: CoroutineScope) =
         applicationScope.launch(Dispatchers.Loom) {
             startDataImport()
             startCoverExtraction()
         }
 
-    context(_: TransactionContext)
     suspend fun startDataImport() {
-        val jobId = createImportJob(JobType.DATA_IMPORT, "Starting import...")
+        val jobId = jobStatsService.createJob(JobType.DATA_IMPORT)
             .let(::JobId)
 
         val stats = ImportStats()
         try {
-            updateJobProgress(jobId.value, "Parsing INPX data in parallel...")
+            jobStatsService.updateProgress(jobId.value, "Parsing INPX data in parallel...")
 
             inpxParser.parseAndImport(booksDataPath, jobId, stats)
 
-            updateJobStats(jobId.value, stats)
-            completeJob(
+            jobStatsService.updateStats(jobId.value, stats)
+            jobStatsService.updateProgress(
                 jobId.value,
                 "Import completed successfully with parallel processing!",
             )
+            jobStatsService.completeJob(jobId.value)
         } catch (e: Exception) {
             log.error("Error importing data", e)
-            failJob(jobId.value, e.message ?: "Unknown error occurred")
+            jobStatsService.failJob(jobId.value, e.message ?: "Unknown error occurred")
         }
     }
 
-    context(_: TransactionContext)
     suspend fun startCoverExtraction() {
-        val jobId = createImportJob(JobType.COVER_EXTRACTION, "Starting cover extraction...")
+        val jobId = jobStatsService.createJob(JobType.COVER_EXTRACTION)
             .let(::JobId)
 
         val stats = ImportStats()
         try {
-            updateJobProgress(jobId.value, "Finding FB2 archives...")
+            jobStatsService.updateProgress(jobId.value, "Finding FB2 archives...")
             val archives = booksDataPath.listDirectoryEntries("*.zip")
                 .filter { it.fileName.toString().contains("fb2") }
                 .sorted()
 
             if (archives.isEmpty()) {
-                failJob(jobId.value, "No FB2 archives found in $booksDataPath")
+                jobStatsService.failJob(jobId.value, "No FB2 archives found in $booksDataPath")
+                return
             }
 
-            updateJobProgress(
+            jobStatsService.updateProgress(
                 jobId.value,
                 "Processing ${archives.size} archives in parallel...",
             )
@@ -89,14 +83,15 @@ class ImportJobService(
                     }
             }
 
-            updateJobStats(jobId.value, stats)
-            completeJob(
+            jobStatsService.updateStats(jobId.value, stats)
+            jobStatsService.updateProgress(
                 jobId.value,
                 "Cover extraction completed successfully with parallel processing!",
             )
+            jobStatsService.completeJob(jobId.value)
         } catch (e: Exception) {
             log.error("Error extracting covers", e)
-            failJob(jobId.value, e.message ?: "Unknown error occurred")
+            jobStatsService.failJob(jobId.value, e.message ?: "Unknown error occurred")
         }
     }
 

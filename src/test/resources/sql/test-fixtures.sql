@@ -134,12 +134,3 @@ INSERT INTO KINDLE_SEND_EVENTS (ID, QUEUE_ID, EVENT_TYPE, DETAILS, CREATED_AT) V
 (9, 5, 'STARTED', 'Started processing send request', '2024-01-24T11:00:00Z'),
 (10, 5, 'COMPLETED', 'Successfully sent to device', '2024-01-24T11:05:00Z');
 
--- ============================================================================
--- IMPORT_JOBS
--- ============================================================================
-INSERT INTO IMPORT_JOBS (ID, JOB_TYPE, STATUS, PROGRESS, INP_FILES_PROCESSED, BOOKS_ADDED, BOOKS_UPDATED, BOOKS_DELETED, COVERS_ADDED, BOOK_ERRORS, COVER_ERRORS, ERROR_MESSAGE, STARTED_AT, COMPLETED_AT, CREATED_AT) VALUES
-(1, 'DATA_IMPORT', 'COMPLETED', 'Completed successfully', 10, 10, 0, 0, 8, 0, 2, NULL, '2024-01-01T00:00:00Z', '2024-01-01T00:10:00Z', '2024-01-01T00:00:00Z'),
-(2, 'COVER_EXTRACTION', 'COMPLETED', 'Extracted covers for all books', 10, 0, 0, 0, 10, 0, 0, NULL, '2024-01-01T00:15:00Z', '2024-01-01T00:20:00Z', '2024-01-01T00:15:00Z'),
-(3, 'DATA_IMPORT', 'RUNNING', 'Processing file 5 of 20', 5, 5, 0, 0, 3, 0, 0, NULL, '2024-01-25T10:00:00Z', NULL, '2024-01-25T10:00:00Z'),
-(4, 'DATA_IMPORT', 'FAILED', 'Failed to process input', 3, 2, 0, 0, 1, 1, 0, 'IOException: Unable to read archive file', '2024-01-24T15:00:00Z', '2024-01-24T15:05:00Z', '2024-01-24T15:00:00Z');
-
