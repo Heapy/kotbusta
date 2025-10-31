@@ -5,7 +5,6 @@ import { api } from './utils/api.js';
 
 // Components
 import { Header } from './components/Header.js';
-import { BookCard } from './components/BookCard.js';
 import { BookDetail } from './components/BookDetail.js';
 import { BooksList } from './components/BooksList.js';
 import { Activity } from './components/Activity.js';
