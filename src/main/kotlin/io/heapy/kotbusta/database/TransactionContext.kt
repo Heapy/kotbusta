@@ -1,6 +1,5 @@
 package io.heapy.kotbusta.database
 
-import io.heapy.kotbusta.coroutines.runBlockingVirtual
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
@@ -76,8 +75,6 @@ class JooqTransactionProvider(
             )
         }
 
-        runBlockingVirtual(ioDispatcher) {
-            block(transactionContext)
-        }
+        block(transactionContext)
     }
 }

@@ -1,103 +1,104 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.coroutines.Loom
+import io.heapy.kotbusta.model.ImportJob
 import io.heapy.kotbusta.model.ImportStats
-import io.heapy.kotbusta.model.JobType
 import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
 import java.nio.file.Path
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.io.path.listDirectoryEntries
 
 class ImportJobService(
     private val booksDataPath: Path,
     private val fb2Parser: Fb2Parser,
     private val inpxParser: InpxParser,
-    private val jobStatsService: JobStatsService,
 ) {
-    fun startImport(applicationScope: CoroutineScope) =
-        applicationScope.launch(Dispatchers.Loom) {
-            startDataImport()
-            startCoverExtraction()
+    private val stats = AtomicReference(ImportStats())
+    private val jobRunning = AtomicBoolean(false)
+
+    private fun startJob(): Boolean {
+        val started = jobRunning
+            .compareAndSet(
+                expectedValue = false,
+                newValue = true,
+            )
+
+        if (started) {
+            stats.store(ImportStats())
         }
 
-    suspend fun startDataImport() {
-        val jobId = jobStatsService.createJob(JobType.DATA_IMPORT)
-            .let(::JobId)
+        return started
+    }
 
-        val stats = ImportStats()
-        try {
-            jobStatsService.updateProgress(jobId.value, "Parsing INPX data in parallel...")
-
-            inpxParser.parseAndImport(booksDataPath, jobId, stats)
-
-            jobStatsService.updateStats(jobId.value, stats)
-            jobStatsService.updateProgress(
-                jobId.value,
-                "Import completed successfully with parallel processing!",
+    private fun stopJob(): Boolean {
+        return jobRunning
+            .compareAndSet(
+                expectedValue = true,
+                newValue = false,
             )
-            jobStatsService.completeJob(jobId.value)
-        } catch (e: Exception) {
-            log.error("Error importing data", e)
-            jobStatsService.failJob(jobId.value, e.message ?: "Unknown error occurred")
+    }
+
+    fun stats(): ImportStats = stats.load()
+
+    fun startImport(applicationScope: CoroutineScope): Boolean {
+        return if (startJob()) {
+            applicationScope.launch(Dispatchers.IO) {
+                val jobStats = stats.load()
+                try {
+                    startDataImport(jobStats)
+                    startCoverExtraction(jobStats)
+                } catch (e: Exception) {
+                    jobStats.status.store(ImportJob.JobStatus.FAILED)
+                    jobStats.addMessage("Error importing data: ${e.message}")
+                    log.error("Error during import", e)
+                    stopJob()
+                }
+            }
+            true
+        } else {
+            log.warn("Another job is already running")
+            false
         }
     }
 
-    suspend fun startCoverExtraction() {
-        val jobId = jobStatsService.createJob(JobType.COVER_EXTRACTION)
-            .let(::JobId)
-
-        val stats = ImportStats()
-        try {
-            jobStatsService.updateProgress(jobId.value, "Finding FB2 archives...")
-            val archives = booksDataPath.listDirectoryEntries("*.zip")
-                .filter { it.fileName.toString().contains("fb2") }
-                .sorted()
-
-            if (archives.isEmpty()) {
-                jobStatsService.failJob(jobId.value, "No FB2 archives found in $booksDataPath")
-                return
-            }
-
-            jobStatsService.updateProgress(
-                jobId.value,
-                "Processing ${archives.size} archives in parallel...",
-            )
-
-            // Process archives in parallel
-            coroutineScope {
-                archives
-                    .forEach { archive ->
-                        launch(Dispatchers.Loom) {
-                            fb2Parser.extractBookCovers(
-                                archivePath = archive.toString(),
-                                jobId = jobId,
-                                stats = stats,
-                            )
-                        }
-                    }
-            }
-
-            jobStatsService.updateStats(jobId.value, stats)
-            jobStatsService.updateProgress(
-                jobId.value,
-                "Cover extraction completed successfully with parallel processing!",
-            )
-            jobStatsService.completeJob(jobId.value)
-        } catch (e: Exception) {
-            log.error("Error extracting covers", e)
-            jobStatsService.failJob(jobId.value, e.message ?: "Unknown error occurred")
-        }
+    suspend fun startDataImport(jobStats: ImportStats) {
+        jobStats.addMessage("Parsing INPX data")
+        inpxParser.parseAndImport(booksDataPath, jobStats)
+        jobStats.addMessage("Parsing INPX data completed")
     }
 
-    @JvmInline
-    @Serializable
-    value class JobId(val value: Int)
+    suspend fun startCoverExtraction(jobStats: ImportStats) {
+        jobStats.addMessage("Finding FB2 archives")
+        val archives = booksDataPath.listDirectoryEntries("*.zip")
+            .filter { it.fileName.toString().contains("fb2") }
+            .sorted()
+
+        if (archives.isEmpty()) {
+            jobStats.addMessage("No FB2 archives found in $booksDataPath")
+            return
+        }
+
+        jobStats.addMessage("Processing ${archives.size} archives in parallel...")
+
+        // Process archives in parallel
+        coroutineScope {
+            archives
+                .forEach { archive ->
+                    fb2Parser.extractBookCovers(
+                        archivePath = archive.toString(),
+                        stats = jobStats,
+                    )
+                }
+        }
+
+        jobStats.addMessage("Cover extraction completed successfully with parallel processing!")
+    }
 
     private companion object : Logger()
 }

@@ -8,7 +8,6 @@ import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.model.Series
-import io.heapy.kotbusta.service.ImportJobService.JobId
 import io.heapy.kotbusta.service.TimeService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -27,7 +26,6 @@ class InpxParser(
 ) {
     suspend fun parseAndImport(
         booksDataPath: Path,
-        jobId: JobId,
         stats: ImportStats,
     ) {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
@@ -81,7 +79,7 @@ class InpxParser(
             val parts = line.split('\u0004') // Field separator in INP files
             if (parts.size < 8) {
                 log.warn("Invalid line: $line")
-                stats.incInvalidInpLine()
+                stats.incInvalidBooks()
                 return false
             }
 
@@ -92,7 +90,7 @@ class InpxParser(
             val seriesNumber = parts[4].toIntOrNull()
             val bookId = parts[5].toIntOrNull() ?: run {
                 log.warn("Invalid bookId: ${parts[5]}")
-                stats.incInvalidBookId()
+                stats.incInvalidBooks()
                 return false
             }
             val fileSize = parts[6].toIntOrNull()
@@ -105,7 +103,7 @@ class InpxParser(
 
             if (deleted == "1") {
                 log.warn("Book $bookId deleted")
-                stats.incBooksDeleted()
+                stats.incDeletedBooks()
                 return false // Skip deleted books
             }
 
@@ -113,7 +111,7 @@ class InpxParser(
             val authors = parseAuthors(authorPart)
             if (authors.isEmpty()) {
                 log.warn("No authors for book $bookId")
-                stats.incBookNoAuthors()
+                stats.incInvalidBooks()
                 return false
             }
 
@@ -139,7 +137,7 @@ class InpxParser(
                 fileSize = fileSize,
                 dateAdded = parseDateAdded(dateAdded)
             )
-            stats.incBookAdded()
+            stats.incAddedBooks()
             true
         } catch (e: Exception) {
             log.error("Error parsing line: $line", e)

@@ -23,7 +23,6 @@ class Fb2Parser(
 ) {
     suspend fun extractBookCovers(
         archivePath: String,
-        jobId: ImportJobService.JobId,
         stats: ImportStats,
     ) {
         log.info("Extracting covers from: $archivePath")

@@ -5,7 +5,6 @@ import io.heapy.komok.tech.config.dotenv.dotenv
 import io.heapy.komok.tech.di.delegate.MutableBean
 import io.heapy.komok.tech.di.delegate.bean
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.coroutines.DispatchersModule
 import io.heapy.kotbusta.database.JooqTransactionProvider
 import io.heapy.kotbusta.database.LimitingConnectionProvider
 import io.heapy.kotbusta.database.PragmaDataSource
@@ -18,7 +17,6 @@ import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
 import io.heapy.kotbusta.service.ImportJobService
-import io.heapy.kotbusta.service.JobStatsService
 import io.heapy.kotbusta.service.KindleService
 import io.heapy.kotbusta.service.TimeService
 import io.heapy.kotbusta.service.UserService
@@ -28,6 +26,7 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
@@ -40,10 +39,9 @@ import java.security.SecureRandom
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
 
-class ApplicationModule(
-    val dispatchersModule: DispatchersModule,
-) {
-    private val workerScope = CoroutineScope(SupervisorJob() + dispatchersModule.ioDispatcher.value)
+class ApplicationModule {
+    private val workerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     val staticFilesConfig by bean {
         val staticFilesPath = env["KOTBUSTA_STATIC_FILES_PATH"]
         StaticFilesConfig(
@@ -159,16 +157,11 @@ class ApplicationModule(
         )
     }
 
-    val jobStatsService by bean {
-        JobStatsService()
-    }
-
     val importJobService by bean {
         ImportJobService(
             booksDataPath = booksDataPath.value,
             fb2Parser = fb2Parser.value,
             inpxParser = inpxParser.value,
-            jobStatsService = jobStatsService.value,
         )
     }
 
@@ -240,7 +233,7 @@ class ApplicationModule(
         JooqTransactionProvider(
             roDslContext = roDslContext.value,
             rwDslContext = rwDslContext.value,
-            ioDispatcher = dispatchersModule.ioDispatcher.value,
+            ioDispatcher = Dispatchers.IO,
         )
     }
 

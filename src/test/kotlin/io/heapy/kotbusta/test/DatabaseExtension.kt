@@ -1,9 +1,7 @@
 package io.heapy.kotbusta.test
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.coroutines.DispatchersModule
 import io.heapy.kotbusta.database.TransactionProvider
-import org.jooq.DSLContext
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
@@ -55,7 +53,7 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         )
 
         // Create application module with test configuration
-        val applicationModule = ApplicationModule(DispatchersModule())
+        val applicationModule = ApplicationModule()
         applicationModule.envOverrides.setValue(testEnv)
 
         // Initialize database (runs migrations)

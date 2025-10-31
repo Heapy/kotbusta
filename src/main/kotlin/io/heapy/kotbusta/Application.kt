@@ -2,7 +2,6 @@
 
 package io.heapy.kotbusta
 
-import io.heapy.kotbusta.coroutines.DispatchersModule
 import io.heapy.kotbusta.ktor.configureAuthentication
 import io.heapy.kotbusta.ktor.configureRouting
 import io.heapy.kotbusta.ktor.configureSerialization
@@ -17,7 +16,7 @@ fun main() {
 }
 
 fun Application.module() {
-    context(ApplicationModule(DispatchersModule())) {
+    context(ApplicationModule()) {
         contextOf<ApplicationModule>().initialize()
         configureSerialization()
         configureStatusPages()

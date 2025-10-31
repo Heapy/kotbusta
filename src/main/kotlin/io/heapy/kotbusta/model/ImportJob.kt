@@ -1,56 +1,76 @@
 package io.heapy.kotbusta.model
 
+import io.heapy.kotbusta.model.ImportJob.JobStatus
 import kotlinx.serialization.Serializable
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.atomics.AtomicInt
-import kotlin.concurrent.atomics.fetchAndIncrement
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.time.Clock
 import kotlin.time.Instant
 
 @Serializable
 data class ImportJob(
-    val id: Int,
-    val jobType: JobType,
     val status: JobStatus,
-    val progress: String?,
-    val inpFilesProcessed: Int = 0,
-    val booksAdded: Int = 0,
-    val booksUpdated: Int = 0,
-    val booksDeleted: Int = 0,
-    val coversAdded: Int = 0,
-    val bookErrors: Int = 0,
-    val coverErrors: Int = 0,
-    val errorMessage: String? = null,
+    val messages: Map<Instant, String>,
+    val inpFilesProcessed: Int,
+    val booksAdded: Int,
+    val bookErrors: Int,
+    val bookDeleted: Int,
+    val coversAdded: Int,
+    val coverErrors: Int,
     val startedAt: Instant,
     val completedAt: Instant? = null,
-)
-
-data class ImportStats(
-    val inpFilesProcessed: AtomicInt = AtomicInt(0),
-    val booksAdded: AtomicInt = AtomicInt(0),
-    val booksUpdated: AtomicInt = AtomicInt(0),
-    val booksDeleted: AtomicInt = AtomicInt(0),
-    val coversAdded: AtomicInt = AtomicInt(0),
-    val bookErrors: AtomicInt = AtomicInt(0),
-    val coverErrors: AtomicInt = AtomicInt(0),
 ) {
-    fun incInpFiles() = inpFilesProcessed.fetchAndIncrement()
-    fun incBookAdded() = booksAdded.fetchAndIncrement()
-    fun incBooksUpdated() = booksUpdated.fetchAndIncrement()
-    fun incInvalidBookId() = booksDeleted.fetchAndIncrement()
-    fun incBooksDeleted() = booksDeleted.fetchAndIncrement()
-    fun incInvalidInpLine() = bookErrors.fetchAndIncrement()
-    fun incBookNoAuthors() = bookErrors.fetchAndIncrement()
-    fun incBookErrors() = bookErrors.fetchAndIncrement()
-    fun incCoversAdded() = coversAdded.fetchAndIncrement()
-    fun incCoverErrors() = coverErrors.fetchAndIncrement()
+    enum class JobStatus {
+        IDLE,
+        RUNNING,
+        COMPLETED,
+        FAILED,
+    }
 }
 
-enum class JobStatus {
-    RUNNING,
-    COMPLETED,
-    FAILED;
+class ImportStats {
+    val status = AtomicReference(JobStatus.IDLE)
+    val message = ConcurrentHashMap<Instant, String>()
+    val startedAt = AtomicReference(Clock.System.now())
+    val completedAt = AtomicReference<Instant?>(null)
+    val inpFilesProcessed = AtomicInt(0)
+    val booksAdded = AtomicInt(0)
+    val booksDeleted = AtomicInt(0)
+    val bookErrors = AtomicInt(0)
+    val coversAdded = AtomicInt(0)
+    val coverErrors = AtomicInt(0)
+
+    fun addMessage(msg: String) {
+        message[Clock.System.now()] = msg
+    }
+
+    fun incInpFiles() {
+        inpFilesProcessed.addAndFetch(1)
+    }
+
+    fun incInvalidBooks() {
+        bookErrors.addAndFetch(1)
+    }
+
+    fun incDeletedBooks() {
+        booksDeleted.addAndFetch(1)
+    }
+
+    fun incAddedBooks() {
+        booksAdded.addAndFetch(1)
+    }
 }
 
-enum class JobType {
-    DATA_IMPORT,
-    COVER_EXTRACTION;
-}
+fun ImportStats.toImportJob() = ImportJob(
+    status = status.load(),
+    messages = message.toMap(),
+    inpFilesProcessed = inpFilesProcessed.load(),
+    booksAdded = booksAdded.load(),
+    bookErrors = bookErrors.load(),
+    bookDeleted = booksDeleted.load(),
+    coversAdded = coversAdded.load(),
+    coverErrors = coverErrors.load(),
+    startedAt = startedAt.load(),
+    completedAt = completedAt.load(),
+)
