@@ -244,7 +244,7 @@ class ApplicationModule(
 
     val roDataSource by bean {
         val base = SQLiteDataSource().apply {
-            url = "jdbc:sqlite:${dbPath.value}?mode=ro"
+            url = "jdbc:sqlite:${dbPath.value}"
         }
         PragmaDataSource(
             base,
