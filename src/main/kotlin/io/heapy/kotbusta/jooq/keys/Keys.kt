@@ -9,7 +9,6 @@ import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
-import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -22,7 +21,6 @@ import io.heapy.kotbusta.jooq.tables.records.AuthorsRecord
 import io.heapy.kotbusta.jooq.tables.records.BookAuthorsRecord
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
 import io.heapy.kotbusta.jooq.tables.records.DownloadsRecord
-import io.heapy.kotbusta.jooq.tables.records.ImportJobsRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleDevicesRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleSendEventsRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleSendQueueRecord
@@ -48,7 +46,6 @@ val AUTHORS__PK_AUTHORS: UniqueKey<AuthorsRecord> = Internal.createUniqueKey(Aut
 val BOOK_AUTHORS__PK_BOOK_AUTHORS: UniqueKey<BookAuthorsRecord> = Internal.createUniqueKey(BookAuthors.BOOK_AUTHORS, DSL.name("pk_BOOK_AUTHORS"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID, BookAuthors.BOOK_AUTHORS.AUTHOR_ID), true)
 val BOOKS__PK_BOOKS: UniqueKey<BooksRecord> = Internal.createUniqueKey(Books.BOOKS, DSL.name("pk_BOOKS"), arrayOf(Books.BOOKS.ID), true)
 val DOWNLOADS__PK_DOWNLOADS: UniqueKey<DownloadsRecord> = Internal.createUniqueKey(Downloads.DOWNLOADS, DSL.name("pk_DOWNLOADS"), arrayOf(Downloads.DOWNLOADS.ID), true)
-val IMPORT_JOBS__PK_IMPORT_JOBS: UniqueKey<ImportJobsRecord> = Internal.createUniqueKey(ImportJobs.IMPORT_JOBS, DSL.name("pk_IMPORT_JOBS"), arrayOf(ImportJobs.IMPORT_JOBS.ID), true)
 val KINDLE_DEVICES__PK_KINDLE_DEVICES: UniqueKey<KindleDevicesRecord> = Internal.createUniqueKey(KindleDevices.KINDLE_DEVICES, DSL.name("pk_KINDLE_DEVICES"), arrayOf(KindleDevices.KINDLE_DEVICES.ID), true)
 val KINDLE_DEVICES__UK_KINDLE_DEVICES_1_13757864: UniqueKey<KindleDevicesRecord> = Internal.createUniqueKey(KindleDevices.KINDLE_DEVICES, DSL.name("uk_KINDLE_DEVICES_1_13757864"), arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID, KindleDevices.KINDLE_DEVICES.EMAIL), true)
 val KINDLE_SEND_EVENTS__PK_KINDLE_SEND_EVENTS: UniqueKey<KindleSendEventsRecord> = Internal.createUniqueKey(KindleSendEvents.KINDLE_SEND_EVENTS, DSL.name("pk_KINDLE_SEND_EVENTS"), arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.ID), true)

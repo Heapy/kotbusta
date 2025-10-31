@@ -6,5 +6,4 @@ val migrations: List<Migration>
     get() = listOf(
         v1,
         v2,
-        v3,
     )

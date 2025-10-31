@@ -8,7 +8,6 @@ import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
-import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -60,11 +59,6 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     val DOWNLOADS: Downloads get() = Downloads.DOWNLOADS
 
     /**
-     * The table <code>IMPORT_JOBS</code>.
-     */
-    val IMPORT_JOBS: ImportJobs get() = ImportJobs.IMPORT_JOBS
-
-    /**
      * The table <code>KINDLE_DEVICES</code>.
      */
     val KINDLE_DEVICES: KindleDevices get() = KindleDevices.KINDLE_DEVICES
@@ -111,7 +105,6 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
         BookAuthors.BOOK_AUTHORS,
         Books.BOOKS,
         Downloads.DOWNLOADS,
-        ImportJobs.IMPORT_JOBS,
         KindleDevices.KINDLE_DEVICES,
         KindleSendEvents.KINDLE_SEND_EVENTS,
         KindleSendQueue.KINDLE_SEND_QUEUE,

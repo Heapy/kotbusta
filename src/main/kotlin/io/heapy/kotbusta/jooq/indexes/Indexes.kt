@@ -8,7 +8,6 @@ package io.heapy.kotbusta.jooq.indexes
 import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
-import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -30,9 +29,6 @@ val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_LANGUAG
 val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("IDX_BOOKS_SERIES"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)
 val IDX_BOOKS_TITLE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_TITLE"), Books.BOOKS, arrayOf(Books.BOOKS.TITLE), false)
 val IDX_DOWNLOADS_RECENT: Index = Internal.createIndex(DSL.name("IDX_DOWNLOADS_RECENT"), Downloads.DOWNLOADS, arrayOf(Downloads.DOWNLOADS.CREATED_AT), false)
-val IDX_IMPORT_JOBS_STARTED: Index = Internal.createIndex(DSL.name("IDX_IMPORT_JOBS_STARTED"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STARTED_AT), false)
-val IDX_IMPORT_JOBS_STATUS: Index = Internal.createIndex(DSL.name("IDX_IMPORT_JOBS_STATUS"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.STATUS), false)
-val IDX_IMPORT_JOBS_TYPE: Index = Internal.createIndex(DSL.name("IDX_IMPORT_JOBS_TYPE"), ImportJobs.IMPORT_JOBS, arrayOf(ImportJobs.IMPORT_JOBS.JOB_TYPE), false)
 val IDX_KINDLE_DEVICES_EMAIL: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_EMAIL"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.EMAIL), false)
 val IDX_KINDLE_DEVICES_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_USER"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID), false)
 val IDX_KINDLE_SEND_EVENTS_QUEUE: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_EVENTS_QUEUE"), KindleSendEvents.KINDLE_SEND_EVENTS, arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.QUEUE_ID), false)

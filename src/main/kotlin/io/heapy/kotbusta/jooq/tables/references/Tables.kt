@@ -9,7 +9,6 @@ import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
-import io.heapy.kotbusta.jooq.tables.ImportJobs
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -40,11 +39,6 @@ val BOOKS: Books = Books.BOOKS
  * The table <code>DOWNLOADS</code>.
  */
 val DOWNLOADS: Downloads = Downloads.DOWNLOADS
-
-/**
- * The table <code>IMPORT_JOBS</code>.
- */
-val IMPORT_JOBS: ImportJobs = ImportJobs.IMPORT_JOBS
 
 /**
  * The table <code>KINDLE_DEVICES</code>.

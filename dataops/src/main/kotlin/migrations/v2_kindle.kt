@@ -65,7 +65,7 @@ $next
 CREATE INDEX IF NOT EXISTS IDX_KINDLE_SEND_EVENTS_TYPE ON KINDLE_SEND_EVENTS (EVENT_TYPE);
 """.trimIndent()
 
-val v3: Migration
+val v2: Migration
     get() = Migration(
         version = 3,
         script = sql,
