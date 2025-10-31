@@ -62,7 +62,7 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         applicationModule.initializeDatabase()
 
         // Load test fixtures using the same data source
-        loadTestFixtures(applicationModule.dataSource.value)
+        loadTestFixtures(applicationModule.rwDataSource.value)
 
         // Store in test context
         context.getStore(NAMESPACE).put(APP_MODULE_KEY, applicationModule)
@@ -81,9 +81,7 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         extensionContext: ExtensionContext,
     ): Boolean {
         return when (parameterContext.parameter.type) {
-            TestDatabase::class.java,
             ApplicationModule::class.java,
-            DSLContext::class.java,
             TransactionProvider::class.java -> true
             else -> false
         }
@@ -96,9 +94,7 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         val applicationModule = getApplicationModule(extensionContext)
 
         return when (parameterContext.parameter.type) {
-            TestDatabase::class.java -> TestDatabase(applicationModule)
             ApplicationModule::class.java -> applicationModule
-            DSLContext::class.java -> applicationModule.dslContext.value
             TransactionProvider::class.java -> applicationModule.transactionProvider.value
             else -> error("Unsupported parameter type: ${parameterContext.parameter.type}")
         }
@@ -131,17 +127,4 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
                 ?: error("DatabaseExtension not registered")
         }
     }
-}
-
-/**
- * Test database accessor that provides convenient access to database components.
- *
- * This is a lightweight wrapper around ApplicationModule that exposes only the
- * database-related components needed for testing.
- */
-data class TestDatabase(
-    private val applicationModule: ApplicationModule,
-) {
-    val dslContext: DSLContext get() = applicationModule.dslContext.value
-    val transactionProvider: TransactionProvider get() = applicationModule.transactionProvider.value
 }

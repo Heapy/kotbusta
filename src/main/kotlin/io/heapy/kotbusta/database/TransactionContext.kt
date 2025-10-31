@@ -10,7 +10,6 @@ import org.jooq.DSLContext
 sealed interface TransactionContext
 
 private class JooqTransactionContext(
-    val type: TransactionType,
     val dslContext: DSLContext,
 ) : TransactionContext
 
@@ -19,7 +18,6 @@ internal object MockTransactionContext : TransactionContext
 enum class TransactionType {
     READ_ONLY,
     READ_WRITE,
-    NONE,
 }
 
 @DslMarker
@@ -60,51 +58,26 @@ fun transaction(
 }
 
 class JooqTransactionProvider(
-    private val dslContext: DSLContext,
+    private val roDslContext: DSLContext,
+    private val rwDslContext: DSLContext,
     private val ioDispatcher: CoroutineDispatcher,
 ) : TransactionProvider {
     override suspend fun <T> transaction(
         type: TransactionType,
         block: suspend context(TransactionContext) () -> T,
     ): T = withContext(ioDispatcher) {
-        when (type) {
-            TransactionType.READ_ONLY -> dslContext.transactionResult { configuration ->
-                val transactionDslContext = configuration.dsl()
-                transactionDslContext.connection { connection ->
-                    connection.isReadOnly = true
-                }
+        val transactionContext = when (type) {
+            TransactionType.READ_ONLY -> JooqTransactionContext(
+                dslContext = roDslContext,
+            )
 
-                val transactionContext = JooqTransactionContext(
-                    type = type,
-                    dslContext = transactionDslContext,
-                )
+            TransactionType.READ_WRITE -> JooqTransactionContext(
+                dslContext = rwDslContext,
+            )
+        }
 
-                runBlockingVirtual(ioDispatcher) {
-                    block(transactionContext)
-                }
-            }
-
-            TransactionType.READ_WRITE -> dslContext.transactionResult { configuration ->
-                val transactionContext = JooqTransactionContext(
-                    type = type,
-                    dslContext = configuration.dsl(),
-                )
-
-                runBlockingVirtual(ioDispatcher) {
-                    block(transactionContext)
-                }
-            }
-
-            TransactionType.NONE -> {
-                val transactionContext = JooqTransactionContext(
-                    type = type,
-                    dslContext = dslContext,
-                )
-
-                runBlockingVirtual(ioDispatcher) {
-                    block(transactionContext)
-                }
-            }
+        runBlockingVirtual(ioDispatcher) {
+            block(transactionContext)
         }
     }
 }

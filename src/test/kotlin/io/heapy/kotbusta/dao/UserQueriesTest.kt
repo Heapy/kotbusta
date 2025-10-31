@@ -1,8 +1,10 @@
 package io.heapy.kotbusta.dao
 
+import io.heapy.kotbusta.database.TransactionProvider
+import io.heapy.kotbusta.database.transaction
+import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.USERS
 import io.heapy.kotbusta.test.DatabaseExtension
-import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -23,24 +25,29 @@ import org.junit.jupiter.api.extension.ExtendWith
 @ExtendWith(DatabaseExtension::class)
 class UserQueriesTest {
     @Test
-    fun `test fixtures should load successfully`(dslContext: DSLContext) {
+    context(_: TransactionProvider)
+    fun `test fixtures should load successfully`() = transaction {
         // Check total number of users
-        val userCount = dslContext
-            .selectCount()
-            .from(USERS)
-            .fetchOne(0, Int::class.java)
+        val userCount = useTx { dslContext ->
+            dslContext
+                .selectCount()
+                .from(USERS)
+                .fetchOne(0, Int::class.java)
+        }
 
         assertEquals(5, userCount, "Should have 5 users from fixtures")
     }
 
     @Test
-    fun `should find pending users from fixtures`(dslContext: DSLContext) {
+    context(_: TransactionProvider)
+    fun `should find pending users from fixtures`() = transaction {
         // When: Querying for pending users
-        val pendingUsers = dslContext
-            .selectFrom(USERS)
-            .where(USERS.STATUS.eq("PENDING"))
-            .fetch()
-
+        val pendingUsers = useTx { dslContext ->
+            dslContext
+                .selectFrom(USERS)
+                .where(USERS.STATUS.eq("PENDING"))
+                .fetch()
+        }
         // Then: Should return exactly 1 pending user
         assertEquals(1, pendingUsers.size, "Should have exactly 1 pending user")
 
@@ -51,16 +58,18 @@ class UserQueriesTest {
     }
 
     @Test
-    fun `should find user by Google ID`(dslContext: DSLContext) {
+    context(_: TransactionProvider)
+    fun `should find user by Google ID`() = transaction {
         // Given: Test fixtures with John Doe (google_123456)
         val googleId = "google_123456"
 
         // When: Finding user by Google ID
-        val user = dslContext
-            .selectFrom(USERS)
-            .where(USERS.GOOGLE_ID.eq(googleId))
-            .fetchOne()
-
+        val user = useTx { dslContext ->
+            dslContext
+                .selectFrom(USERS)
+                .where(USERS.GOOGLE_ID.eq(googleId))
+                .fetchOne()
+        }
         // Then: Should return the user
         assertNotNull(user, "User should be found")
         assertEquals("john.doe@example.com", user?.email)
@@ -69,15 +78,17 @@ class UserQueriesTest {
     }
 
     @Test
-    fun `should have correct user statuses in fixtures`(dslContext: DSLContext) {
+    context(_: TransactionProvider)
+    fun `should have correct user statuses in fixtures`() = transaction {
         // Verify the distribution of user statuses in fixtures
-        val statusCounts = dslContext
-            .select(USERS.STATUS, DSL.count())
-            .from(USERS)
-            .groupBy(USERS.STATUS)
-            .fetch()
-            .associate { it.value1() to it.value2() }
-
+        val statusCounts = useTx { dslContext ->
+            dslContext
+                .select(USERS.STATUS, DSL.count())
+                .from(USERS)
+                .groupBy(USERS.STATUS)
+                .fetch()
+                .associate { it.value1() to it.value2() }
+        }
         assertEquals(2, statusCounts["APPROVED"], "Should have 2 approved users")
         assertEquals(1, statusCounts["PENDING"], "Should have 1 pending user")
         assertEquals(1, statusCounts["REJECTED"], "Should have 1 rejected user")

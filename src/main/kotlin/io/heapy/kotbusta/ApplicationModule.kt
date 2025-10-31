@@ -7,6 +7,8 @@ import io.heapy.komok.tech.di.delegate.bean
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.coroutines.DispatchersModule
 import io.heapy.kotbusta.database.JooqTransactionProvider
+import io.heapy.kotbusta.database.LimitingConnectionProvider
+import io.heapy.kotbusta.database.PragmaDataSource
 import io.heapy.kotbusta.ktor.GoogleOauthConfig
 import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
@@ -216,15 +218,22 @@ class ApplicationModule(
         )
     }
 
-    val dslContext by bean {
+    val roDslContext by bean {
         System.setProperty("org.jooq.no-logo", "true")
         System.setProperty("org.jooq.no-tips", "true")
-        DSL.using(dataSource.value, SQLDialect.SQLITE)
+        DSL.using(LimitingConnectionProvider(roDataSource.value, 2), SQLDialect.SQLITE)
+    }
+
+    val rwDslContext by bean {
+        System.setProperty("org.jooq.no-logo", "true")
+        System.setProperty("org.jooq.no-tips", "true")
+        DSL.using(LimitingConnectionProvider(rwDataSource.value, 1), SQLDialect.SQLITE)
     }
 
     val transactionProvider by bean {
         JooqTransactionProvider(
-            dslContext = dslContext.value,
+            roDslContext = roDslContext.value,
+            rwDslContext = rwDslContext.value,
             ioDispatcher = dispatchersModule.ioDispatcher.value,
         )
     }
@@ -233,14 +242,39 @@ class ApplicationModule(
         env["KOTBUSTA_DB_PATH"] ?: "kotbusta.db"
     }
 
-    val dataSource by bean {
-        SQLiteDataSource().apply {
+    val roDataSource by bean {
+        val base = SQLiteDataSource().apply {
+            url = "jdbc:sqlite:${dbPath.value}?mode=ro"
+        }
+        PragmaDataSource(
+            base,
+            listOf(
+                "PRAGMA foreign_keys=ON",
+                "PRAGMA busy_timeout=5000",
+                "PRAGMA synchronous=NORMAL",
+                "PRAGMA query_only=ON"
+            )
+        )
+    }
+
+    // Writer: normal RW URL, per-connection PRAGMAs
+    val rwDataSource by bean {
+        val base = SQLiteDataSource().apply {
             url = "jdbc:sqlite:${dbPath.value}"
         }
+        PragmaDataSource(
+            base,
+            listOf(
+                "PRAGMA foreign_keys=ON",
+                "PRAGMA busy_timeout=5000",
+                "PRAGMA synchronous=NORMAL",
+                "PRAGMA journal_mode=WAL",
+            )
+        )
     }
 
     fun initializeDatabase() {
-        runMigrations(dataSource.value)
+        runMigrations(rwDataSource.value)
     }
 
     fun initializeKindleSendWorker() {
