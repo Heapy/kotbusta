@@ -29,7 +29,7 @@ class InpxParser(
         stats: ImportStats,
     ) {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
-        log.info("Starting INPX parsing from: $inpxFilePath")
+        stats.addMessage("Starting INPX parsing from: $inpxFilePath")
 
         coroutineScope {
             ZipFile(inpxFilePath.toString()).use { zipFile ->
@@ -40,29 +40,31 @@ class InpxParser(
                 log.info("Found ${entries.size} .inp files to process")
 
                 // Process INP files in parallel
-                entries.mapIndexed { index, entry ->
-                    stats.incInpFiles()
-                    async(Dispatchers.IO) {
-                        log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
+                entries
+                    .mapIndexed { index, entry ->
+                        stats.incInpFiles()
+                        async(Dispatchers.IO) {
+                            log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
 
-                        val lines = zipFile.getInputStream(entry)
-                            .bufferedReader(Charsets.UTF_8)
-                            .useLines(Sequence<String>::toList)
+                            val lines = zipFile.getInputStream(entry)
+                                .bufferedReader(Charsets.UTF_8)
+                                .useLines(Sequence<String>::toList)
 
-                        val archiveName = entry.name.removeSuffix(".inp")
+                            val archiveName = entry.name.removeSuffix(".inp")
 
-                        // Process lines in batches within a transaction
-                        transactionProvider.transaction(READ_WRITE) {
-                            lines.chunked(100).forEach { batch ->
-                                batch.forEach { line ->
-                                    parseBookLine(line, archiveName, stats)
+                            // Process lines in batches within a transaction
+                            transactionProvider.transaction(READ_WRITE) {
+                                lines.chunked(100).forEach { batch ->
+                                    batch.forEach { line ->
+                                        parseBookLine(line, archiveName, stats)
+                                    }
                                 }
                             }
-                        }
 
-                        log.info("Completed processing ${entry.name}: ${stats.booksAdded} books added, ${stats.bookErrors} errors")
+                            log.info("Completed processing ${entry.name}: ${stats.booksAdded} books added, ${stats.bookErrors} errors")
+                        }
                     }
-                }.awaitAll()
+                    .awaitAll()
 
                 log.info("INPX parsing completed successfully")
             }
@@ -94,15 +96,15 @@ class InpxParser(
                 return false
             }
             val fileSize = parts[6].toIntOrNull()
-            val libId = parts[7] // seems that it's the same as bookId
+            parts[7] // seems that it's the same as bookId
             val deleted = parts.getOrNull(8)
             val fileFormat = parts.getOrNull(9)
             val dateAdded = parts.getOrNull(10)
             val language = parts.getOrNull(11) ?: "ru"
-            val keywords = parts.getOrNull(12) // too many empty, so not useful for anything
+            parts.getOrNull(12) // too many empty, so not useful for anything
 
             if (deleted == "1") {
-                log.warn("Book $bookId deleted")
+                log.debug("Book $bookId deleted")
                 stats.incDeletedBooks()
                 return false // Skip deleted books
             }
@@ -135,7 +137,7 @@ class InpxParser(
                 filePath = filePath,
                 archivePath = archivePath,
                 fileSize = fileSize,
-                dateAdded = parseDateAdded(dateAdded)
+                dateAdded = parseDateAdded(dateAdded),
             )
             stats.incAddedBooks()
             true
