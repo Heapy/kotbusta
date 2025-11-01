@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     application
+    jacoco
 }
 
 repositories {
@@ -64,5 +65,19 @@ testing {
         val test by getting(JvmTestSuite::class) {
             useJUnitJupiter(libs.versions.junit)
         }
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.14"
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+        csv.required.set(false)
     }
 }

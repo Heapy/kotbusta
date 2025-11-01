@@ -2,6 +2,8 @@
 
 A modern web application for browsing, searching, and downloading books that using Flibusta (MyHomeLib) digital library format. Built with Kotlin/Ktor backend and Preact frontend.
 
+![Coverage](.github/badges/jacoco.svg)
+
 ## Features
 
 - 📚 **Browse Books**: View books with covers, metadata, and descriptions
