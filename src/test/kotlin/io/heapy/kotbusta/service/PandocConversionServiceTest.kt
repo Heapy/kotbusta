@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.extensions.RequiresPandoc
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.io.File
 import java.nio.file.Path
 
+@RequiresPandoc
 class PandocConversionServiceTest {
     private val conversionService = PandocConversionService()
     private val sampleDataPath = "src/test/resources/flibusta-sample"
