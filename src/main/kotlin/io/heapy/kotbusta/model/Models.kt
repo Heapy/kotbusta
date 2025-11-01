@@ -18,8 +18,6 @@ data class User(
 @Serializable
 data class Author(
     val id: Int,
-    val firstName: String?,
-    val lastName: String,
     val fullName: String,
 )
 

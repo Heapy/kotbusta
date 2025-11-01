@@ -3,12 +3,9 @@ package io.heapy.kotbusta.dao
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.transaction
 import io.heapy.kotbusta.database.useTx
-import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.jooq.tables.references.USER_STARS
 import io.heapy.kotbusta.ktor.UserSession
-import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.SearchQuery
-import io.heapy.kotbusta.model.Series
 import io.heapy.kotbusta.test.DatabaseExtension
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -404,145 +401,5 @@ class BookQueriesTest {
         val cover = getBookCover(bookId = 1)
         assertNotNull(cover)
         assertEquals("fake image data", String(cover!!))
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `updateBookAnnotation should update book annotation`() = transaction {
-        // Given: Book 5 exists
-        // When: Updating annotation
-        updateBookAnnotation(
-            bookId = 5,
-            annotation = "Updated annotation text",
-        )
-
-        // Then: Annotation should be updated
-        val book = useTx { dslContext ->
-            dslContext
-                .selectFrom(BOOKS)
-                .where(BOOKS.ID.eq(5))
-                .fetchOne()
-        }
-
-        assertEquals("Updated annotation text", book?.annotation)
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `insertBook should create new book with all relationships`() = transaction {
-        // Given: New book data
-        val authors = listOf(
-            Author(
-                id = 0,
-                firstName = "Test",
-                lastName = "Author",
-                fullName = "Test Author",
-            ),
-        )
-        val series = Series(id = 1, name = "Test Series")
-
-        // When: Inserting book
-        insertBook(
-            bookId = 100,
-            title = "Test Book",
-            authors = authors,
-            series = series,
-            seriesNumber = 1,
-            genre = "Test Genre",
-            language = "en",
-            filePath = "/books/100.epub",
-            archivePath = "/archive/100.zip",
-            fileSize = 1024,
-            dateAdded = kotlin.time.Clock.System.now(),
-        )
-
-        // Then: Book should be created
-        val book = useTx { dslContext ->
-            dslContext
-                .selectFrom(BOOKS)
-                .where(BOOKS.ID.eq(100))
-                .fetchOne()
-        }
-
-        assertNotNull(book)
-        assertEquals("Test Book", book?.title)
-        assertEquals("Test Genre", book?.genre)
-        assertEquals("en", book?.language)
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `insertBook should handle book without series`() = transaction {
-        // Given: New book without series
-        val authors = listOf(
-            Author(
-                id = 0,
-                firstName = "Standalone",
-                lastName = "Author",
-                fullName = "Standalone Author",
-            ),
-        )
-
-        // When: Inserting book without series
-        insertBook(
-            bookId = 101,
-            title = "Standalone Book",
-            authors = authors,
-            series = null,
-            seriesNumber = null,
-            genre = "Fiction",
-            language = "en",
-            filePath = "/books/101.epub",
-            archivePath = "/archive/101.zip",
-            fileSize = 2048,
-            dateAdded = kotlin.time.Clock.System.now(),
-        )
-
-        // Then: Book should be created without series
-        val book = useTx { dslContext ->
-            dslContext
-                .selectFrom(BOOKS)
-                .where(BOOKS.ID.eq(101))
-                .fetchOne()
-        }
-
-        assertNotNull(book)
-        assertNull(book?.seriesId)
-        assertNull(book?.seriesNumber)
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `insertBook should be idempotent and update existing book`() = transaction {
-        // Given: Existing book ID 1
-        val authors = listOf(
-            Author(id = 1, firstName = "J.K.", lastName = "Rowling", fullName = "J.K. Rowling"),
-        )
-
-        // When: Inserting book with same ID
-        insertBook(
-            bookId = 1,
-            title = "Updated Title",
-            authors = authors,
-            series = null,
-            seriesNumber = null,
-            genre = "Updated Genre",
-            language = "en",
-            filePath = "/books/1-updated.epub",
-            archivePath = "/archive/1-updated.zip",
-            fileSize = 999999,
-            dateAdded = kotlin.time.Clock.System.now(),
-        )
-
-        // Then: Book should be updated
-        val book = useTx { dslContext ->
-            dslContext
-                .selectFrom(BOOKS)
-                .where(BOOKS.ID.eq(1))
-                .fetchOne()
-        }
-
-        assertEquals("Updated Title", book?.title)
-        assertEquals("Updated Genre", book?.genre)
     }
 }

@@ -23,7 +23,7 @@ import org.jooq.impl.Internal
 // INDEX definitions
 // -------------------------------------------------------------------------
 
-val IDX_AUTHORS_NAME: Index = Internal.createIndex(DSL.name("IDX_AUTHORS_NAME"), Authors.AUTHORS, arrayOf(Authors.AUTHORS.LAST_NAME, Authors.AUTHORS.FIRST_NAME), false)
+val IDX_AUTHORS_NAME: Index = Internal.createIndex(DSL.name("IDX_AUTHORS_NAME"), Authors.AUTHORS, arrayOf(Authors.AUTHORS.FULL_NAME), false)
 val IDX_BOOKS_GENRE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_GENRE"), Books.BOOKS, arrayOf(Books.BOOKS.GENRE), false)
 val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_LANGUAGE"), Books.BOOKS, arrayOf(Books.BOOKS.LANGUAGE), false)
 val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("IDX_BOOKS_SERIES"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)

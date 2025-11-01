@@ -46,29 +46,33 @@ open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(
         set(value): Unit = set(6, value)
         get(): Int? = get(6) as Int?
 
-    open var filePath: String
+    open var fileFormat: String
         set(value): Unit = set(7, value)
         get(): String = get(7) as String
 
-    open var archivePath: String
+    open var filePath: String
         set(value): Unit = set(8, value)
         get(): String = get(8) as String
 
-    open var fileSize: Int?
+    open var archivePath: String
         set(value): Unit = set(9, value)
-        get(): Int? = get(9) as Int?
+        get(): String = get(9) as String
+
+    open var fileSize: Int?
+        set(value): Unit = set(10, value)
+        get(): Int? = get(10) as Int?
 
     open var dateAdded: Instant
-        set(value): Unit = set(10, value)
-        get(): Instant = get(10) as Instant
+        set(value): Unit = set(11, value)
+        get(): Instant = get(11) as Instant
 
     open var coverImage: ByteArray?
-        set(value): Unit = set(11, value)
-        get(): ByteArray? = get(11) as ByteArray?
+        set(value): Unit = set(12, value)
+        get(): ByteArray? = get(12) as ByteArray?
 
     open var createdAt: Instant
-        set(value): Unit = set(12, value)
-        get(): Instant = get(12) as Instant
+        set(value): Unit = set(13, value)
+        get(): Instant = get(13) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -79,7 +83,7 @@ open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(
     /**
      * Create a detached, initialised BooksRecord
      */
-    constructor(id: Int? = null, title: String, `annotation`: String? = null, genre: String? = null, language: String, seriesId: Int? = null, seriesNumber: Int? = null, filePath: String, archivePath: String, fileSize: Int? = null, dateAdded: Instant, coverImage: ByteArray? = null, createdAt: Instant): this() {
+    constructor(id: Int? = null, title: String, `annotation`: String? = null, genre: String? = null, language: String, seriesId: Int? = null, seriesNumber: Int? = null, fileFormat: String, filePath: String, archivePath: String, fileSize: Int? = null, dateAdded: Instant, coverImage: ByteArray? = null, createdAt: Instant): this() {
         this.id = id
         this.title = title
         this.`annotation` = `annotation`
@@ -87,6 +91,7 @@ open class BooksRecord private constructor() : UpdatableRecordImpl<BooksRecord>(
         this.language = language
         this.seriesId = seriesId
         this.seriesNumber = seriesNumber
+        this.fileFormat = fileFormat
         this.filePath = filePath
         this.archivePath = archivePath
         this.fileSize = fileSize

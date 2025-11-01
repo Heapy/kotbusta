@@ -15,38 +15,38 @@ INSERT INTO USERS (ID, GOOGLE_ID, EMAIL, NAME, AVATAR_URL, STATUS, CREATED_AT, U
 -- ============================================================================
 -- AUTHORS
 -- ============================================================================
-INSERT INTO AUTHORS (ID, FIRST_NAME, LAST_NAME, FULL_NAME, CREATED_AT) VALUES
-(1, 'J.K.', 'Rowling', 'J.K. Rowling', '2024-01-01T00:00:00Z'),
-(2, 'George R.R.', 'Martin', 'George R.R. Martin', '2024-01-01T00:00:00Z'),
-(3, 'Brandon', 'Sanderson', 'Brandon Sanderson', '2024-01-01T00:00:00Z'),
-(4, 'Stephen', 'King', 'Stephen King', '2024-01-01T00:00:00Z'),
-(5, 'Agatha', 'Christie', 'Agatha Christie', '2024-01-01T00:00:00Z'),
-(6, NULL, 'Tolstoy', 'Leo Tolstoy', '2024-01-01T00:00:00Z'),
-(7, 'Isaac', 'Asimov', 'Isaac Asimov', '2024-01-01T00:00:00Z');
+INSERT INTO AUTHORS (ID, FULL_NAME) VALUES
+(1, 'J.K. Rowling'),
+(2, 'George R.R. Martin'),
+(3, 'Brandon Sanderson'),
+(4, 'Stephen King'),
+(5, 'Agatha Christie'),
+(6, 'Leo Tolstoy'),
+(7, 'Isaac Asimov');
 
 -- ============================================================================
 -- SERIES
 -- ============================================================================
-INSERT INTO SERIES (ID, NAME, CREATED_AT) VALUES
-(1, 'Harry Potter', '2024-01-01T00:00:00Z'),
-(2, 'A Song of Ice and Fire', '2024-01-01T00:00:00Z'),
-(3, 'The Stormlight Archive', '2024-01-01T00:00:00Z'),
-(4, 'Foundation', '2024-01-01T00:00:00Z');
+INSERT INTO SERIES (ID, NAME) VALUES
+(1, 'Harry Potter'),
+(2, 'A Song of Ice and Fire'),
+(3, 'The Stormlight Archive'),
+(4, 'Foundation');
 
 -- ============================================================================
 -- BOOKS
 -- ============================================================================
-INSERT INTO BOOKS (ID, TITLE, ANNOTATION, GENRE, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, COVER_IMAGE, CREATED_AT) VALUES
-(1, 'Harry Potter and the Philosopher''s Stone', 'The first book in the Harry Potter series.', 'Fantasy', 'en', 1, 1, '/books/1.epub', '/archive/1.zip', 524288, '2024-01-01T00:00:00Z', NULL, '2024-01-01T00:00:00Z'),
-(2, 'Harry Potter and the Chamber of Secrets', 'The second book in the Harry Potter series.', 'Fantasy', 'en', 1, 2, '/books/2.epub', '/archive/2.zip', 587776, '2024-01-02T00:00:00Z', NULL, '2024-01-02T00:00:00Z'),
-(3, 'A Game of Thrones', 'The first book in A Song of Ice and Fire.', 'Fantasy', 'en', 2, 1, '/books/3.epub', '/archive/3.zip', 1048576, '2024-01-03T00:00:00Z', NULL, '2024-01-03T00:00:00Z'),
-(4, 'The Way of Kings', 'First book of The Stormlight Archive.', 'Fantasy', 'en', 3, 1, '/books/4.epub', '/archive/4.zip', 2097152, '2024-01-04T00:00:00Z', NULL, '2024-01-04T00:00:00Z'),
-(5, 'The Shining', 'A horror novel about the Overlook Hotel.', 'Horror', 'en', NULL, NULL, '/books/5.epub', '/archive/5.zip', 458752, '2024-01-05T00:00:00Z', NULL, '2024-01-05T00:00:00Z'),
-(6, 'Murder on the Orient Express', 'A classic Hercule Poirot mystery.', 'Mystery', 'en', NULL, NULL, '/books/6.epub', '/archive/6.zip', 327680, '2024-01-06T00:00:00Z', NULL, '2024-01-06T00:00:00Z'),
-(7, 'War and Peace', 'Epic historical novel set during Napoleon''s invasion of Russia.', 'Historical Fiction', 'en', NULL, NULL, '/books/7.epub', '/archive/7.zip', 1572864, '2024-01-07T00:00:00Z', NULL, '2024-01-07T00:00:00Z'),
-(8, 'Foundation', 'The first book in the Foundation series.', 'Science Fiction', 'en', 4, 1, '/books/8.epub', '/archive/8.zip', 393216, '2024-01-08T00:00:00Z', NULL, '2024-01-08T00:00:00Z'),
-(9, 'Foundation and Empire', 'The second book in the Foundation series.', 'Science Fiction', 'en', 4, 2, '/books/9.epub', '/archive/9.zip', 409600, '2024-01-09T00:00:00Z', NULL, '2024-01-09T00:00:00Z'),
-(10, 'Mistborn: The Final Empire', 'First book in the Mistborn trilogy.', 'Fantasy', 'en', NULL, NULL, '/books/10.epub', '/archive/10.zip', 655360, '2024-01-10T00:00:00Z', NULL, '2024-01-10T00:00:00Z');
+INSERT INTO BOOKS (ID, TITLE, ANNOTATION, GENRE, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT, FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, COVER_IMAGE, CREATED_AT) VALUES
+(1, 'Harry Potter and the Philosopher''s Stone', 'The first book in the Harry Potter series.', 'Fantasy', 'en', 1, 1, 'fb2','/books/1.epub', '/archive/1.zip', 524288, '2024-01-01T00:00:00Z', NULL, '2024-01-01T00:00:00Z'),
+(2, 'Harry Potter and the Chamber of Secrets', 'The second book in the Harry Potter series.', 'Fantasy', 'en', 1, 2, 'fb2','/books/2.epub', '/archive/2.zip', 587776, '2024-01-02T00:00:00Z', NULL, '2024-01-02T00:00:00Z'),
+(3, 'A Game of Thrones', 'The first book in A Song of Ice and Fire.', 'Fantasy', 'en', 2, 1, 'fb2','/books/3.epub', '/archive/3.zip', 1048576, '2024-01-03T00:00:00Z', NULL, '2024-01-03T00:00:00Z'),
+(4, 'The Way of Kings', 'First book of The Stormlight Archive.', 'Fantasy', 'en', 3, 1, 'fb2','/books/4.epub', '/archive/4.zip', 2097152, '2024-01-04T00:00:00Z', NULL, '2024-01-04T00:00:00Z'),
+(5, 'The Shining', 'A horror novel about the Overlook Hotel.', 'Horror', 'en', NULL, NULL, 'fb2','/books/5.epub', '/archive/5.zip', 458752, '2024-01-05T00:00:00Z', NULL, '2024-01-05T00:00:00Z'),
+(6, 'Murder on the Orient Express', 'A classic Hercule Poirot mystery.', 'Mystery', 'en', NULL, NULL, 'fb2','/books/6.epub', '/archive/6.zip', 327680, '2024-01-06T00:00:00Z', NULL, '2024-01-06T00:00:00Z'),
+(7, 'War and Peace', 'Epic historical novel set during Napoleon''s invasion of Russia.', 'Historical Fiction', 'en', NULL, NULL, 'fb2','/books/7.epub', '/archive/7.zip', 1572864, '2024-01-07T00:00:00Z', NULL, '2024-01-07T00:00:00Z'),
+(8, 'Foundation', 'The first book in the Foundation series.', 'Science Fiction', 'en', 4, 1, 'fb2','/books/8.epub', '/archive/8.zip', 393216, '2024-01-08T00:00:00Z', NULL, '2024-01-08T00:00:00Z'),
+(9, 'Foundation and Empire', 'The second book in the Foundation series.', 'Science Fiction', 'en', 4, 2, 'fb2','/books/9.epub', '/archive/9.zip', 409600, '2024-01-09T00:00:00Z', NULL, '2024-01-09T00:00:00Z'),
+(10, 'Mistborn: The Final Empire', 'First book in the Mistborn trilogy.', 'Fantasy', 'en', NULL, NULL, 'fb2','/books/10.epub', '/archive/10.zip', 655360, '2024-01-10T00:00:00Z', NULL, '2024-01-10T00:00:00Z');
 
 -- ============================================================================
 -- BOOK_AUTHORS (Many-to-Many Relationship)

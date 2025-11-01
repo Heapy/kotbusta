@@ -6,8 +6,6 @@ package io.heapy.kotbusta.jooq.tables.records
 
 import io.heapy.kotbusta.jooq.tables.Series
 
-import kotlin.time.Instant
-
 import org.jooq.Record1
 import org.jooq.impl.UpdatableRecordImpl
 
@@ -26,10 +24,6 @@ open class SeriesRecord private constructor() : UpdatableRecordImpl<SeriesRecord
         set(value): Unit = set(1, value)
         get(): String = get(1) as String
 
-    open var createdAt: Instant
-        set(value): Unit = set(2, value)
-        get(): Instant = get(2) as Instant
-
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -39,10 +33,9 @@ open class SeriesRecord private constructor() : UpdatableRecordImpl<SeriesRecord
     /**
      * Create a detached, initialised SeriesRecord
      */
-    constructor(id: Int? = null, name: String, createdAt: Instant): this() {
+    constructor(id: Int? = null, name: String): this() {
         this.id = id
         this.name = name
-        this.createdAt = createdAt
         resetTouchedOnNotNull()
     }
 }

@@ -5,7 +5,6 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
-import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.indexes.IDX_AUTHORS_NAME
 import io.heapy.kotbusta.jooq.keys.AUTHORS__PK_AUTHORS
 import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS
@@ -15,7 +14,6 @@ import io.heapy.kotbusta.jooq.tables.records.AuthorsRecord
 
 import kotlin.collections.Collection
 import kotlin.collections.List
-import kotlin.time.Instant
 
 import org.jooq.Condition
 import org.jooq.Field
@@ -85,24 +83,9 @@ open class Authors(
     val ID: TableField<AuthorsRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
 
     /**
-     * The column <code>AUTHORS.FIRST_NAME</code>.
-     */
-    val FIRST_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("FIRST_NAME"), SQLDataType.CLOB, this, "")
-
-    /**
-     * The column <code>AUTHORS.LAST_NAME</code>.
-     */
-    val LAST_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("LAST_NAME"), SQLDataType.CLOB.nullable(false), this, "")
-
-    /**
      * The column <code>AUTHORS.FULL_NAME</code>.
      */
     val FULL_NAME: TableField<AuthorsRecord, String?> = createField(DSL.name("FULL_NAME"), SQLDataType.CLOB.nullable(false), this, "")
-
-    /**
-     * The column <code>AUTHORS.CREATED_AT</code>.
-     */
-    val CREATED_AT: TableField<AuthorsRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())
 
     private constructor(alias: Name, aliased: Table<AuthorsRecord>?): this(alias, null, null, null, aliased, null, null)
     private constructor(alias: Name, aliased: Table<AuthorsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, null, aliased, parameters, null)

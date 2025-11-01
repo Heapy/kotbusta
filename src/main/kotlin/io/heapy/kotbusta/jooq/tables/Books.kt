@@ -130,6 +130,11 @@ open class Books(
     val SERIES_NUMBER: TableField<BooksRecord, Int?> = createField(DSL.name("SERIES_NUMBER"), SQLDataType.INTEGER, this, "")
 
     /**
+     * The column <code>BOOKS.FILE_FORMAT</code>.
+     */
+    val FILE_FORMAT: TableField<BooksRecord, String?> = createField(DSL.name("FILE_FORMAT"), SQLDataType.CLOB.nullable(false), this, "")
+
+    /**
      * The column <code>BOOKS.FILE_PATH</code>.
      */
     val FILE_PATH: TableField<BooksRecord, String?> = createField(DSL.name("FILE_PATH"), SQLDataType.CLOB.nullable(false), this, "")

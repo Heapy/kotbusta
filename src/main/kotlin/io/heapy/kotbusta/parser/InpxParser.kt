@@ -1,13 +1,15 @@
 package io.heapy.kotbusta.parser
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.dao.insertBook
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.model.Author
+import io.heapy.kotbusta.database.useTx
+import io.heapy.kotbusta.jooq.tables.references.AUTHORS
+import io.heapy.kotbusta.jooq.tables.references.BOOKS
+import io.heapy.kotbusta.jooq.tables.references.BOOK_AUTHORS
+import io.heapy.kotbusta.jooq.tables.references.SERIES
 import io.heapy.kotbusta.model.ImportStats
-import io.heapy.kotbusta.model.Series
 import io.heapy.kotbusta.service.TimeService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -17,6 +19,7 @@ import java.nio.file.Path
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.zip.ZipFile
+import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.time.toKotlinInstant
 
@@ -24,6 +27,21 @@ class InpxParser(
     private val transactionProvider: TransactionProvider,
     private val timeService: TimeService,
 ) {
+    private data class ParsedBook(
+        val bookId: Int,
+        val title: String,
+        val authors: List<String>,
+        val series: String?,
+        val seriesNumber: Int?,
+        val genre: String?,
+        val language: String,
+        val fileFormat: String,
+        val filePath: String,
+        val archivePath: String,
+        val fileSize: Int?,
+        val dateAdded: Instant,
+    )
+
     suspend fun parseAndImport(
         booksDataPath: Path,
         stats: ImportStats,
@@ -31,7 +49,7 @@ class InpxParser(
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         stats.addMessage("Starting INPX parsing from: $inpxFilePath")
 
-        coroutineScope {
+        val allBooks = coroutineScope {
             ZipFile(inpxFilePath.toString()).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".inp") }
@@ -39,7 +57,7 @@ class InpxParser(
 
                 log.info("Found ${entries.size} .inp files to process")
 
-                // Process INP files in parallel
+                // Process INP files in parallel and collect all books
                 entries
                     .mapIndexed { index, entry ->
                         stats.incInpFiles()
@@ -52,37 +70,198 @@ class InpxParser(
 
                             val archiveName = entry.name.removeSuffix(".inp")
 
-                            // Process lines in batches within a transaction
-                            transactionProvider.transaction(READ_WRITE) {
-                                lines.chunked(100).forEach { batch ->
-                                    batch.forEach { line ->
-                                        parseBookLine(line, archiveName, stats)
-                                    }
-                                }
+                            // Parse all lines and collect books in memory
+                            val books = lines.mapNotNull { line ->
+                                parseBookLine(line, archiveName, stats)
                             }
 
-                            log.info("Completed processing ${entry.name}: ${stats.booksAdded} books added, ${stats.bookErrors} errors")
+                            log.info("Completed parsing ${entry.name}: ${books.size} books parsed")
+                            books
                         }
                     }
                     .awaitAll()
-
-                log.info("INPX parsing completed successfully")
+                    .flatten()
+                    .distinctBy { it.bookId }
             }
+        }
+
+        log.info("Total books parsed: ${allBooks.size}")
+        stats.addMessage("Parsed ${allBooks.size} books, now persisting to database...")
+
+        transactionProvider.transaction(READ_WRITE) {
+            bulkInsertBooks(allBooks)
+        }
+
+        log.info("INPX parsing and import completed successfully")
+    }
+
+    context(_: TransactionContext)
+    private fun bulkInsertBooks(
+        books: List<ParsedBook>,
+        createdAt: Instant = Clock.System.now(),
+    ) = useTx { dslContext ->
+        log.info("Starting bulk insert of ${books.size} books")
+        dslContext.truncateTable(BOOK_AUTHORS).execute()
+        dslContext.truncateTable(BOOKS).execute()
+        dslContext.truncateTable(AUTHORS).execute()
+        dslContext.truncateTable(SERIES).execute()
+
+        val uniqueSeries = storeSeries(books)
+        val uniqueAuthors = storeAuthors(books)
+
+        storeBooks(books, uniqueSeries, createdAt)
+
+        val relationshipCount = storeBooksAuthors(books, uniqueAuthors)
+
+        log.info("Bulk insert completed: ${books.size} books, ${uniqueAuthors.size} authors, ${uniqueSeries.size} series, $relationshipCount relationships")
+    }
+
+    context(_: TransactionContext)
+    private fun storeBooksAuthors(
+        books: List<ParsedBook>,
+        uniqueAuthors: MutableMap<String, Int>,
+    ): Int = useTx { dslContext ->
+        log.info("Inserting book-author relationships")
+
+        val bookAuthorPairs = books
+            .flatMap { book ->
+                book.authors
+                    .map { author ->
+                        val authorId = uniqueAuthors[author]
+                            ?: error("Author not found: $author")
+                        book.bookId to authorId
+                    }
+            }
+
+        if (bookAuthorPairs.isNotEmpty()) {
+            dslContext
+                .batch(
+                    bookAuthorPairs.map { (bookId, authorId) ->
+                        dslContext
+                            .insertInto(BOOK_AUTHORS)
+                            .set(BOOK_AUTHORS.BOOK_ID, bookId)
+                            .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+                    },
+                )
+                .execute()
+        }
+
+        bookAuthorPairs.size
+    }
+
+    context(_: TransactionContext)
+    private fun storeBooks(
+        books: List<ParsedBook>,
+        uniqueSeries: MutableMap<String, Int>,
+        createdAt: Instant,
+    ) = useTx { dslContext ->
+        log.info("Inserting ${books.size} books")
+
+        if (books.isNotEmpty()) {
+            dslContext
+                .batch(
+                    books.map { book ->
+                        val seriesId = book.series
+                            ?.let { seriesId ->
+                                uniqueSeries[seriesId]
+                            }
+
+                        dslContext
+                            .insertInto(BOOKS)
+                            .set(BOOKS.ID, book.bookId)
+                            .set(BOOKS.TITLE, book.title)
+                            .set(BOOKS.GENRE, book.genre)
+                            .set(BOOKS.LANGUAGE, book.language)
+                            .set(BOOKS.SERIES_ID, seriesId)
+                            .set(BOOKS.SERIES_NUMBER, book.seriesNumber)
+                            .set(BOOKS.FILE_FORMAT, book.fileFormat)
+                            .set(BOOKS.FILE_PATH, book.filePath)
+                            .set(BOOKS.ARCHIVE_PATH, book.archivePath)
+                            .set(BOOKS.FILE_SIZE, book.fileSize)
+                            .set(BOOKS.DATE_ADDED, book.dateAdded)
+                            .set(BOOKS.CREATED_AT, createdAt)
+                    },
+                )
+                .execute()
         }
     }
 
     context(_: TransactionContext)
+    private fun storeAuthors(
+        books: List<ParsedBook>,
+    ): MutableMap<String, Int> = useTx { dslContext ->
+        var authorId = 0
+        val uniqueAuthors = books
+            .fold(mutableMapOf<String, Int>()) { acc, book ->
+                book.authors.forEach { author ->
+                    val existingId = acc[author]
+                    acc[author] = existingId ?: ++authorId
+                }
+                acc
+            }
+
+        log.info("Inserting ${uniqueAuthors.size} new authors")
+
+        // Batch insert new authors
+        if (uniqueAuthors.isNotEmpty()) {
+            dslContext
+                .batch(
+                    uniqueAuthors.map { (author, id) ->
+                        dslContext
+                            .insertInto(AUTHORS)
+                            .set(AUTHORS.ID, id)
+                            .set(AUTHORS.FULL_NAME, author)
+                    },
+                )
+                .execute()
+        }
+
+        uniqueAuthors
+    }
+
+    context(_: TransactionContext)
+    private fun storeSeries(
+        books: List<ParsedBook>,
+    ): MutableMap<String, Int> = useTx { dslContext ->
+        var seriesId = 0
+        val uniqueSeries = books
+            .fold(mutableMapOf<String, Int>()) { acc, book ->
+                book.series?.let { series ->
+                    val existingId = acc[series]
+                    acc[series] = existingId ?: ++seriesId
+                }
+                acc
+            }
+
+        log.info("Inserting ${uniqueSeries.size} unique series")
+
+        if (uniqueSeries.isNotEmpty()) {
+            dslContext
+                .batch(
+                    uniqueSeries.map { (series, id) ->
+                        dslContext
+                            .insertInto(SERIES)
+                            .set(SERIES.ID, id)
+                            .set(SERIES.NAME, series)
+                    },
+                )
+                .execute()
+        }
+
+        uniqueSeries
+    }
+
     private fun parseBookLine(
         line: String,
         archivePath: String,
         stats: ImportStats,
-    ): Boolean {
+    ): ParsedBook? {
         return try {
             val parts = line.split('\u0004') // Field separator in INP files
             if (parts.size < 8) {
                 log.warn("Invalid line: $line")
                 stats.incInvalidBooks()
-                return false
+                return null
             }
 
             val authorPart = parts[0]
@@ -90,11 +269,7 @@ class InpxParser(
             val title = parts[2]
             val seriesPart = parts[3]
             val seriesNumber = parts[4].toIntOrNull()
-            val bookId = parts[5].toIntOrNull() ?: run {
-                log.warn("Invalid bookId: ${parts[5]}")
-                stats.incInvalidBooks()
-                return false
-            }
+            val bookId = parts[5].toIntOrNull()
             val fileSize = parts[6].toIntOrNull()
             parts[7] // seems that it's the same as bookId
             val deleted = parts.getOrNull(8)
@@ -103,10 +278,22 @@ class InpxParser(
             val language = parts.getOrNull(11) ?: "ru"
             parts.getOrNull(12) // too many empty, so not useful for anything
 
+            val warnings = buildList {
+                if (bookId == null) add("Invalid bookId: $bookId")
+                if (fileSize == null) add("Invalid fileSize: $fileSize")
+                if (fileFormat == null) add("Invalid fileFormat: $fileFormat")
+            }
+
+            if (warnings.isNotEmpty()) {
+                log.warn("Invalid book: $line. Warnings: $warnings")
+                stats.incInvalidBooks()
+                return null
+            }
+
             if (deleted == "1") {
                 log.debug("Book $bookId deleted")
                 stats.incDeletedBooks()
-                return false // Skip deleted books
+                return null
             }
 
             // Parse authors
@@ -114,74 +301,57 @@ class InpxParser(
             if (authors.isEmpty()) {
                 log.warn("No authors for book $bookId")
                 stats.incInvalidBooks()
-                return false
+                return null
             }
 
             // Parse series
-            val series = if (seriesPart.isNotBlank()) {
-                Series(0, seriesPart.trim())
-            } else null
+            val series = if (seriesPart.isNotBlank()) seriesPart.trim() else null
 
             // Determine file paths
             val filePath = "${bookId}.${fileFormat}"
 
-            // Insert book into database
-            insertBook(
-                bookId = bookId,
+            stats.incAddedBooks()
+
+            // Return parsed book data
+            ParsedBook(
+                bookId = bookId!!,
                 title = title.trim(),
                 authors = authors,
                 series = series,
                 seriesNumber = seriesNumber,
                 genre = genre.trim().takeIf { it.isNotBlank() },
                 language = language,
+                fileFormat = fileFormat!!,
                 filePath = filePath,
                 archivePath = archivePath,
                 fileSize = fileSize,
                 dateAdded = parseDateAdded(dateAdded),
             )
-            stats.incAddedBooks()
-            true
         } catch (e: Exception) {
             log.error("Error parsing line: $line", e)
-            false
+            stats.incInvalidBooks()
+            null
         }
     }
 
-    private fun parseAuthors(authorPart: String): List<Author> {
-        if (authorPart.isBlank()) return emptyList()
-
-        return authorPart.split(':').mapNotNull { authorStr ->
-            val parts = authorStr.split(',').map { it.trim() }
-            if (parts.isEmpty() || parts[0].isBlank()) return@mapNotNull null
-
-            val lastName = parts[0]
-            val firstName = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
-            val middleName = parts.getOrNull(2)?.takeIf { it.isNotBlank() }
-
-            val fullName = buildString {
-                append(lastName)
-                if (firstName != null) {
-                    append(", $firstName")
-                    if (middleName != null) {
-                        append(" $middleName")
-                    }
+    private fun parseAuthors(authorPart: String): List<String> {
+        return if (authorPart.isNotBlank()) {
+            authorPart
+                .split(':')
+                .filter { it.isNotBlank() }
+                .map { author ->
+                    author.replace(',', ' ')
                 }
-            }
-
-            Author(
-                id = 0,
-                firstName = firstName,
-                lastName = lastName,
-                fullName = fullName,
-            )
+        } else {
+            emptyList()
         }
     }
 
+    private val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     private fun parseDateAdded(dateStr: String?): Instant {
         if (dateStr.isNullOrBlank()) return timeService.now()
 
         return try {
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
             val date = LocalDate.parse(dateStr, formatter)
             date.atStartOfDay()
                 .atOffset(java.time.ZoneOffset.UTC)
