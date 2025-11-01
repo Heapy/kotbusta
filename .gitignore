@@ -18,6 +18,3 @@ build
 
 # Database
 .database
-
-# Test Unpacked Data
-src/test/resources/flibusta-sample/
