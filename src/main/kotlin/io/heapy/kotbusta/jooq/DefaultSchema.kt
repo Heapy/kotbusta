@@ -6,8 +6,10 @@ package io.heapy.kotbusta.jooq
 
 import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
+import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -49,6 +51,11 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     val BOOK_AUTHORS: BookAuthors get() = BookAuthors.BOOK_AUTHORS
 
     /**
+     * The table <code>BOOK_GENRES</code>.
+     */
+    val BOOK_GENRES: BookGenres get() = BookGenres.BOOK_GENRES
+
+    /**
      * The table <code>BOOKS</code>.
      */
     val BOOKS: Books get() = Books.BOOKS
@@ -57,6 +64,11 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
      * The table <code>DOWNLOADS</code>.
      */
     val DOWNLOADS: Downloads get() = Downloads.DOWNLOADS
+
+    /**
+     * The table <code>GENRES</code>.
+     */
+    val GENRES: Genres get() = Genres.GENRES
 
     /**
      * The table <code>KINDLE_DEVICES</code>.
@@ -103,8 +115,10 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     override fun getTables(): List<Table<*>> = listOf(
         Authors.AUTHORS,
         BookAuthors.BOOK_AUTHORS,
+        BookGenres.BOOK_GENRES,
         Books.BOOKS,
         Downloads.DOWNLOADS,
+        Genres.GENRES,
         KindleDevices.KINDLE_DEVICES,
         KindleSendEvents.KINDLE_SEND_EVENTS,
         KindleSendQueue.KINDLE_SEND_QUEUE,

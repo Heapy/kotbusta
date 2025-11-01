@@ -8,6 +8,8 @@ import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.AUTHORS
 import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.jooq.tables.references.BOOK_AUTHORS
+import io.heapy.kotbusta.jooq.tables.references.BOOK_GENRES
+import io.heapy.kotbusta.jooq.tables.references.GENRES
 import io.heapy.kotbusta.jooq.tables.references.SERIES
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.service.TimeService
@@ -33,7 +35,7 @@ class InpxParser(
         val authors: List<String>,
         val series: String?,
         val seriesNumber: Int?,
-        val genre: String?,
+        val genres: List<String>,
         val language: String,
         val fileFormat: String,
         val filePath: String,
@@ -101,19 +103,23 @@ class InpxParser(
         createdAt: Instant = Clock.System.now(),
     ) = useTx { dslContext ->
         stats.addMessage("Starting bulk insert of ${books.size} books")
+        dslContext.truncateTable(BOOK_GENRES).execute()
         dslContext.truncateTable(BOOK_AUTHORS).execute()
         dslContext.truncateTable(BOOKS).execute()
+        dslContext.truncateTable(GENRES).execute()
         dslContext.truncateTable(AUTHORS).execute()
         dslContext.truncateTable(SERIES).execute()
 
         val uniqueSeries = storeSeries(stats, books)
         val uniqueAuthors = storeAuthors(stats, books)
+        val uniqueGenres = storeGenres(stats, books)
 
         storeBooks(stats, books, uniqueSeries, createdAt)
 
-        val relationshipCount = storeBooksAuthors(stats, books, uniqueAuthors)
+        val authorRelationshipCount = storeBooksAuthors(stats, books, uniqueAuthors)
+        val genreRelationshipCount = storeBooksGenres(stats, books, uniqueGenres)
 
-        stats.addMessage("Bulk insert completed: ${books.size} books, ${uniqueAuthors.size} authors, ${uniqueSeries.size} series, $relationshipCount relationships")
+        stats.addMessage("Bulk insert completed: ${books.size} books, ${uniqueAuthors.size} authors, ${uniqueSeries.size} series, ${uniqueGenres.size} genres, $authorRelationshipCount author relationships, $genreRelationshipCount genre relationships")
     }
 
     context(_: TransactionContext)
@@ -255,6 +261,73 @@ class InpxParser(
         uniqueSeries
     }
 
+    context(_: TransactionContext)
+    private fun storeGenres(
+        stats: ImportStats,
+        books: List<ParsedBook>,
+    ): MutableMap<String, Int> = useTx { dslContext ->
+        var genreId = 0
+        val uniqueGenres = books
+            .fold(mutableMapOf<String, Int>()) { acc, book ->
+                book.genres.forEach { genre ->
+                    val existingId = acc[genre]
+                    acc[genre] = existingId ?: ++genreId
+                }
+                acc
+            }
+
+        stats.addMessage("Inserting ${uniqueGenres.size} unique genres")
+
+        if (uniqueGenres.isNotEmpty()) {
+            dslContext
+                .batch(
+                    uniqueGenres.map { (genre, id) ->
+                        dslContext
+                            .insertInto(GENRES)
+                            .set(GENRES.ID, id)
+                            .set(GENRES.NAME, genre)
+                    },
+                )
+                .execute()
+        }
+
+        uniqueGenres
+    }
+
+    context(_: TransactionContext)
+    private fun storeBooksGenres(
+        stats: ImportStats,
+        books: List<ParsedBook>,
+        uniqueGenres: MutableMap<String, Int>,
+    ): Int = useTx { dslContext ->
+        val bookGenrePairs = books
+            .flatMap { book ->
+                book.genres
+                    .map { genre ->
+                        val genreId = uniqueGenres[genre]
+                            ?: error("Genre not found: $genre")
+                        book.bookId to genreId
+                    }
+            }
+
+        stats.addMessage("Inserting ${bookGenrePairs.size} book-genre relationships")
+
+        if (bookGenrePairs.isNotEmpty()) {
+            dslContext
+                .batch(
+                    bookGenrePairs.map { (bookId, genreId) ->
+                        dslContext
+                            .insertInto(BOOK_GENRES)
+                            .set(BOOK_GENRES.BOOK_ID, bookId)
+                            .set(BOOK_GENRES.GENRE_ID, genreId)
+                    },
+                )
+                .execute()
+        }
+
+        bookGenrePairs.size
+    }
+
     private fun parseBookLine(
         line: String,
         archivePath: String,
@@ -311,6 +384,15 @@ class InpxParser(
             // Parse series
             val series = if (seriesPart.isNotBlank()) seriesPart.trim() else null
 
+            // Parse genres (split by ':' and filter out empty ones)
+            val genres = if (genre.isNotBlank()) {
+                genre.split(':')
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+            } else {
+                emptyList()
+            }
+
             // Determine file paths
             val filePath = "${bookId}.${fileFormat}"
 
@@ -323,7 +405,7 @@ class InpxParser(
                 authors = authors,
                 series = series,
                 seriesNumber = seriesNumber,
-                genre = genre.trim().takeIf { it.isNotBlank() },
+                genres = genres,
                 language = language,
                 fileFormat = fileFormat!!,
                 filePath = filePath,

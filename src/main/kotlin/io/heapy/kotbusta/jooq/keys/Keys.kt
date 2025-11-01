@@ -7,8 +7,10 @@ package io.heapy.kotbusta.jooq.keys
 
 import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
+import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -19,8 +21,10 @@ import io.heapy.kotbusta.jooq.tables.UserStars
 import io.heapy.kotbusta.jooq.tables.Users
 import io.heapy.kotbusta.jooq.tables.records.AuthorsRecord
 import io.heapy.kotbusta.jooq.tables.records.BookAuthorsRecord
+import io.heapy.kotbusta.jooq.tables.records.BookGenresRecord
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
 import io.heapy.kotbusta.jooq.tables.records.DownloadsRecord
+import io.heapy.kotbusta.jooq.tables.records.GenresRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleDevicesRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleSendEventsRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleSendQueueRecord
@@ -44,8 +48,11 @@ import org.jooq.impl.QOM.ForeignKeyRule
 
 val AUTHORS__PK_AUTHORS: UniqueKey<AuthorsRecord> = Internal.createUniqueKey(Authors.AUTHORS, DSL.name("pk_AUTHORS"), arrayOf(Authors.AUTHORS.ID), true)
 val BOOK_AUTHORS__PK_BOOK_AUTHORS: UniqueKey<BookAuthorsRecord> = Internal.createUniqueKey(BookAuthors.BOOK_AUTHORS, DSL.name("pk_BOOK_AUTHORS"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID, BookAuthors.BOOK_AUTHORS.AUTHOR_ID), true)
+val BOOK_GENRES__PK_BOOK_GENRES: UniqueKey<BookGenresRecord> = Internal.createUniqueKey(BookGenres.BOOK_GENRES, DSL.name("pk_BOOK_GENRES"), arrayOf(BookGenres.BOOK_GENRES.BOOK_ID, BookGenres.BOOK_GENRES.GENRE_ID), true)
 val BOOKS__PK_BOOKS: UniqueKey<BooksRecord> = Internal.createUniqueKey(Books.BOOKS, DSL.name("pk_BOOKS"), arrayOf(Books.BOOKS.ID), true)
 val DOWNLOADS__PK_DOWNLOADS: UniqueKey<DownloadsRecord> = Internal.createUniqueKey(Downloads.DOWNLOADS, DSL.name("pk_DOWNLOADS"), arrayOf(Downloads.DOWNLOADS.ID), true)
+val GENRES__PK_GENRES: UniqueKey<GenresRecord> = Internal.createUniqueKey(Genres.GENRES, DSL.name("pk_GENRES"), arrayOf(Genres.GENRES.ID), true)
+val GENRES__UK_GENRES_1_99430152: UniqueKey<GenresRecord> = Internal.createUniqueKey(Genres.GENRES, DSL.name("uk_GENRES_1_99430152"), arrayOf(Genres.GENRES.NAME), true)
 val KINDLE_DEVICES__PK_KINDLE_DEVICES: UniqueKey<KindleDevicesRecord> = Internal.createUniqueKey(KindleDevices.KINDLE_DEVICES, DSL.name("pk_KINDLE_DEVICES"), arrayOf(KindleDevices.KINDLE_DEVICES.ID), true)
 val KINDLE_DEVICES__UK_KINDLE_DEVICES_1_13757864: UniqueKey<KindleDevicesRecord> = Internal.createUniqueKey(KindleDevices.KINDLE_DEVICES, DSL.name("uk_KINDLE_DEVICES_1_13757864"), arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID, KindleDevices.KINDLE_DEVICES.EMAIL), true)
 val KINDLE_SEND_EVENTS__PK_KINDLE_SEND_EVENTS: UniqueKey<KindleSendEventsRecord> = Internal.createUniqueKey(KindleSendEvents.KINDLE_SEND_EVENTS, DSL.name("pk_KINDLE_SEND_EVENTS"), arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.ID), true)
@@ -63,6 +70,8 @@ val USERS__UK_USERS_1_34197334: UniqueKey<UsersRecord> = Internal.createUniqueKe
 
 val BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS: ForeignKey<BookAuthorsRecord, AuthorsRecord> = Internal.createForeignKey(BookAuthors.BOOK_AUTHORS, DSL.name("fk_BOOK_AUTHORS_pk_AUTHORS"), arrayOf(BookAuthors.BOOK_AUTHORS.AUTHOR_ID), io.heapy.kotbusta.jooq.keys.AUTHORS__PK_AUTHORS, arrayOf(Authors.AUTHORS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
 val BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS: ForeignKey<BookAuthorsRecord, BooksRecord> = Internal.createForeignKey(BookAuthors.BOOK_AUTHORS, DSL.name("fk_BOOK_AUTHORS_pk_BOOKS"), arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val BOOK_GENRES__FK_BOOK_GENRES_PK_BOOKS: ForeignKey<BookGenresRecord, BooksRecord> = Internal.createForeignKey(BookGenres.BOOK_GENRES, DSL.name("fk_BOOK_GENRES_pk_BOOKS"), arrayOf(BookGenres.BOOK_GENRES.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
+val BOOK_GENRES__FK_BOOK_GENRES_PK_GENRES: ForeignKey<BookGenresRecord, GenresRecord> = Internal.createForeignKey(BookGenres.BOOK_GENRES, DSL.name("fk_BOOK_GENRES_pk_GENRES"), arrayOf(BookGenres.BOOK_GENRES.GENRE_ID), io.heapy.kotbusta.jooq.keys.GENRES__PK_GENRES, arrayOf(Genres.GENRES.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
 val BOOKS__FK_BOOKS_PK_SERIES: ForeignKey<BooksRecord, SeriesRecord> = Internal.createForeignKey(Books.BOOKS, DSL.name("fk_BOOKS_pk_SERIES"), arrayOf(Books.BOOKS.SERIES_ID), io.heapy.kotbusta.jooq.keys.SERIES__PK_SERIES, arrayOf(Series.SERIES.ID), true, ForeignKeyRule.NO_ACTION, ForeignKeyRule.NO_ACTION)
 val DOWNLOADS__FK_DOWNLOADS_PK_BOOKS: ForeignKey<DownloadsRecord, BooksRecord> = Internal.createForeignKey(Downloads.DOWNLOADS, DSL.name("fk_DOWNLOADS_pk_BOOKS"), arrayOf(Downloads.DOWNLOADS.BOOK_ID), io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS, arrayOf(Books.BOOKS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)
 val DOWNLOADS__FK_DOWNLOADS_PK_USERS: ForeignKey<DownloadsRecord, UsersRecord> = Internal.createForeignKey(Downloads.DOWNLOADS, DSL.name("fk_DOWNLOADS_pk_USERS"), arrayOf(Downloads.DOWNLOADS.USER_ID), io.heapy.kotbusta.jooq.keys.USERS__PK_USERS, arrayOf(Users.USERS.ID), true, ForeignKeyRule.CASCADE, ForeignKeyRule.NO_ACTION)

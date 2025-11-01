@@ -6,8 +6,10 @@ package io.heapy.kotbusta.jooq.indexes
 
 
 import io.heapy.kotbusta.jooq.tables.Authors
+import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -24,11 +26,13 @@ import org.jooq.impl.Internal
 // -------------------------------------------------------------------------
 
 val IDX_AUTHORS_NAME: Index = Internal.createIndex(DSL.name("IDX_AUTHORS_NAME"), Authors.AUTHORS, arrayOf(Authors.AUTHORS.FULL_NAME), false)
-val IDX_BOOKS_GENRE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_GENRE"), Books.BOOKS, arrayOf(Books.BOOKS.GENRE), false)
+val IDX_BOOK_GENRES_BOOK: Index = Internal.createIndex(DSL.name("IDX_BOOK_GENRES_BOOK"), BookGenres.BOOK_GENRES, arrayOf(BookGenres.BOOK_GENRES.BOOK_ID), false)
+val IDX_BOOK_GENRES_GENRE: Index = Internal.createIndex(DSL.name("IDX_BOOK_GENRES_GENRE"), BookGenres.BOOK_GENRES, arrayOf(BookGenres.BOOK_GENRES.GENRE_ID), false)
 val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_LANGUAGE"), Books.BOOKS, arrayOf(Books.BOOKS.LANGUAGE), false)
 val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("IDX_BOOKS_SERIES"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)
 val IDX_BOOKS_TITLE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_TITLE"), Books.BOOKS, arrayOf(Books.BOOKS.TITLE), false)
 val IDX_DOWNLOADS_RECENT: Index = Internal.createIndex(DSL.name("IDX_DOWNLOADS_RECENT"), Downloads.DOWNLOADS, arrayOf(Downloads.DOWNLOADS.CREATED_AT), false)
+val IDX_GENRES_NAME: Index = Internal.createIndex(DSL.name("IDX_GENRES_NAME"), Genres.GENRES, arrayOf(Genres.GENRES.NAME), false)
 val IDX_KINDLE_DEVICES_EMAIL: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_EMAIL"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.EMAIL), false)
 val IDX_KINDLE_DEVICES_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_USER"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID), false)
 val IDX_KINDLE_SEND_EVENTS_QUEUE: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_EVENTS_QUEUE"), KindleSendEvents.KINDLE_SEND_EVENTS, arrayOf(KindleSendEvents.KINDLE_SEND_EVENTS.QUEUE_ID), false)

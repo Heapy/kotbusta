@@ -7,8 +7,10 @@ package io.heapy.kotbusta.jooq.tables.references
 
 import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
+import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
 import io.heapy.kotbusta.jooq.tables.Downloads
+import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
@@ -31,6 +33,11 @@ val AUTHORS: Authors = Authors.AUTHORS
 val BOOK_AUTHORS: BookAuthors = BookAuthors.BOOK_AUTHORS
 
 /**
+ * The table <code>BOOK_GENRES</code>.
+ */
+val BOOK_GENRES: BookGenres = BookGenres.BOOK_GENRES
+
+/**
  * The table <code>BOOKS</code>.
  */
 val BOOKS: Books = Books.BOOKS
@@ -39,6 +46,11 @@ val BOOKS: Books = Books.BOOKS
  * The table <code>DOWNLOADS</code>.
  */
 val DOWNLOADS: Downloads = Downloads.DOWNLOADS
+
+/**
+ * The table <code>GENRES</code>.
+ */
+val GENRES: Genres = Genres.GENRES
 
 /**
  * The table <code>KINDLE_DEVICES</code>.

@@ -1,0 +1,34 @@
+package migrations
+
+import migrations.model.Migration
+import org.intellij.lang.annotations.Language
+
+@Language("SQLite")
+private val sql = """
+CREATE TABLE IF NOT EXISTS GENRES
+(
+    ID   INTEGER PRIMARY KEY AUTOINCREMENT,
+    NAME TEXT UNIQUE NOT NULL
+);
+$next
+CREATE TABLE IF NOT EXISTS BOOK_GENRES
+(
+    BOOK_ID  INTEGER NOT NULL,
+    GENRE_ID INTEGER NOT NULL,
+    PRIMARY KEY (BOOK_ID, GENRE_ID),
+    FOREIGN KEY (BOOK_ID) REFERENCES BOOKS (ID) ON DELETE CASCADE,
+    FOREIGN KEY (GENRE_ID) REFERENCES GENRES (ID) ON DELETE CASCADE
+);
+$next
+CREATE INDEX IF NOT EXISTS IDX_BOOK_GENRES_BOOK ON BOOK_GENRES (BOOK_ID);
+$next
+CREATE INDEX IF NOT EXISTS IDX_BOOK_GENRES_GENRE ON BOOK_GENRES (GENRE_ID);
+$next
+CREATE INDEX IF NOT EXISTS IDX_GENRES_NAME ON GENRES (NAME);
+""".trimIndent()
+
+val v3: Migration
+    get() = Migration(
+        version = 3,
+        script = sql,
+    )

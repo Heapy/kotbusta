@@ -6,13 +6,13 @@ package io.heapy.kotbusta.jooq.tables
 
 import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.KotlinInstantConverter
-import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_GENRE
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_LANGUAGE
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_SERIES
 import io.heapy.kotbusta.jooq.indexes.IDX_BOOKS_TITLE
 import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_PK_SERIES
 import io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.BOOK_GENRES__FK_BOOK_GENRES_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS
@@ -20,7 +20,9 @@ import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_PK_BOOKS
 import io.heapy.kotbusta.jooq.tables.Authors.AuthorsPath
 import io.heapy.kotbusta.jooq.tables.BookAuthors.BookAuthorsPath
+import io.heapy.kotbusta.jooq.tables.BookGenres.BookGenresPath
 import io.heapy.kotbusta.jooq.tables.Downloads.DownloadsPath
+import io.heapy.kotbusta.jooq.tables.Genres.GenresPath
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
 import io.heapy.kotbusta.jooq.tables.Series.SeriesPath
 import io.heapy.kotbusta.jooq.tables.UserComments.UserCommentsPath
@@ -110,11 +112,6 @@ open class Books(
     val ANNOTATION: TableField<BooksRecord, String?> = createField(DSL.name("ANNOTATION"), SQLDataType.CLOB, this, "")
 
     /**
-     * The column <code>BOOKS.GENRE</code>.
-     */
-    val GENRE: TableField<BooksRecord, String?> = createField(DSL.name("GENRE"), SQLDataType.CLOB, this, "")
-
-    /**
      * The column <code>BOOKS.LANGUAGE</code>.
      */
     val LANGUAGE: TableField<BooksRecord, String?> = createField(DSL.name("LANGUAGE"), SQLDataType.CLOB.nullable(false), this, "")
@@ -196,7 +193,7 @@ open class Books(
         override fun `as`(alias: Table<*>): BooksPath = BooksPath(alias.qualifiedName, this)
     }
     override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
-    override fun getIndexes(): List<Index> = listOf(IDX_BOOKS_GENRE, IDX_BOOKS_LANGUAGE, IDX_BOOKS_SERIES, IDX_BOOKS_TITLE)
+    override fun getIndexes(): List<Index> = listOf(IDX_BOOKS_LANGUAGE, IDX_BOOKS_SERIES, IDX_BOOKS_TITLE)
     override fun getPrimaryKey(): UniqueKey<BooksRecord> = BOOKS__PK_BOOKS
     override fun getReferences(): List<ForeignKey<BooksRecord, *>> = listOf(BOOKS__FK_BOOKS_PK_SERIES)
 
@@ -220,6 +217,21 @@ open class Books(
 
     val bookAuthors: BookAuthorsPath
         get(): BookAuthorsPath = bookAuthors()
+
+    private lateinit var _bookGenres: BookGenresPath
+
+    /**
+     * Get the implicit to-many join path to the <code>BOOK_GENRES</code> table
+     */
+    fun bookGenres(): BookGenresPath {
+        if (!this::_bookGenres.isInitialized)
+            _bookGenres = BookGenresPath(this, null, BOOK_GENRES__FK_BOOK_GENRES_PK_BOOKS.inverseKey)
+
+        return _bookGenres;
+    }
+
+    val bookGenres: BookGenresPath
+        get(): BookGenresPath = bookGenres()
 
     private lateinit var _downloads: DownloadsPath
 
@@ -303,6 +315,12 @@ open class Books(
      */
     val authors: AuthorsPath
         get(): AuthorsPath = bookAuthors().authors()
+
+    /**
+     * Get the implicit many-to-many join path to the <code>GENRES</code> table
+     */
+    val genres: GenresPath
+        get(): GenresPath = bookGenres().genres()
 
     /**
      * Get the implicit many-to-many join path to the <code>USERS</code> table
