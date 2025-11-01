@@ -10,7 +10,6 @@ import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.service.ConversionFormat
-import io.heapy.kotbusta.service.PandocConversionService
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -23,7 +22,7 @@ fun Route.downloadBookRoute() {
     val userService = applicationModule.userService.value
     val booksDataPath = applicationModule.booksDataPath.value
     val transactionProvider = applicationModule.transactionProvider.value
-    val conversionService = PandocConversionService()
+    val conversionService = applicationModule.conversionService.value
 
     get("/books/{id}/download/{format}") {
         requireApprovedUser {
@@ -48,106 +47,94 @@ fun Route.downloadBookRoute() {
 
             when (format) {
                 "fb2" -> {
-                    val archiveFile =
-                        booksDataPath.resolve("${book.archivePath}.zip")
+                    val archiveFile = booksDataPath.resolve("${book.archivePath}.zip")
                     if (archiveFile.exists()) {
-                        val zipFile = ZipFile(archiveFile.toFile())
-                        val fb2File = zipFile.entries().asSequence()
-                            .find { it.name == book.filePath }
-                        if (fb2File != null) {
-                            val fileBytes =
-                                zipFile.getInputStream(fb2File).readBytes()
-                            call.response.header(
-                                HttpHeaders.ContentDisposition,
-                                ContentDisposition.Attachment.withParameter(
-                                    ContentDisposition.Parameters.FileName,
-                                    book.filePath,
-                                ).toString(),
-                            )
-                            call.respond(fileBytes)
-                        } else {
-                            call.respond(
-                                HttpStatusCode.NotImplemented,
-                                Error(
-                                    message = "FB2 download not implemented yet",
-                                ),
-                            )
+                        ZipFile(archiveFile.toFile()).use { zipFile ->
+                            val fb2File = zipFile.entries().asSequence()
+                                .find { it.name == book.filePath }
+                            if (fb2File != null) {
+                                val fileBytes =
+                                    zipFile.getInputStream(fb2File).readBytes()
+                                call.response.header(
+                                    HttpHeaders.ContentDisposition,
+                                    ContentDisposition.Attachment.withParameter(
+                                        ContentDisposition.Parameters.FileName,
+                                        book.filePath,
+                                    ).toString(),
+                                )
+                                call.respond(fileBytes)
+                            } else {
+                                notFoundError("FB2 file not found in archive $book")
+                            }
                         }
                     } else {
-                        call.respond(
-                            HttpStatusCode.NotFound,
-                            Error(
-                                message = "Book file not found",
-                            ),
-                        )
+                        notFoundError("Book file not found $book")
                     }
                 }
 
                 else -> {
                     val archiveFile = booksDataPath.resolve("${book.archivePath}.zip")
                     if (!archiveFile.exists()) {
-                        call.respond(
-                            HttpStatusCode.NotFound,
-                            Error(message = "Book file not found")
-                        )
-                        return@requireApprovedUser
+                        notFoundError("Book file not found $book")
                     }
 
-                    val zipFile = ZipFile(archiveFile.toFile())
-                    val fb2Entry = zipFile.entries().asSequence()
-                        .find { it.name == book.filePath }
+                    ZipFile(archiveFile.toFile()).use { zipFile ->
+                        val fb2Entry = zipFile.entries().asSequence()
+                            .find { it.name == book.filePath }
 
-                    if (fb2Entry == null) {
-                        call.respond(
-                            HttpStatusCode.NotFound,
-                            Error(message = "FB2 file not found in archive")
-                        )
-                        return@requireApprovedUser
-                    }
-
-                    val tempDir = File(System.getProperty("java.io.tmpdir"), "kotbusta-conversions")
-                    tempDir.mkdirs()
-
-                    val tempFb2File = File(tempDir, "${bookId}_${book.filePath}")
-                    tempFb2File.writeBytes(zipFile.getInputStream(fb2Entry).readBytes())
-
-                    val outputFileName = "${book.title.replace(Regex("[^a-zA-Z0-9._-]"), "_")}.${format}"
-                    val outputFile = File(tempDir, "${bookId}_${outputFileName}")
-
-                    try {
-                        val conversionResult = conversionService.convertFb2(
-                            inputFile = tempFb2File,
-                            outputFormat = format,
-                            outputFile = outputFile
-                        )
-
-                        if (conversionResult.success && conversionResult.outputFile != null) {
-                            val convertedBytes = conversionResult.outputFile.readBytes()
-                            val conversionFormat = ConversionFormat.values()
-                                .find { it.extension.equals(format, ignoreCase = true) }
-
-                            call.response.header(
-                                HttpHeaders.ContentDisposition,
-                                ContentDisposition.Attachment.withParameter(
-                                    ContentDisposition.Parameters.FileName,
-                                    outputFileName
-                                ).toString()
-                            )
-
-                            if (conversionFormat != null) {
-                                call.response.header(HttpHeaders.ContentType, conversionFormat.mimeType)
-                            }
-
-                            call.respond(convertedBytes)
-                        } else {
-                            call.respond(
-                                HttpStatusCode.InternalServerError,
-                                Error(message = "Conversion failed: ${conversionResult.errorMessage}")
-                            )
+                        if (fb2Entry == null) {
+                            notFoundError("FB2 file not found in archive $book")
                         }
-                    } finally {
-                        tempFb2File.delete()
-                        outputFile.delete()
+
+                        val tempDir = File(System.getProperty("java.io.tmpdir"), "kotbusta-conversions")
+                        tempDir.mkdirs()
+
+                        val tempFb2File = File(tempDir, "${bookId}_${book.filePath}")
+                        tempFb2File.writeBytes(zipFile.getInputStream(fb2Entry).readBytes())
+
+                        // Sanitize filename: handle empty titles, limit length, remove unsafe characters
+                        val sanitizedTitle = book.title
+                            .ifBlank { "book_${bookId}" }
+                            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                            .take(100)
+                        val outputFileName = "${sanitizedTitle}.${format}"
+                        val outputFile = File(tempDir, "${bookId}_${outputFileName}")
+
+                        try {
+                            val conversionResult = conversionService.convertFb2(
+                                inputFile = tempFb2File,
+                                outputFormat = format,
+                                outputFile = outputFile
+                            )
+
+                            if (conversionResult.success && conversionResult.outputFile != null) {
+                                val convertedBytes = conversionResult.outputFile.readBytes()
+                                val conversionFormat = ConversionFormat.values()
+                                    .find { it.extension.equals(format, ignoreCase = true) }
+
+                                call.response.header(
+                                    HttpHeaders.ContentDisposition,
+                                    ContentDisposition.Attachment.withParameter(
+                                        ContentDisposition.Parameters.FileName,
+                                        outputFileName
+                                    ).toString()
+                                )
+
+                                if (conversionFormat != null) {
+                                    call.response.header(HttpHeaders.ContentType, conversionFormat.mimeType)
+                                }
+
+                                call.respond(convertedBytes)
+                            } else {
+                                call.respond(
+                                    HttpStatusCode.InternalServerError,
+                                    Error(message = "Conversion failed: ${conversionResult.errorMessage}")
+                                )
+                            }
+                        } finally {
+                            tempFb2File.delete()
+                            outputFile.delete()
+                        }
                     }
                 }
             }

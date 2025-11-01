@@ -18,6 +18,7 @@ import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
 import io.heapy.kotbusta.service.ImportJobService
 import io.heapy.kotbusta.service.KindleService
+import io.heapy.kotbusta.service.PandocConversionService
 import io.heapy.kotbusta.service.TimeService
 import io.heapy.kotbusta.service.UserService
 import io.heapy.kotbusta.worker.KindleSendWorker
@@ -140,6 +141,10 @@ class ApplicationModule {
 
     val coverService by bean {
         CoverService()
+    }
+
+    val conversionService by bean {
+        PandocConversionService()
     }
 
     val inpxParser by bean {
