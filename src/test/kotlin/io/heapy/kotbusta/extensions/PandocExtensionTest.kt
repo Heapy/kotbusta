@@ -1,11 +1,11 @@
 package io.heapy.kotbusta.extensions
 
 import io.heapy.komok.tech.logging.Logger
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 
 class PandocExtensionTest {
-
     @Test
     fun `should always run - no pandoc required`() {
         log.info("✓ This test runs regardless of pandoc availability")
