@@ -132,10 +132,62 @@ export function AdminPanel() {
         ),
 
         Object.keys(jobStatus.messages).length > 0 && h('div', {
-          style: { color: '#7f8c8d', fontSize: '0.875rem', marginBottom: '0.5rem' }
+          style: {
+            marginTop: '1rem',
+            marginBottom: '1rem',
+            border: '1px solid #e1e8ed',
+            borderRadius: '4px',
+            background: '#f8f9fa',
+            maxHeight: '300px',
+            overflowY: 'auto'
+          }
         },
-          Object.entries(jobStatus.messages).map(([timestamp, msg]) =>
-            h('div', { key: timestamp }, msg)
+          h('div', {
+            style: {
+              padding: '0.5rem 1rem',
+              borderBottom: '1px solid #e1e8ed',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              background: '#ecf0f1',
+              position: 'sticky',
+              top: 0,
+              zIndex: 1
+            }
+          }, 'Import Log'),
+          h('div', {
+            style: {
+              padding: '0.5rem',
+              fontFamily: 'monospace',
+              fontSize: '0.75rem'
+            }
+          },
+            Object.entries(jobStatus.messages)
+              .sort((a, b) => new Date(a[0]) - new Date(b[0]))
+              .map(([timestamp, msg]) =>
+                h('div', {
+                  key: timestamp,
+                  style: {
+                    padding: '0.25rem 0.5rem',
+                    borderBottom: '1px solid #ecf0f1',
+                    display: 'flex',
+                    gap: '0.75rem'
+                  }
+                },
+                  h('span', {
+                    style: {
+                      color: '#7f8c8d',
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0
+                    }
+                  }, new Date(timestamp).toLocaleTimeString()),
+                  h('span', {
+                    style: {
+                      color: '#34495e',
+                      wordBreak: 'break-word'
+                    }
+                  }, msg)
+                )
+              )
           )
         ),
 
