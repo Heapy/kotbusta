@@ -214,22 +214,9 @@ export function BookDetail({ bookId, onBack, onRefresh, onSelectBook }) {
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer',
-              marginBottom: '0.25rem'
-            }
-          }, 'Download EPUB'),
-          h('button', {
-            onClick: () => download('mobi'),
-            style: {
-              width: '100%',
-              padding: '0.5rem',
-              background: '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
               cursor: 'pointer'
             }
-          }, 'Download MOBI')
+          }, 'Download EPUB')
         )
       ),
 
