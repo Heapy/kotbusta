@@ -1,5 +1,5 @@
+import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { html } from '../utils/html.js';
 import { api } from '../utils/api.js';
 
 export function AdminPanel() {
@@ -72,106 +72,107 @@ export function AdminPanel() {
   };
 
   if (loading) {
-    return html`<div style=${{ padding: '2rem', textAlign: 'center' }}>Loading...</div>`;
+    return h('div', { style: { padding: '2rem', textAlign: 'center' } }, 'Loading...');
   }
 
-  return html`
-    <div style=${{ padding: '2rem' }}>
-      <h2 style=${{ color: '#e74c3c' }}>Admin Panel</h2>
+  return h('div', { style: { padding: '2rem' } },
+    h('h2', { style: { color: '#e74c3c' } }, 'Admin Panel'),
 
-      <div style=${{ marginBottom: '2rem' }}>
-        <div style=${{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3>Import Job ${jobStatus?.status === 'RUNNING' ? html`<span style=${{ color: '#f39c12', fontSize: '0.875rem' }}>(🔴 Live)</span>` : ''}</h3>
-          <button
-            onClick=${startImport}
-            disabled=${jobStatus?.status === 'RUNNING'}
-            style=${{
-              padding: '0.5rem 1rem',
-              background: jobStatus?.status === 'RUNNING' ? '#95a5a6' : '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: jobStatus?.status === 'RUNNING' ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
-              opacity: jobStatus?.status === 'RUNNING' ? 0.6 : 1
-            }}>
-            ${jobStatus?.status === 'RUNNING' ? 'Import Running...' : 'Start Import'}
-          </button>
-        </div>
+    h('div', { style: { marginBottom: '2rem' } },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' } },
+        h('h3', null,
+          'Import Job ',
+          jobStatus?.status === 'RUNNING' && h('span', { style: { color: '#f39c12', fontSize: '0.875rem' } }, '(🔴 Live)')
+        ),
+        h('button', {
+          onClick: startImport,
+          disabled: jobStatus?.status === 'RUNNING',
+          style: {
+            padding: '0.5rem 1rem',
+            background: jobStatus?.status === 'RUNNING' ? '#95a5a6' : '#3498db',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: jobStatus?.status === 'RUNNING' ? 'not-allowed' : 'pointer',
+            fontWeight: 'bold',
+            opacity: jobStatus?.status === 'RUNNING' ? 0.6 : 1
+          }
+        }, jobStatus?.status === 'RUNNING' ? 'Import Running...' : 'Start Import')
+      ),
 
-        ${jobStatus && html`
-          <div style=${{
-            padding: '1rem',
-            border: jobStatus.status === 'RUNNING' ? '2px solid #3498db' : '1px solid #e1e8ed',
-            borderRadius: '8px',
-            background: 'white'
-          }}>
-            <div style=${{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-              <div>
-                <span style=${{ fontWeight: 'bold' }}>Import Job</span>
-                <span style=${{
-                  marginLeft: '0.5rem',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  background: jobStatus.status === 'COMPLETED' ? '#d5f4e6' :
-                             jobStatus.status === 'FAILED' ? '#fadbd8' :
-                             jobStatus.status === 'RUNNING' ? '#fff3cd' : '#e1e8ed',
-                  color: jobStatus.status === 'COMPLETED' ? '#27ae60' :
-                         jobStatus.status === 'FAILED' ? '#e74c3c' :
-                         jobStatus.status === 'RUNNING' ? '#f39c12' : '#7f8c8d'
-                }}>
-                  ${jobStatus.status}
-                </span>
-              </div>
-              <div style=${{ color: '#7f8c8d', fontSize: '0.875rem' }}>
-                Started: ${new Date(jobStatus.startedAt).toLocaleString()}
-              </div>
-            </div>
+      jobStatus && h('div', {
+        style: {
+          padding: '1rem',
+          border: jobStatus.status === 'RUNNING' ? '2px solid #3498db' : '1px solid #e1e8ed',
+          borderRadius: '8px',
+          background: 'white'
+        }
+      },
+        h('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' } },
+          h('div', null,
+            h('span', { style: { fontWeight: 'bold' } }, 'Import Job'),
+            h('span', {
+              style: {
+                marginLeft: '0.5rem',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '4px',
+                fontSize: '0.75rem',
+                background: jobStatus.status === 'COMPLETED' ? '#d5f4e6' :
+                           jobStatus.status === 'FAILED' ? '#fadbd8' :
+                           jobStatus.status === 'RUNNING' ? '#fff3cd' : '#e1e8ed',
+                color: jobStatus.status === 'COMPLETED' ? '#27ae60' :
+                       jobStatus.status === 'FAILED' ? '#e74c3c' :
+                       jobStatus.status === 'RUNNING' ? '#f39c12' : '#7f8c8d'
+              }
+            }, jobStatus.status)
+          ),
+          h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } },
+            'Started: ', new Date(jobStatus.startedAt).toLocaleString()
+          )
+        ),
 
-            ${Object.keys(jobStatus.messages).length > 0 && html`
-              <div style=${{ color: '#7f8c8d', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
-                ${Object.entries(jobStatus.messages).map(([timestamp, msg]) => html`
-                  <div key=${timestamp}>${msg}</div>
-                `)}
-              </div>
-            `}
+        Object.keys(jobStatus.messages).length > 0 && h('div', {
+          style: { color: '#7f8c8d', fontSize: '0.875rem', marginBottom: '0.5rem' }
+        },
+          Object.entries(jobStatus.messages).map(([timestamp, msg]) =>
+            h('div', { key: timestamp }, msg)
+          )
+        ),
 
-            <div style=${{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-              gap: '0.5rem',
-              fontSize: '0.875rem',
-              color: '#34495e'
-            }}>
-              <div>Files: ${jobStatus.inpFilesProcessed}</div>
-              <div>Added: ${jobStatus.booksAdded}</div>
-              <div>Deleted: ${jobStatus.bookDeleted}</div>
-              <div>Covers: ${jobStatus.coversAdded}</div>
-              ${jobStatus.bookErrors > 0 && html`<div style=${{ color: '#e74c3c' }}>Book Errors: ${jobStatus.bookErrors}</div>`}
-              ${jobStatus.coverErrors > 0 && html`<div style=${{ color: '#e74c3c' }}>Cover Errors: ${jobStatus.coverErrors}</div>`}
-            </div>
+        h('div', {
+          style: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+            gap: '0.5rem',
+            fontSize: '0.875rem',
+            color: '#34495e'
+          }
+        },
+          h('div', null, 'Files: ', jobStatus.inpFilesProcessed),
+          h('div', null, 'Added: ', jobStatus.booksAdded),
+          h('div', null, 'Deleted: ', jobStatus.bookDeleted),
+          h('div', null, 'Covers: ', jobStatus.coversAdded),
+          jobStatus.bookErrors > 0 && h('div', { style: { color: '#e74c3c' } }, 'Book Errors: ', jobStatus.bookErrors),
+          jobStatus.coverErrors > 0 && h('div', { style: { color: '#e74c3c' } }, 'Cover Errors: ', jobStatus.coverErrors)
+        ),
 
-            ${jobStatus.completedAt && html`
-              <div style=${{ color: '#7f8c8d', fontSize: '0.875rem', marginTop: '0.5rem' }}>
-                Completed: ${new Date(jobStatus.completedAt).toLocaleString()}
-              </div>
-            `}
-          </div>
-        `}
+        jobStatus.completedAt && h('div', {
+          style: { color: '#7f8c8d', fontSize: '0.875rem', marginTop: '0.5rem' }
+        }, 'Completed: ', new Date(jobStatus.completedAt).toLocaleString())
+      ),
 
-        ${!jobStatus && html`
-          <div style=${{ textAlign: 'center', padding: '2rem', color: '#95a5a6' }}>
-            No job information available
-          </div>
-        `}
-      </div>
+      !jobStatus && h('div', {
+        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
+      }, 'No job information available')
+    ),
 
-      <div>
-        <h3>Pending User Approvals (${pendingUsers.length})</h3>
-        <div style=${{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          ${pendingUsers.map(user => html`
-            <div key=${user.id} style=${{
+    h('div', null,
+      h('h3', null, 'Pending User Approvals (', pendingUsers.length, ')'),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.75rem' } },
+        pendingUsers.map(user =>
+          h('div', {
+            key: user.id,
+            style: {
               padding: '1rem',
               border: '1px solid #e1e8ed',
               borderRadius: '8px',
@@ -179,53 +180,53 @@ export function AdminPanel() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
-            }}>
-              <div style=${{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                ${user.avatarUrl && html`
-                  <img src=${user.avatarUrl} alt=${user.name}
-                    style=${{ width: '48px', height: '48px', borderRadius: '50%' }}
-                  />
-                `}
-                <div>
-                  <div style=${{ fontWeight: 'bold' }}>${user.name}</div>
-                  <div style=${{ color: '#7f8c8d', fontSize: '0.875rem' }}>${user.email}</div>
-                  <div style=${{ color: '#95a5a6', fontSize: '0.75rem' }}>
-                    Requested: ${new Date(user.createdAt).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-              <div style=${{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick=${() => approveUser(user.id)} style=${{
+            }
+          },
+            h('div', { style: { display: 'flex', gap: '0.75rem', alignItems: 'center' } },
+              user.avatarUrl && h('img', {
+                src: user.avatarUrl,
+                alt: user.name,
+                style: { width: '48px', height: '48px', borderRadius: '50%' }
+              }),
+              h('div', null,
+                h('div', { style: { fontWeight: 'bold' } }, user.name),
+                h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } }, user.email),
+                h('div', { style: { color: '#95a5a6', fontSize: '0.75rem' } },
+                  'Requested: ', new Date(user.createdAt).toLocaleString()
+                )
+              )
+            ),
+            h('div', { style: { display: 'flex', gap: '0.5rem' } },
+              h('button', {
+                onClick: () => approveUser(user.id),
+                style: {
                   padding: '0.5rem 1rem',
                   background: '#27ae60',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
-                }}>
-                  Approve
-                </button>
-                <button onClick=${() => rejectUser(user.id)} style=${{
+                }
+              }, 'Approve'),
+              h('button', {
+                onClick: () => rejectUser(user.id),
+                style: {
                   padding: '0.5rem 1rem',
                   background: '#e74c3c',
                   color: 'white',
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer'
-                }}>
-                  Reject
-                </button>
-              </div>
-            </div>
-          `)}
-        </div>
+                }
+              }, 'Reject')
+            )
+          )
+        )
+      ),
 
-        ${pendingUsers.length === 0 && html`
-          <div style=${{ textAlign: 'center', padding: '2rem', color: '#95a5a6' }}>
-            No pending user approvals
-          </div>
-        `}
-      </div>
-    </div>
-  `;
+      pendingUsers.length === 0 && h('div', {
+        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
+      }, 'No pending user approvals')
+    )
+  );
 }

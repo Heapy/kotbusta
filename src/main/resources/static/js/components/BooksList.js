@@ -1,5 +1,5 @@
+import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { html } from '../utils/html.js';
 import { api } from '../utils/api.js';
 import { SearchBar } from './SearchBar.js';
 import { BookCard } from './BookCard.js';
@@ -63,73 +63,63 @@ export function BooksList({ starred = false, onSelectBook }) {
 
   const hasMore = offset + limit < total;
 
-  return html`
-    <div style=${{ padding: '2rem' }}>
-      <h2>${starred ? 'Starred Books' : 'All Books'}</h2>
+  return h('div', { style: { padding: '2rem' } },
+    h('h2', null, starred ? 'Starred Books' : 'All Books'),
 
-      ${!starred && html`
-        <${SearchBar} onSearch=${handleSearch} />
-      `}
+    !starred && h(SearchBar, { onSearch: handleSearch }),
 
-      ${loading ? html`
-        <div style=${{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
-      ` : html`
-        <div style=${{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: '1.5rem',
-          marginBottom: '2rem'
-        }}>
-          ${books.map(book => html`
-            <${BookCard}
-              key=${book.id}
-              book=${book}
-              onSelect=${onSelectBook}
-              onToggleStar=${toggleStar}
-            />
-          `)}
-        </div>
-      `}
+    loading
+      ? h('div', { style: { textAlign: 'center', padding: '2rem' } }, 'Loading...')
+      : h('div', {
+          style: {
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+            gap: '1.5rem',
+            marginBottom: '2rem'
+          }
+        },
+        books.map(book =>
+          h(BookCard, {
+            key: book.id,
+            book: book,
+            onSelect: onSelectBook,
+            onToggleStar: toggleStar
+          })
+        )
+      ),
 
-      ${books.length === 0 && !loading && html`
-        <div style=${{ textAlign: 'center', padding: '2rem', color: '#95a5a6' }}>
-          No books found
-        </div>
-      `}
+    books.length === 0 && !loading && h('div', {
+      style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
+    }, 'No books found'),
 
-      <div style=${{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' }}>
-        <button
-          onClick=${() => setOffset(Math.max(0, offset - limit))}
-          disabled=${offset === 0}
-          style=${{
-            padding: '0.75rem 1.5rem',
-            background: offset === 0 ? '#ecf0f1' : '#3498db',
-            color: offset === 0 ? '#95a5a6' : 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: offset === 0 ? 'not-allowed' : 'pointer'
-          }}
-        >
-          Previous
-        </button>
-        <span style=${{ padding: '0.75rem', color: '#7f8c8d' }}>
-          ${offset + 1}-${Math.min(offset + limit, total)} of ${total}
-        </span>
-        <button
-          onClick=${() => setOffset(offset + limit)}
-          disabled=${!hasMore}
-          style=${{
-            padding: '0.75rem 1.5rem',
-            background: !hasMore ? '#ecf0f1' : '#3498db',
-            color: !hasMore ? '#95a5a6' : 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: !hasMore ? 'not-allowed' : 'pointer'
-          }}
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  `;
+    h('div', { style: { display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' } },
+      h('button', {
+        onClick: () => setOffset(Math.max(0, offset - limit)),
+        disabled: offset === 0,
+        style: {
+          padding: '0.75rem 1.5rem',
+          background: offset === 0 ? '#ecf0f1' : '#3498db',
+          color: offset === 0 ? '#95a5a6' : 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: offset === 0 ? 'not-allowed' : 'pointer'
+        }
+      }, 'Previous'),
+      h('span', { style: { padding: '0.75rem', color: '#7f8c8d' } },
+        `${offset + 1}-${Math.min(offset + limit, total)} of ${total}`
+      ),
+      h('button', {
+        onClick: () => setOffset(offset + limit),
+        disabled: !hasMore,
+        style: {
+          padding: '0.75rem 1.5rem',
+          background: !hasMore ? '#ecf0f1' : '#3498db',
+          color: !hasMore ? '#95a5a6' : 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: !hasMore ? 'not-allowed' : 'pointer'
+        }
+      }, 'Next')
+    )
+  );
 }

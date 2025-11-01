@@ -1,6 +1,5 @@
-import { h, render } from 'preact';
+import { render, h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { html } from './utils/html.js';
 import { api } from './utils/api.js';
 
 // Components
@@ -69,66 +68,54 @@ function App() {
   };
 
   if (loading) {
-    return html`
-      <div style=${{
+    return h('div', {
+      style: {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
         background: '#ecf0f1'
-      }}>
-        <div style=${{ textAlign: 'center' }}>
-          <h2>Loading...</h2>
-        </div>
-      </div>
-    `;
+      }
+    },
+      h('div', { style: { textAlign: 'center' } },
+        h('h2', null, 'Loading...')
+      )
+    );
   }
 
   // Show error page if there's a server error
   if (error) {
-    return html`<${ErrorPage} error=${error} onRetry=${loadUser} />`;
+    return h(ErrorPage, { error: error, onRetry: loadUser });
   }
 
   // Show login page if user is not authenticated
   if (!user) {
-    return html`<${LoginPage} />`;
+    return h(LoginPage);
   }
 
-  return html`
-    <div style=${{ minHeight: '100vh', background: '#ecf0f1' }}>
-      <${Header}
-        user=${user}
-        onNavigate=${handleNavigate}
-        currentView=${currentView}
-        isAdmin=${isAdmin}
-      />
+  return h('div', { style: { minHeight: '100vh', background: '#ecf0f1' } },
+    h(Header, {
+      user: user,
+      onNavigate: handleNavigate,
+      currentView: currentView,
+      isAdmin: isAdmin
+    }),
 
-      ${selectedBookId ? html`
-        <${BookDetail}
-          bookId=${selectedBookId}
-          onBack=${handleBackFromBook}
-          onRefresh=${() => {}}
-        />
-      ` : html`
-        ${currentView === 'books' && html`
-          <${BooksList} onSelectBook=${handleSelectBook} />
-        `}
-        ${currentView === 'starred' && html`
-          <${BooksList} starred=${true} onSelectBook=${handleSelectBook} />
-        `}
-        ${currentView === 'activity' && html`
-          <${Activity} />
-        `}
-        ${currentView === 'kindle' && html`
-          <${KindleManagement} />
-        `}
-        ${currentView === 'admin' && isAdmin && html`
-          <${AdminPanel} />
-        `}
-      `}
-    </div>
-  `;
+    selectedBookId
+      ? h(BookDetail, {
+          bookId: selectedBookId,
+          onBack: handleBackFromBook,
+          onRefresh: () => {}
+        })
+      : [
+          currentView === 'books' && h(BooksList, { onSelectBook: handleSelectBook }),
+          currentView === 'starred' && h(BooksList, { starred: true, onSelectBook: handleSelectBook }),
+          currentView === 'activity' && h(Activity),
+          currentView === 'kindle' && h(KindleManagement),
+          currentView === 'admin' && isAdmin && h(AdminPanel)
+        ]
+  );
 }
 
 // Render the app
-render(html`<${App} />`, document.getElementById('app'));
+render(h(App), document.getElementById('app'));

@@ -1,5 +1,5 @@
+import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
-import { html } from '../utils/html.js';
 import { api } from '../utils/api.js';
 
 export function KindleManagement() {
@@ -43,7 +43,7 @@ export function KindleManagement() {
   const deleteDevice = async (deviceId) => {
     if (!confirm('Delete this device?')) return;
     try {
-      await api.delete(`/api/kindle/devices/${deviceId}`);
+      await api.delete(`/api/kindle/devices/\${deviceId}`);
       await loadData();
     } catch (err) {
       alert('Failed to delete device: ' + err.message);
@@ -51,93 +51,99 @@ export function KindleManagement() {
   };
 
   if (loading) {
-    return html`<div style=${{ padding: '2rem', textAlign: 'center' }}>Loading...</div>`;
+    return h('div', { style: { padding: '2rem', textAlign: 'center' } }, 'Loading...');
   }
 
-  return html`
-    <div style=${{ padding: '2rem' }}>
-      <h2>Kindle Management</h2>
+  return h('div', { style: { padding: '2rem' } },
+    h('h2', null, 'Kindle Management'),
 
-      <div style=${{ marginBottom: '2rem' }}>
-        <div style=${{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h3>My Devices</h3>
-          <button onClick=${() => setShowAddDevice(!showAddDevice)} style=${{
+    h('div', { style: { marginBottom: '2rem' } },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' } },
+        h('h3', null, 'My Devices'),
+        h('button', {
+          onClick: () => setShowAddDevice(!showAddDevice),
+          style: {
             padding: '0.5rem 1rem',
             background: '#27ae60',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer'
-          }}>
-            + Add Device
-          </button>
-        </div>
+          }
+        }, '+ Add Device')
+      ),
 
-        ${showAddDevice && html`
-          <form onSubmit=${addDevice} style=${{
-            background: '#ecf0f1',
-            padding: '1rem',
-            borderRadius: '8px',
-            marginBottom: '1rem'
-          }}>
-            <input
-              type="email"
-              value=${newDevice.email}
-              onInput=${(e) => setNewDevice({ ...newDevice, email: e.target.value })}
-              placeholder="Kindle Email (e.g., user@kindle.com)"
-              required
-              style=${{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #bdc3c7',
-                borderRadius: '4px',
-                marginBottom: '0.5rem',
-                boxSizing: 'border-box'
-              }}
-            />
-            <input
-              type="text"
-              value=${newDevice.name}
-              onInput=${(e) => setNewDevice({ ...newDevice, name: e.target.value })}
-              placeholder="Device Name (e.g., My Kindle)"
-              required
-              style=${{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #bdc3c7',
-                borderRadius: '4px',
-                marginBottom: '0.5rem',
-                boxSizing: 'border-box'
-              }}
-            />
-            <div style=${{ display: 'flex', gap: '0.5rem' }}>
-              <button type="submit" style=${{
-                padding: '0.5rem 1rem',
-                background: '#27ae60',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}>
-                Add
-              </button>
-              <button type="button" onClick=${() => setShowAddDevice(false)} style=${{
-                padding: '0.5rem 1rem',
-                background: '#95a5a6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}>
-                Cancel
-              </button>
-            </div>
-          </form>
-        `}
+      showAddDevice && h('form', {
+        onSubmit: addDevice,
+        style: {
+          background: '#ecf0f1',
+          padding: '1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem'
+        }
+      },
+        h('input', {
+          type: 'email',
+          value: newDevice.email,
+          onInput: (e) => setNewDevice({ ...newDevice, email: e.target.value }),
+          placeholder: 'Kindle Email (e.g., user@kindle.com)',
+          required: true,
+          style: {
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #bdc3c7',
+            borderRadius: '4px',
+            marginBottom: '0.5rem',
+            boxSizing: 'border-box'
+          }
+        }),
+        h('input', {
+          type: 'text',
+          value: newDevice.name,
+          onInput: (e) => setNewDevice({ ...newDevice, name: e.target.value }),
+          placeholder: 'Device Name (e.g., My Kindle)',
+          required: true,
+          style: {
+            width: '100%',
+            padding: '0.75rem',
+            border: '1px solid #bdc3c7',
+            borderRadius: '4px',
+            marginBottom: '0.5rem',
+            boxSizing: 'border-box'
+          }
+        }),
+        h('div', { style: { display: 'flex', gap: '0.5rem' } },
+          h('button', {
+            type: 'submit',
+            style: {
+              padding: '0.5rem 1rem',
+              background: '#27ae60',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }
+          }, 'Add'),
+          h('button', {
+            type: 'button',
+            onClick: () => setShowAddDevice(false),
+            style: {
+              padding: '0.5rem 1rem',
+              background: '#95a5a6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }
+          }, 'Cancel')
+        )
+      ),
 
-        <div style=${{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          ${devices.map(device => html`
-            <div key=${device.id} style=${{
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.75rem' } },
+        devices.map(device =>
+          h('div', {
+            key: device.id,
+            style: {
               padding: '1rem',
               border: '1px solid #e1e8ed',
               borderRadius: '8px',
@@ -145,53 +151,57 @@ export function KindleManagement() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
-            }}>
-              <div>
-                <div style=${{ fontWeight: 'bold' }}>${device.name}</div>
-                <div style=${{ color: '#7f8c8d', fontSize: '0.875rem' }}>${device.email}</div>
-              </div>
-              <button onClick=${() => deleteDevice(device.id)} style=${{
+            }
+          },
+            h('div', null,
+              h('div', { style: { fontWeight: 'bold' } }, device.name),
+              h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } }, device.email)
+            ),
+            h('button', {
+              onClick: () => deleteDevice(device.id),
+              style: {
                 padding: '0.5rem 1rem',
                 background: '#e74c3c',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer'
-              }}>
-                Delete
-              </button>
-            </div>
-          `)}
-        </div>
+              }
+            }, 'Delete')
+          )
+        )
+      ),
 
-        ${devices.length === 0 && html`
-          <div style=${{ textAlign: 'center', padding: '2rem', color: '#95a5a6' }}>
-            No devices yet. Add your first Kindle device to get started!
-          </div>
-        `}
-      </div>
+      devices.length === 0 && h('div', {
+        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
+      }, 'No devices yet. Add your first Kindle device to get started!')
+    ),
 
-      <div>
-        <h3>Send History</h3>
-        <div style=${{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          ${sendHistory.map(item => html`
-            <div key=${item.id} style=${{
+    h('div', null,
+      h('h3', null, 'Send History'),
+      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.5rem' } },
+        sendHistory.map(item =>
+          h('div', {
+            key: item.id,
+            style: {
               padding: '0.75rem',
               border: '1px solid #e1e8ed',
               borderRadius: '4px',
               background: 'white'
-            }}>
-              <div style=${{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                <div>
-                  <div style=${{ fontWeight: 'bold' }}>${item.bookTitle}</div>
-                  <div style=${{ color: '#7f8c8d', fontSize: '0.875rem' }}>
-                    to ${item.deviceName} · ${item.format}
-                  </div>
-                  <div style=${{ color: '#95a5a6', fontSize: '0.75rem' }}>
-                    ${new Date(item.createdAt).toLocaleString()}
-                  </div>
-                </div>
-                <span style=${{
+            }
+          },
+            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'start' } },
+              h('div', null,
+                h('div', { style: { fontWeight: 'bold' } }, item.bookTitle),
+                h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } },
+                  `to ${item.deviceName} · ${item.format}`
+                ),
+                h('div', { style: { color: '#95a5a6', fontSize: '0.75rem' } },
+                  new Date(item.createdAt).toLocaleString()
+                )
+              ),
+              h('span', {
+                style: {
                   padding: '0.25rem 0.75rem',
                   borderRadius: '4px',
                   fontSize: '0.75rem',
@@ -201,25 +211,19 @@ export function KindleManagement() {
                   color: item.status === 'COMPLETED' ? '#27ae60' :
                          item.status === 'FAILED' ? '#e74c3c' :
                          item.status === 'PROCESSING' ? '#f39c12' : '#3498db'
-                }}>
-                  ${item.status}
-                </span>
-              </div>
-              ${item.lastError && html`
-                <div style=${{ color: '#e74c3c', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                  Error: ${item.lastError}
-                </div>
-              `}
-            </div>
-          `)}
-        </div>
+                }
+              }, item.status)
+            ),
+            item.lastError && h('div', {
+              style: { color: '#e74c3c', fontSize: '0.75rem', marginTop: '0.5rem' }
+            }, `Error: ${item.lastError}`)
+          )
+        )
+      ),
 
-        ${sendHistory.length === 0 && html`
-          <div style=${{ textAlign: 'center', padding: '2rem', color: '#95a5a6' }}>
-            No send history yet
-          </div>
-        `}
-      </div>
-    </div>
-  `;
+      sendHistory.length === 0 && h('div', {
+        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
+      }, 'No send history yet')
+    )
+  );
 }
