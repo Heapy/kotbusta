@@ -141,6 +141,7 @@ class PandocConversionService : ConversionService {
             val completed = process.waitFor(5, TimeUnit.SECONDS)
             completed && process.exitValue() == 0
         } catch (e: Exception) {
+            log.error("Error while checking pandoc availability", e)
             false
         }
     }
@@ -152,18 +153,16 @@ class PandocConversionService : ConversionService {
     ): List<String> {
         val command = mutableListOf(
             "pandoc",
-            inputFile.absolutePath,
+            inputFile.name, // Use relative name instead of absolute path
             "-f", "fb2",
             "-t", outputFormat.lowercase(),
-            "-o", outputFile.absolutePath
+            "-o", outputFile.absolutePath,
+            "--extract-media=." // Extract media to current directory
         )
 
         when (outputFormat.lowercase()) {
             "pdf" -> {
                 command.addAll(listOf("--pdf-engine=xelatex"))
-            }
-            "epub" -> {
-                command.addAll(listOf("--epub-metadata", createMetadataFile(inputFile)))
             }
             "html" -> {
                 command.addAll(listOf("--standalone", "--self-contained"))
@@ -173,20 +172,4 @@ class PandocConversionService : ConversionService {
         return command
     }
 
-    private fun createMetadataFile(inputFile: File): String {
-        val metadataContent = """
-            <?xml version="1.0"?>
-            <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-                <dc:title>${inputFile.nameWithoutExtension}</dc:title>
-                <dc:creator>Unknown Author</dc:creator>
-                <dc:language>en</dc:language>
-            </metadata>
-        """.trimIndent()
-
-        val metadataFile = File.createTempFile("metadata_", ".xml")
-        metadataFile.writeText(metadataContent)
-        metadataFile.deleteOnExit()
-
-        return metadataFile.absolutePath
-    }
 }
