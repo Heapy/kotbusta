@@ -123,7 +123,7 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
         borderRadius: '4px',
         cursor: 'pointer'
       }
-    }, '<- Back'),
+    }, '← Back'),
 
     h('div', { style: { display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', marginBottom: '2rem' } },
       h('div', null,

@@ -165,7 +165,7 @@ function App() {
       : [
           currentView === 'books' && h(BooksList, { onSelectBook: handleSelectBook }),
           currentView === 'starred' && h(BooksList, { starred: true, onSelectBook: handleSelectBook }),
-          currentView === 'activity' && h(Activity),
+          currentView === 'activity' && h(Activity, { onSelectBook: handleSelectBook }),
           currentView === 'kindle' && h(KindleManagement),
           currentView === 'admin' && isAdmin && h(AdminPanel)
         ]

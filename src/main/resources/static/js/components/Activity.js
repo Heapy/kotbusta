@@ -2,7 +2,7 @@ import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { api } from '../utils/api.js';
 
-export function Activity() {
+export function Activity({ onSelectBook }) {
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,8 +49,16 @@ export function Activity() {
               }),
               h('div', null,
                 h('div', { style: { fontWeight: 'bold' } }, comment.userName),
-                h('div', { style: { color: '#3498db', fontSize: '0.875rem' } },
-                  `on "${comment.bookTitle}"`
+                h('div', { style: { fontSize: '0.875rem' } },
+                  'on ',
+                  h('span', {
+                    onClick: () => onSelectBook(comment.bookId),
+                    style: {
+                      color: '#3498db',
+                      cursor: 'pointer',
+                      textDecoration: 'underline'
+                    }
+                  }, `"${comment.bookTitle}"`)
                 ),
                 h('div', { style: { color: '#95a5a6', fontSize: '0.875rem' } },
                   new Date(comment.createdAt).toLocaleString()
@@ -76,7 +84,15 @@ export function Activity() {
               background: 'white'
             }
           },
-            h('div', { style: { fontWeight: 'bold' } }, download.bookTitle),
+            h('div', {
+              onClick: () => onSelectBook(download.bookId),
+              style: {
+                fontWeight: 'bold',
+                color: '#3498db',
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }
+            }, download.bookTitle),
             h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } },
               `${download.format.toUpperCase()} · ${new Date(download.createdAt).toLocaleString()}`
             )
