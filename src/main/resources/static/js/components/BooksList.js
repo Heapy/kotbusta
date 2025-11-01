@@ -4,13 +4,18 @@ import { api } from '../utils/api.js';
 import { SearchBar } from './SearchBar.js';
 import { BookCard } from './BookCard.js';
 
-export function BooksList({ starred = false, onSelectBook }) {
+export function BooksList({ starred = false, onSelectBook, initialOffset = 0, onPageChange }) {
   const [books, setBooks] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [offset, setOffset] = useState(0);
+  const [offset, setOffset] = useState(initialOffset);
   const [searchParams, setSearchParams] = useState(null);
   const limit = 20;
+
+  // Update offset when initialOffset changes (browser back/forward)
+  useEffect(() => {
+    setOffset(initialOffset);
+  }, [initialOffset]);
 
   useEffect(() => {
     loadBooks();
@@ -63,6 +68,24 @@ export function BooksList({ starred = false, onSelectBook }) {
 
   const hasMore = offset + limit < total;
 
+  const handlePreviousPage = () => {
+    const newOffset = Math.max(0, offset - limit);
+    setOffset(newOffset);
+    if (onPageChange) {
+      onPageChange(newOffset);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNextPage = () => {
+    const newOffset = offset + limit;
+    setOffset(newOffset);
+    if (onPageChange) {
+      onPageChange(newOffset);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return h('div', { style: { padding: '2rem' } },
     h('h2', null, starred ? 'Starred Books' : 'All Books'),
 
@@ -94,7 +117,7 @@ export function BooksList({ starred = false, onSelectBook }) {
 
     h('div', { style: { display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' } },
       h('button', {
-        onClick: () => setOffset(Math.max(0, offset - limit)),
+        onClick: handlePreviousPage,
         disabled: offset === 0,
         style: {
           padding: '0.75rem 1.5rem',
@@ -109,7 +132,7 @@ export function BooksList({ starred = false, onSelectBook }) {
         `${offset + 1}-${Math.min(offset + limit, total)} of ${total}`
       ),
       h('button', {
-        onClick: () => setOffset(offset + limit),
+        onClick: handleNextPage,
         disabled: !hasMore,
         style: {
           padding: '0.75rem 1.5rem',

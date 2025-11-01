@@ -16,21 +16,33 @@ import { ErrorPage } from './components/ErrorPage.js';
 function parseRoute() {
   const hash = window.location.hash.slice(1) || '/books';
 
+  // Split hash into path and query
+  const [path, queryString] = hash.split('?');
+
+  // Parse query parameters
+  const queryParams = new URLSearchParams(queryString || '');
+  const page = parseInt(queryParams.get('page') || '1', 10);
+  const offset = (page - 1) * 20; // 20 items per page
+
   // Check if it's a book detail route: /view/book/:id
-  const bookMatch = hash.match(/^\/([^/]+)\/book\/(\d+)$/);
+  const bookMatch = path.match(/^\/([^/]+)\/book\/(\d+)$/);
   if (bookMatch) {
-    return { view: bookMatch[1], bookId: parseInt(bookMatch[2], 10) };
+    return { view: bookMatch[1], bookId: parseInt(bookMatch[2], 10), offset: 0 };
   }
 
   // Otherwise it's a view route
-  const view = hash.slice(1) || 'books'; // Remove leading slash
-  return { view, bookId: null };
+  const view = path.slice(1) || 'books'; // Remove leading slash
+  return { view, bookId: null, offset };
 }
 
 // Update URL hash based on current state
-function updateRoute(view, bookId) {
+function updateRoute(view, bookId, offset = 0) {
+  const page = Math.floor(offset / 20) + 1;
+
   if (bookId) {
     window.location.hash = `#/${view}/book/${bookId}`;
+  } else if (page > 1) {
+    window.location.hash = `#/${view}?page=${page}`;
   } else {
     window.location.hash = `#/${view}`;
   }
@@ -42,6 +54,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentView, setCurrentView] = useState('books');
   const [selectedBookId, setSelectedBookId] = useState(null);
+  const [pageOffset, setPageOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -54,6 +67,7 @@ function App() {
     if (route.bookId) {
       setSelectedBookId(route.bookId);
     }
+    setPageOffset(route.offset);
   }, []);
 
   // Listen to browser back/forward buttons
@@ -68,6 +82,7 @@ function App() {
       } else {
         setSelectedBookId(null);
       }
+      setPageOffset(route.offset);
     };
 
     window.addEventListener('hashchange', handleHashChange);
@@ -110,16 +125,22 @@ function App() {
   const handleNavigate = (view) => {
     setCurrentView(view);
     setSelectedBookId(null);
-    updateRoute(view, null);
+    setPageOffset(0);
+    updateRoute(view, null, 0);
   };
 
   const handleSelectBook = (bookId) => {
     setSelectedBookId(bookId);
-    updateRoute(currentView, bookId);
+    updateRoute(currentView, bookId, pageOffset);
   };
 
   const handleBackFromBook = () => {
     window.history.back();
+  };
+
+  const handlePageChange = (offset) => {
+    setPageOffset(offset);
+    updateRoute(currentView, null, offset);
   };
 
   if (loading) {
@@ -163,8 +184,17 @@ function App() {
           onRefresh: () => {}
         })
       : [
-          currentView === 'books' && h(BooksList, { onSelectBook: handleSelectBook }),
-          currentView === 'starred' && h(BooksList, { starred: true, onSelectBook: handleSelectBook }),
+          currentView === 'books' && h(BooksList, {
+            onSelectBook: handleSelectBook,
+            initialOffset: pageOffset,
+            onPageChange: handlePageChange
+          }),
+          currentView === 'starred' && h(BooksList, {
+            starred: true,
+            onSelectBook: handleSelectBook,
+            initialOffset: pageOffset,
+            onPageChange: handlePageChange
+          }),
           currentView === 'activity' && h(Activity, { onSelectBook: handleSelectBook }),
           currentView === 'kindle' && h(KindleManagement),
           currentView === 'admin' && isAdmin && h(AdminPanel)
