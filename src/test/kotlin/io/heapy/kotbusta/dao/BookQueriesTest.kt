@@ -355,36 +355,34 @@ class BookQueriesTest {
     fun `getSimilarBooks should return books by same author or genre`() = transaction {
         // Given: Book 1 is Fantasy by J.K. Rowling
         // When: Getting similar books
-        val similarBooks = with(user1Session) {
-            getSimilarBooks(
-                bookId = 1,
-                genres = listOf("Fantasy"),
-                limit = 5,
-            )
-        }
+        val similarBooks = getSimilarBooks(
+            bookId = 1,
+            limit = 5,
+        )
 
         // Then: Should return other Fantasy books or by same author
         assertTrue(similarBooks.isNotEmpty())
         // Should not include the original book
         assertTrue(similarBooks.none { it.id == 1 })
-        // Should prioritize same genre
+        // Should include other Fantasy books
         assertTrue(similarBooks.any { it.genres.contains("Fantasy") })
+        // Book 2 (Harry Potter 2) should be included (same author + same genre)
+        assertTrue(similarBooks.any { it.id == 2 })
+        // All books should have isStarred = false (not checking star status)
+        assertTrue(similarBooks.all { !it.isStarred })
     }
 
     @Test
     context(_: TransactionProvider)
-    fun `getSimilarBooks should return empty list if genres is empty`() = transaction {
-        // Given: Book without genres
-        // When: Getting similar books
-        val similarBooks = with(user1Session) {
-            getSimilarBooks(
-                bookId = 1,
-                genres = emptyList(),
-                limit = 5,
-            )
-        }
+    fun `getSimilarBooks should return empty list if book has no genres`() = transaction {
+        // Given: Book 5 (The Shining - Horror) which is the only Horror book
+        // When: Getting similar books and it has no same-author books
+        val similarBooks = getSimilarBooks(
+            bookId = 5,
+            limit = 5,
+        )
 
-        // Then: Should return empty list
+        // Then: Should return empty list (no matching genre or author)
         assertTrue(similarBooks.isEmpty())
     }
 

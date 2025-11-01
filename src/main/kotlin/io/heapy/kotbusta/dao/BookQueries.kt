@@ -262,12 +262,16 @@ fun searchBooks(query: SearchQuery): SearchResult = useTx { dslContext ->
     )
 }
 
-context(_: TransactionContext, userSession: UserSession)
+context(_: TransactionContext)
 fun getSimilarBooks(
     bookId: Int,
     limit: Int,
 ): List<BookSummary> = useTx { dslContext ->
-    val genres = getBookGenres(bookId)
+    val genreIds = dslContext
+        .select(BOOK_GENRES.GENRE_ID)
+        .from(BOOK_GENRES)
+        .where(BOOK_GENRES.BOOK_ID.eq(bookId))
+        .fetch(BOOK_GENRES.GENRE_ID)
 
     val authorIds = dslContext
         .select(BOOK_AUTHORS.AUTHOR_ID)
@@ -275,13 +279,7 @@ fun getSimilarBooks(
         .where(BOOK_AUTHORS.BOOK_ID.eq(bookId))
         .fetch(BOOK_AUTHORS.AUTHOR_ID)
 
-    val genreIds = dslContext
-        .select(GENRES.ID)
-        .from(GENRES)
-        .where(GENRES.NAME.`in`(genres))
-        .fetch(GENRES.ID)
-
-    val query = dslContext
+    val results = dslContext
         .selectDistinct(
             BOOKS.ID,
             BOOKS.TITLE,
@@ -289,30 +287,15 @@ fun getSimilarBooks(
             BOOKS.SERIES_ID,
             BOOKS.SERIES_NUMBER,
             SERIES.NAME.`as`("series_name"),
-            DSL.case_()
-                .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
-                .otherwise(DSL.inline(false))
-                .`as`("is_starred"),
+            DSL.inline(false).`as`("is_starred"),
         )
         .from(BOOKS)
         .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
         .leftJoin(BOOK_AUTHORS).on(BOOKS.ID.eq(BOOK_AUTHORS.BOOK_ID))
         .leftJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
         .leftJoin(BOOK_GENRES).on(BOOKS.ID.eq(BOOK_GENRES.BOOK_ID))
-        .leftJoin(USER_STARS)
-        .on(
-            BOOKS.ID.eq(USER_STARS.BOOK_ID)
-                .and(USER_STARS.USER_ID.eq(userSession.userId)),
-        )
-
-    val condition = BOOKS.ID.ne(bookId).and(
-        BOOK_GENRES.GENRE_ID.`in`(genreIds).or(
-            AUTHORS.ID.`in`(authorIds),
-        ),
-    )
-
-    val results = query
-        .where(condition)
+        .where(BOOKS.ID.ne(bookId))
+        .and(BOOK_GENRES.GENRE_ID.`in`(genreIds).or(BOOK_AUTHORS.AUTHOR_ID.`in`(authorIds)))
         .orderBy(BOOKS.ID.desc())
         .limit(limit)
         .fetch()
