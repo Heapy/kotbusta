@@ -178,7 +178,6 @@ class InpxParser(
                             .insertInto(BOOKS)
                             .set(BOOKS.ID, book.bookId)
                             .set(BOOKS.TITLE, book.title)
-                            .set(BOOKS.GENRE, book.genre)
                             .set(BOOKS.LANGUAGE, book.language)
                             .set(BOOKS.SERIES_ID, seriesId)
                             .set(BOOKS.SERIES_NUMBER, book.seriesNumber)

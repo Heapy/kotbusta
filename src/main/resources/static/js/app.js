@@ -181,7 +181,8 @@ function App() {
       ? h(BookDetail, {
           bookId: selectedBookId,
           onBack: handleBackFromBook,
-          onRefresh: () => {}
+          onRefresh: () => {},
+          onSelectBook: handleSelectBook
         })
       : [
           currentView === 'books' && h(BooksList, {

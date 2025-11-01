@@ -1,18 +1,23 @@
 import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { api } from '../utils/api.js';
+import { BookCard } from './BookCard.js';
 
-export function BookDetail({ bookId, onBack, onRefresh }) {
+export function BookDetail({ bookId, onBack, onRefresh, onSelectBook }) {
   const [book, setBook] = useState(null);
   const [comments, setComments] = useState([]);
+  const [similarBooks, setSimilarBooks] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [note, setNote] = useState('');
+  const [noteEditMode, setNoteEditMode] = useState(false);
+  const [noteEditValue, setNoteEditValue] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendingToKindle, setSendingToKindle] = useState(false);
 
   useEffect(() => {
     loadBook();
     loadComments();
+    loadSimilarBooks();
   }, [bookId]);
 
   const loadBook = async () => {
@@ -36,6 +41,15 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
     }
   };
 
+  const loadSimilarBooks = async () => {
+    try {
+      const res = await api.get(`/api/books/${bookId}/similar?limit=6`);
+      setSimilarBooks(res.data || []);
+    } catch (err) {
+      console.error('Failed to load similar books:', err);
+    }
+  };
+
   const toggleStar = async () => {
     try {
       if (book.isStarred) {
@@ -44,6 +58,21 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
         await api.post(`/api/books/${bookId}/star`);
       }
       await loadBook();
+      await loadSimilarBooks();
+      onRefresh();
+    } catch (err) {
+      alert('Failed to toggle star: ' + err.message);
+    }
+  };
+
+  const toggleBookStar = async (id, isStarred) => {
+    try {
+      if (isStarred) {
+        await api.delete(`/api/books/${id}/star`);
+      } else {
+        await api.post(`/api/books/${id}/star`);
+      }
+      await loadSimilarBooks();
       onRefresh();
     } catch (err) {
       alert('Failed to toggle star: ' + err.message);
@@ -72,14 +101,28 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
     }
   };
 
+  const startEditingNote = () => {
+    setNoteEditValue(note);
+    setNoteEditMode(true);
+  };
+
+  const cancelEditingNote = () => {
+    setNoteEditValue('');
+    setNoteEditMode(false);
+  };
+
   const saveNote = async (e) => {
     e.preventDefault();
     try {
-      if (note.trim()) {
-        await api.post(`/api/books/${bookId}/notes`, { note });
+      if (noteEditValue.trim()) {
+        await api.post(`/api/books/${bookId}/notes`, { note: noteEditValue });
+        setNote(noteEditValue);
       } else {
         await api.delete(`/api/books/${bookId}/notes`);
+        setNote('');
       }
+      setNoteEditMode(false);
+      setNoteEditValue('');
       alert('Note saved!');
     } catch (err) {
       alert('Failed to save note: ' + err.message);
@@ -201,14 +244,17 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
         ),
 
         h('div', { style: { display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' } },
-          book.genre && h('span', {
-            style: {
-              background: '#ecf0f1',
-              padding: '0.5rem 1rem',
-              borderRadius: '4px',
-              color: '#34495e'
-            }
-          }, book.genre),
+          book.genres && book.genres.map(genre =>
+            h('span', {
+              key: genre,
+              style: {
+                background: '#ecf0f1',
+                padding: '0.5rem 1rem',
+                borderRadius: '4px',
+                color: '#34495e'
+              }
+            }, genre)
+          ),
           h('span', {
             style: {
               background: '#e8f4f8',
@@ -234,33 +280,87 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
           h('p', { style: { color: '#7f8c8d', fontSize: '0.875rem', marginBottom: '0.5rem' } },
             'Personal notes are private and only visible to you.'
           ),
-          h('form', { onSubmit: saveNote },
-            h('textarea', {
-              value: note,
-              onInput: (e) => setNote(e.target.value),
-              placeholder: 'Add your personal note...',
-              style: {
-                width: '100%',
-                minHeight: '100px',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem',
-                marginBottom: '0.5rem',
-                boxSizing: 'border-box'
-              }
-            }),
-            h('button', {
-              type: 'submit',
-              style: {
-                padding: '0.5rem 1rem',
-                background: '#27ae60',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }
-            }, 'Save Note')
+          !noteEditMode ? (
+            h('div', null,
+              note ? (
+                h('div', {
+                  style: {
+                    background: '#f8f9fa',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    marginBottom: '0.5rem',
+                    whiteSpace: 'pre-wrap',
+                    minHeight: '50px'
+                  }
+                }, note)
+              ) : (
+                h('div', {
+                  style: {
+                    background: '#f8f9fa',
+                    padding: '1rem',
+                    borderRadius: '8px',
+                    marginBottom: '0.5rem',
+                    color: '#95a5a6',
+                    fontStyle: 'italic',
+                    minHeight: '50px'
+                  }
+                }, 'No note added yet.')
+              ),
+              h('button', {
+                onClick: startEditingNote,
+                style: {
+                  padding: '0.5rem 1rem',
+                  background: '#3498db',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }
+              }, 'Edit')
+            )
+          ) : (
+            h('form', { onSubmit: saveNote },
+              h('textarea', {
+                value: noteEditValue,
+                onInput: (e) => setNoteEditValue(e.target.value),
+                placeholder: 'Add your personal note...',
+                style: {
+                  width: '100%',
+                  minHeight: '100px',
+                  padding: '0.75rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  fontSize: '1rem',
+                  marginBottom: '0.5rem',
+                  boxSizing: 'border-box'
+                }
+              }),
+              h('div', { style: { display: 'flex', gap: '0.5rem' } },
+                h('button', {
+                  type: 'submit',
+                  style: {
+                    padding: '0.5rem 1rem',
+                    background: '#27ae60',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }
+                }, 'Save'),
+                h('button', {
+                  type: 'button',
+                  onClick: cancelEditingNote,
+                  style: {
+                    padding: '0.5rem 1rem',
+                    background: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }
+                }, 'Cancel')
+              )
+            )
           )
         ),
 
@@ -335,6 +435,26 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
               )
             )
           )
+        )
+      )
+    ),
+
+    similarBooks.length > 0 && h('div', { style: { marginTop: '3rem' } },
+      h('h2', { style: { marginBottom: '1rem' } }, 'Similar Books'),
+      h('div', {
+        style: {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+          gap: '1rem'
+        }
+      },
+        similarBooks.map(book =>
+          h(BookCard, {
+            key: book.id,
+            book: book,
+            onSelect: onSelectBook,
+            onToggleStar: toggleBookStar
+          })
         )
       )
     )

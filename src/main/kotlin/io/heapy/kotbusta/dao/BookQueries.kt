@@ -27,7 +27,6 @@ fun getBooks(
         .select(
             BOOKS.ID,
             BOOKS.TITLE,
-            BOOKS.GENRE,
             BOOKS.LANGUAGE,
             BOOKS.SERIES_ID,
             BOOKS.SERIES_NUMBER,
@@ -84,7 +83,6 @@ fun getBookById(
             BOOKS.ID,
             BOOKS.TITLE,
             BOOKS.ANNOTATION,
-            BOOKS.GENRE,
             BOOKS.LANGUAGE,
             BOOKS.FILE_PATH,
             BOOKS.ARCHIVE_PATH,
@@ -115,6 +113,7 @@ fun getBookById(
         .fetchOne() ?: return@useTx null
 
     val authors = getBookAuthors(bookId)
+    val genres = getBookGenres(bookId)
     val series = record.get("series_name", String::class.java)
         ?.let { name ->
             Series(
@@ -127,7 +126,7 @@ fun getBookById(
         id = record.get(BOOKS.ID)!!,
         title = record.get(BOOKS.TITLE)!!,
         annotation = record.get(BOOKS.ANNOTATION),
-        genre = record.get(BOOKS.GENRE),
+        genres = genres,
         language = record.get(BOOKS.LANGUAGE)!!,
         authors = authors,
         series = series,
@@ -185,7 +184,6 @@ fun getStarredBooks(limit: Int, offset: Int): SearchResult =
             .select(
                 BOOKS.ID,
                 BOOKS.TITLE,
-                BOOKS.GENRE,
                 BOOKS.LANGUAGE,
                 BOOKS.SERIES_ID,
                 BOOKS.SERIES_NUMBER,
@@ -224,7 +222,6 @@ fun searchBooks(query: SearchQuery): SearchResult = useTx { dslContext ->
         .selectDistinct(
             BOOKS.ID,
             BOOKS.TITLE,
-            BOOKS.GENRE,
             BOOKS.LANGUAGE,
             BOOKS.SERIES_ID,
             BOOKS.SERIES_NUMBER,
@@ -268,10 +265,9 @@ fun searchBooks(query: SearchQuery): SearchResult = useTx { dslContext ->
 context(_: TransactionContext, userSession: UserSession)
 fun getSimilarBooks(
     bookId: Int,
-    genre: String?,
     limit: Int,
 ): List<BookSummary> = useTx { dslContext ->
-    if (genre == null) return@useTx emptyList()
+    val genres = getBookGenres(bookId)
 
     val authorIds = dslContext
         .select(BOOK_AUTHORS.AUTHOR_ID)
@@ -279,11 +275,16 @@ fun getSimilarBooks(
         .where(BOOK_AUTHORS.BOOK_ID.eq(bookId))
         .fetch(BOOK_AUTHORS.AUTHOR_ID)
 
+    val genreIds = dslContext
+        .select(GENRES.ID)
+        .from(GENRES)
+        .where(GENRES.NAME.`in`(genres))
+        .fetch(GENRES.ID)
+
     val query = dslContext
         .selectDistinct(
             BOOKS.ID,
             BOOKS.TITLE,
-            BOOKS.GENRE,
             BOOKS.LANGUAGE,
             BOOKS.SERIES_ID,
             BOOKS.SERIES_NUMBER,
@@ -292,15 +293,12 @@ fun getSimilarBooks(
                 .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
                 .otherwise(DSL.inline(false))
                 .`as`("is_starred"),
-            DSL.case_()
-                .`when`(BOOKS.GENRE.eq(genre), DSL.inline(1))
-                .otherwise(DSL.inline(0))
-                .`as`("genre_match_score"),
         )
         .from(BOOKS)
         .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
         .leftJoin(BOOK_AUTHORS).on(BOOKS.ID.eq(BOOK_AUTHORS.BOOK_ID))
         .leftJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
+        .leftJoin(BOOK_GENRES).on(BOOKS.ID.eq(BOOK_GENRES.BOOK_ID))
         .leftJoin(USER_STARS)
         .on(
             BOOKS.ID.eq(USER_STARS.BOOK_ID)
@@ -308,17 +306,14 @@ fun getSimilarBooks(
         )
 
     val condition = BOOKS.ID.ne(bookId).and(
-        BOOKS.GENRE.eq(genre).or(
+        BOOK_GENRES.GENRE_ID.`in`(genreIds).or(
             AUTHORS.ID.`in`(authorIds),
         ),
     )
 
     val results = query
         .where(condition)
-        .orderBy(
-            DSL.field("genre_match_score", Int::class.java).desc(),
-            BOOKS.ID.desc(),
-        )
+        .orderBy(BOOKS.ID.desc())
         .limit(limit)
         .fetch()
 
@@ -347,6 +342,18 @@ fun getBookAuthors(
         }
 }
 
+context(_: TransactionContext)
+fun getBookGenres(
+    bookId: Int,
+): List<String> = useTx { dslContext ->
+    dslContext
+        .select(GENRES.NAME)
+        .from(GENRES)
+        .innerJoin(BOOK_GENRES).on(GENRES.ID.eq(BOOK_GENRES.GENRE_ID))
+        .where(BOOK_GENRES.BOOK_ID.eq(bookId))
+        .fetch(GENRES.NAME)
+}
+
 private context(_: TransactionContext)
 fun buildBookSummaryList(
     results: Result<out Record>,
@@ -363,7 +370,7 @@ fun buildBookSummaryList(
                     id = bookId,
                     title = record.get(BOOKS.TITLE)!!,
                     authors = emptyList(),
-                    genre = record.get(BOOKS.GENRE),
+                    genres = emptyList(),
                     language = record.get(BOOKS.LANGUAGE)!!,
                     series = record.get("series_name", String::class.java),
                     seriesNumber = record.get(BOOKS.SERIES_NUMBER)
@@ -376,6 +383,8 @@ fun buildBookSummaryList(
         }
 
         val bookAuthors = mutableMapOf<Int, MutableList<String>>()
+        val bookGenres = mutableMapOf<Int, MutableList<String>>()
+
         if (bookIds.isNotEmpty()) {
             dslContext
                 .select(
@@ -392,10 +401,29 @@ fun buildBookSummaryList(
                     bookAuthors.computeIfAbsent(bookId) { mutableListOf() }
                         .add(authorName)
                 }
+
+            dslContext
+                .select(
+                    BOOK_GENRES.BOOK_ID,
+                    GENRES.NAME,
+                )
+                .from(BOOK_GENRES)
+                .innerJoin(GENRES).on(BOOK_GENRES.GENRE_ID.eq(GENRES.ID))
+                .where(BOOK_GENRES.BOOK_ID.`in`(bookIds))
+                .fetch()
+                .forEach { record ->
+                    val bookId = record.get(BOOK_GENRES.BOOK_ID)!!
+                    val genreName = record.get(GENRES.NAME)!!
+                    bookGenres.computeIfAbsent(bookId) { mutableListOf() }
+                        .add(genreName)
+                }
         }
 
         books.map { book ->
-            book.copy(authors = bookAuthors[book.id] ?: emptyList())
+            book.copy(
+                authors = bookAuthors[book.id] ?: emptyList(),
+                genres = bookGenres[book.id] ?: emptyList()
+            )
         }
     }
 
@@ -412,7 +440,14 @@ fun buildSearchConditions(query: SearchQuery): List<Condition> {
     }
 
     if (!query.genre.isNullOrBlank()) {
-        conditions.add(BOOKS.GENRE.eq(query.genre))
+        conditions.add(
+            BOOKS.ID.`in`(
+                DSL.select(BOOK_GENRES.BOOK_ID)
+                    .from(BOOK_GENRES)
+                    .innerJoin(GENRES).on(BOOK_GENRES.GENRE_ID.eq(GENRES.ID))
+                    .where(GENRES.NAME.eq(query.genre))
+            )
+        )
     }
 
     if (!query.language.isNullOrBlank()) {

@@ -34,19 +34,44 @@ INSERT INTO SERIES (ID, NAME) VALUES
 (4, 'Foundation');
 
 -- ============================================================================
+-- GENRES
+-- ============================================================================
+INSERT INTO GENRES (ID, NAME) VALUES
+(1, 'Fantasy'),
+(2, 'Horror'),
+(3, 'Mystery'),
+(4, 'Historical Fiction'),
+(5, 'Science Fiction');
+
+-- ============================================================================
 -- BOOKS
 -- ============================================================================
-INSERT INTO BOOKS (ID, TITLE, ANNOTATION, GENRE, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT, FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, COVER_IMAGE, CREATED_AT) VALUES
-(1, 'Harry Potter and the Philosopher''s Stone', 'The first book in the Harry Potter series.', 'Fantasy', 'en', 1, 1, 'fb2','/books/1.epub', '/archive/1.zip', 524288, '2024-01-01T00:00:00Z', NULL, '2024-01-01T00:00:00Z'),
-(2, 'Harry Potter and the Chamber of Secrets', 'The second book in the Harry Potter series.', 'Fantasy', 'en', 1, 2, 'fb2','/books/2.epub', '/archive/2.zip', 587776, '2024-01-02T00:00:00Z', NULL, '2024-01-02T00:00:00Z'),
-(3, 'A Game of Thrones', 'The first book in A Song of Ice and Fire.', 'Fantasy', 'en', 2, 1, 'fb2','/books/3.epub', '/archive/3.zip', 1048576, '2024-01-03T00:00:00Z', NULL, '2024-01-03T00:00:00Z'),
-(4, 'The Way of Kings', 'First book of The Stormlight Archive.', 'Fantasy', 'en', 3, 1, 'fb2','/books/4.epub', '/archive/4.zip', 2097152, '2024-01-04T00:00:00Z', NULL, '2024-01-04T00:00:00Z'),
-(5, 'The Shining', 'A horror novel about the Overlook Hotel.', 'Horror', 'en', NULL, NULL, 'fb2','/books/5.epub', '/archive/5.zip', 458752, '2024-01-05T00:00:00Z', NULL, '2024-01-05T00:00:00Z'),
-(6, 'Murder on the Orient Express', 'A classic Hercule Poirot mystery.', 'Mystery', 'en', NULL, NULL, 'fb2','/books/6.epub', '/archive/6.zip', 327680, '2024-01-06T00:00:00Z', NULL, '2024-01-06T00:00:00Z'),
-(7, 'War and Peace', 'Epic historical novel set during Napoleon''s invasion of Russia.', 'Historical Fiction', 'en', NULL, NULL, 'fb2','/books/7.epub', '/archive/7.zip', 1572864, '2024-01-07T00:00:00Z', NULL, '2024-01-07T00:00:00Z'),
-(8, 'Foundation', 'The first book in the Foundation series.', 'Science Fiction', 'en', 4, 1, 'fb2','/books/8.epub', '/archive/8.zip', 393216, '2024-01-08T00:00:00Z', NULL, '2024-01-08T00:00:00Z'),
-(9, 'Foundation and Empire', 'The second book in the Foundation series.', 'Science Fiction', 'en', 4, 2, 'fb2','/books/9.epub', '/archive/9.zip', 409600, '2024-01-09T00:00:00Z', NULL, '2024-01-09T00:00:00Z'),
-(10, 'Mistborn: The Final Empire', 'First book in the Mistborn trilogy.', 'Fantasy', 'en', NULL, NULL, 'fb2','/books/10.epub', '/archive/10.zip', 655360, '2024-01-10T00:00:00Z', NULL, '2024-01-10T00:00:00Z');
+INSERT INTO BOOKS (ID, TITLE, ANNOTATION, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT, FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, COVER_IMAGE, CREATED_AT) VALUES
+(1, 'Harry Potter and the Philosopher''s Stone', 'The first book in the Harry Potter series.', 'en', 1, 1, 'fb2','/books/1.epub', '/archive/1.zip', 524288, '2024-01-01T00:00:00Z', NULL, '2024-01-01T00:00:00Z'),
+(2, 'Harry Potter and the Chamber of Secrets', 'The second book in the Harry Potter series.', 'en', 1, 2, 'fb2','/books/2.epub', '/archive/2.zip', 587776, '2024-01-02T00:00:00Z', NULL, '2024-01-02T00:00:00Z'),
+(3, 'A Game of Thrones', 'The first book in A Song of Ice and Fire.', 'en', 2, 1, 'fb2','/books/3.epub', '/archive/3.zip', 1048576, '2024-01-03T00:00:00Z', NULL, '2024-01-03T00:00:00Z'),
+(4, 'The Way of Kings', 'First book of The Stormlight Archive.', 'en', 3, 1, 'fb2','/books/4.epub', '/archive/4.zip', 2097152, '2024-01-04T00:00:00Z', NULL, '2024-01-04T00:00:00Z'),
+(5, 'The Shining', 'A horror novel about the Overlook Hotel.', 'en', NULL, NULL, 'fb2','/books/5.epub', '/archive/5.zip', 458752, '2024-01-05T00:00:00Z', NULL, '2024-01-05T00:00:00Z'),
+(6, 'Murder on the Orient Express', 'A classic Hercule Poirot mystery.', 'en', NULL, NULL, 'fb2','/books/6.epub', '/archive/6.zip', 327680, '2024-01-06T00:00:00Z', NULL, '2024-01-06T00:00:00Z'),
+(7, 'War and Peace', 'Epic historical novel set during Napoleon''s invasion of Russia.', 'en', NULL, NULL, 'fb2','/books/7.epub', '/archive/7.zip', 1572864, '2024-01-07T00:00:00Z', NULL, '2024-01-07T00:00:00Z'),
+(8, 'Foundation', 'The first book in the Foundation series.', 'en', 4, 1, 'fb2','/books/8.epub', '/archive/8.zip', 393216, '2024-01-08T00:00:00Z', NULL, '2024-01-08T00:00:00Z'),
+(9, 'Foundation and Empire', 'The second book in the Foundation series.', 'en', 4, 2, 'fb2','/books/9.epub', '/archive/9.zip', 409600, '2024-01-09T00:00:00Z', NULL, '2024-01-09T00:00:00Z'),
+(10, 'Mistborn: The Final Empire', 'First book in the Mistborn trilogy.', 'en', NULL, NULL, 'fb2','/books/10.epub', '/archive/10.zip', 655360, '2024-01-10T00:00:00Z', NULL, '2024-01-10T00:00:00Z');
+
+-- ============================================================================
+-- BOOK_GENRES (Many-to-Many Relationship)
+-- ============================================================================
+INSERT INTO BOOK_GENRES (BOOK_ID, GENRE_ID) VALUES
+(1, 1),   -- Harry Potter 1 -> Fantasy
+(2, 1),   -- Harry Potter 2 -> Fantasy
+(3, 1),   -- Game of Thrones -> Fantasy
+(4, 1),   -- The Way of Kings -> Fantasy
+(5, 2),   -- The Shining -> Horror
+(6, 3),   -- Murder on the Orient Express -> Mystery
+(7, 4),   -- War and Peace -> Historical Fiction
+(8, 5),   -- Foundation -> Science Fiction
+(9, 5),   -- Foundation and Empire -> Science Fiction
+(10, 1);  -- Mistborn -> Fantasy
 
 -- ============================================================================
 -- BOOK_AUTHORS (Many-to-Many Relationship)

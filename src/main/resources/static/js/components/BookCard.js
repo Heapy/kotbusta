@@ -57,15 +57,18 @@ export function BookCard({ book, onSelect, onToggleStar }) {
         book.series, book.seriesNumber ? ` #${book.seriesNumber}` : ''
       ),
       h('div', { style: { display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' } },
-        book.genre && h('span', {
-          style: {
-            background: '#ecf0f1',
-            padding: '0.25rem 0.5rem',
-            borderRadius: '4px',
-            fontSize: '0.75rem',
-            color: '#34495e'
-          }
-        }, book.genre),
+        book.genres && book.genres.map(genre =>
+          h('span', {
+            key: genre,
+            style: {
+              background: '#ecf0f1',
+              padding: '0.25rem 0.5rem',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              color: '#34495e'
+            }
+          }, genre)
+        ),
         h('span', {
           style: {
             background: '#e8f4f8',

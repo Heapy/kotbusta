@@ -85,7 +85,7 @@ class BookQueriesTest {
         assertNotNull(book)
         assertEquals(1, book?.id)
         assertEquals("Harry Potter and the Philosopher's Stone", book?.title)
-        assertEquals("Fantasy", book?.genre)
+        assertEquals(listOf("Fantasy"), book?.genres)
         assertEquals("en", book?.language)
         assertTrue(book?.isStarred == true) // User 1 starred this book
         assertNotNull(book?.authors)
@@ -302,7 +302,7 @@ class BookQueriesTest {
 
         // Then: Should return only Fantasy books
         assertTrue(result.books.isNotEmpty())
-        assertTrue(result.books.all { it.genre == "Fantasy" })
+        assertTrue(result.books.all { it.genres.contains("Fantasy") })
     }
 
     @Test
@@ -346,7 +346,7 @@ class BookQueriesTest {
 
         // Then: Should return books matching all criteria
         assertTrue(result.books.isNotEmpty())
-        assertTrue(result.books.all { it.genre == "Fantasy" && it.language == "en" })
+        assertTrue(result.books.all { it.genres.contains("Fantasy") && it.language == "en" })
         assertTrue(result.books.any { it.title.contains("Harry") })
     }
 
@@ -358,7 +358,7 @@ class BookQueriesTest {
         val similarBooks = with(user1Session) {
             getSimilarBooks(
                 bookId = 1,
-                genre = "Fantasy",
+                genres = listOf("Fantasy"),
                 limit = 5,
             )
         }
@@ -368,18 +368,18 @@ class BookQueriesTest {
         // Should not include the original book
         assertTrue(similarBooks.none { it.id == 1 })
         // Should prioritize same genre
-        assertTrue(similarBooks.any { it.genre == "Fantasy" })
+        assertTrue(similarBooks.any { it.genres.contains("Fantasy") })
     }
 
     @Test
     context(_: TransactionProvider)
-    fun `getSimilarBooks should return empty list if genre is null`() = transaction {
-        // Given: Book without genre
+    fun `getSimilarBooks should return empty list if genres is empty`() = transaction {
+        // Given: Book without genres
         // When: Getting similar books
         val similarBooks = with(user1Session) {
             getSimilarBooks(
                 bookId = 1,
-                genre = null,
+                genres = emptyList(),
                 limit = 5,
             )
         }

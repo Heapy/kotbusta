@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
+import io.heapy.kotbusta.dao.getBookGenres
 import io.heapy.kotbusta.dao.getSimilarBooks
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
@@ -16,10 +17,9 @@ fun Route.getSimilarBooksRoute() {
     get("/books/{id}/similar") {
         requireApprovedUser {
             val bookId = call.requiredParameter<Int>("id")
-            val genre = call.requiredParameter<String>("genre")
             val limit = call.request.queryParameters["limit"]?.toIntOrNull() ?: 10
             val books = transactionProvider.transaction(READ_ONLY) {
-                getSimilarBooks(bookId, genre, limit)
+                getSimilarBooks(bookId, limit)
             }
             call.respond(Success(data = books))
         }
