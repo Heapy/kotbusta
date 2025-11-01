@@ -12,6 +12,30 @@ import { AdminPanel } from './components/AdminPanel.js';
 import { LoginPage } from './components/LoginPage.js';
 import { ErrorPage } from './components/ErrorPage.js';
 
+// Parse URL hash to get current route
+function parseRoute() {
+  const hash = window.location.hash.slice(1) || '/books';
+
+  // Check if it's a book detail route: /view/book/:id
+  const bookMatch = hash.match(/^\/([^/]+)\/book\/(\d+)$/);
+  if (bookMatch) {
+    return { view: bookMatch[1], bookId: parseInt(bookMatch[2], 10) };
+  }
+
+  // Otherwise it's a view route
+  const view = hash.slice(1) || 'books'; // Remove leading slash
+  return { view, bookId: null };
+}
+
+// Update URL hash based on current state
+function updateRoute(view, bookId) {
+  if (bookId) {
+    window.location.hash = `#/${view}/book/${bookId}`;
+  } else {
+    window.location.hash = `#/${view}`;
+  }
+}
+
 // Main App Component
 function App() {
   const [user, setUser] = useState(null);
@@ -20,6 +44,35 @@ function App() {
   const [selectedBookId, setSelectedBookId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Initialize route from URL hash
+  useEffect(() => {
+    const route = parseRoute();
+    if (route.view) {
+      setCurrentView(route.view);
+    }
+    if (route.bookId) {
+      setSelectedBookId(route.bookId);
+    }
+  }, []);
+
+  // Listen to browser back/forward buttons
+  useEffect(() => {
+    const handleHashChange = () => {
+      const route = parseRoute();
+      if (route.view) {
+        setCurrentView(route.view);
+      }
+      if (route.bookId) {
+        setSelectedBookId(route.bookId);
+      } else {
+        setSelectedBookId(null);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
     loadUser();
@@ -57,14 +110,16 @@ function App() {
   const handleNavigate = (view) => {
     setCurrentView(view);
     setSelectedBookId(null);
+    updateRoute(view, null);
   };
 
   const handleSelectBook = (bookId) => {
     setSelectedBookId(bookId);
+    updateRoute(currentView, bookId);
   };
 
   const handleBackFromBook = () => {
-    setSelectedBookId(null);
+    window.history.back();
   };
 
   if (loading) {
