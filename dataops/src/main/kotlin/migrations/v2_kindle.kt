@@ -67,6 +67,6 @@ CREATE INDEX IF NOT EXISTS IDX_KINDLE_SEND_EVENTS_TYPE ON KINDLE_SEND_EVENTS (EV
 
 val v2: Migration
     get() = Migration(
-        version = 3,
+        version = 2,
         script = sql,
     )

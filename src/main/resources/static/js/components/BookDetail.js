@@ -7,7 +7,6 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [note, setNote] = useState('');
-  const [notePrivate, setNotePrivate] = useState(true);
   const [loading, setLoading] = useState(true);
   const [sendingToKindle, setSendingToKindle] = useState(false);
 
@@ -77,7 +76,7 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
     e.preventDefault();
     try {
       if (note.trim()) {
-        await api.post(`/api/books/${bookId}/notes`, { note, isPrivate: notePrivate });
+        await api.post(`/api/books/${bookId}/notes`, { note });
       } else {
         await api.delete(`/api/books/${bookId}/notes`);
       }
@@ -232,6 +231,9 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
 
         h('div', { style: { marginBottom: '2rem' } },
           h('h3', null, 'My Note'),
+          h('p', { style: { color: '#7f8c8d', fontSize: '0.875rem', marginBottom: '0.5rem' } },
+            'Personal notes are private and only visible to you.'
+          ),
           h('form', { onSubmit: saveNote },
             h('textarea', {
               value: note,
@@ -248,27 +250,17 @@ export function BookDetail({ bookId, onBack, onRefresh }) {
                 boxSizing: 'border-box'
               }
             }),
-            h('div', { style: { display: 'flex', gap: '1rem', alignItems: 'center' } },
-              h('label', { style: { display: 'flex', alignItems: 'center', gap: '0.5rem' } },
-                h('input', {
-                  type: 'checkbox',
-                  checked: notePrivate,
-                  onChange: (e) => setNotePrivate(e.target.checked)
-                }),
-                'Private'
-              ),
-              h('button', {
-                type: 'submit',
-                style: {
-                  padding: '0.5rem 1rem',
-                  background: '#27ae60',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }
-              }, 'Save Note')
-            )
+            h('button', {
+              type: 'submit',
+              style: {
+                padding: '0.5rem 1rem',
+                background: '#27ae60',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }
+            }, 'Save Note')
           )
         ),
 

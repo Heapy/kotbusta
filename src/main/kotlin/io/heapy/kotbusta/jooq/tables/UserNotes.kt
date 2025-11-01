@@ -99,11 +99,6 @@ open class UserNotes(
     val NOTE: TableField<UserNotesRecord, String?> = createField(DSL.name("NOTE"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
-     * The column <code>USER_NOTES.IS_PRIVATE</code>.
-     */
-    val IS_PRIVATE: TableField<UserNotesRecord, Int?> = createField(DSL.name("IS_PRIVATE"), SQLDataType.INTEGER.nullable(false), this, "")
-
-    /**
      * The column <code>USER_NOTES.CREATED_AT</code>.
      */
     val CREATED_AT: TableField<UserNotesRecord, Instant?> = createField(DSL.name("CREATED_AT"), SQLDataType.CLOB.nullable(false), this, "", KotlinInstantConverter())

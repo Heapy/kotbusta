@@ -86,10 +86,10 @@ INSERT INTO USER_COMMENTS (ID, USER_ID, BOOK_ID, COMMENT, CREATED_AT, UPDATED_AT
 -- ============================================================================
 -- USER_NOTES
 -- ============================================================================
-INSERT INTO USER_NOTES (ID, USER_ID, BOOK_ID, NOTE, IS_PRIVATE, CREATED_AT, UPDATED_AT) VALUES
-(1, 1, 1, 'Remember to recommend this to my nephew.', 1, '2024-01-18T10:00:00Z', '2024-01-18T10:00:00Z'),
-(2, 1, 4, 'Start reading book 2 when it arrives.', 1, '2024-01-19T10:00:00Z', '2024-01-19T10:00:00Z'),
-(3, 2, 8, 'Check out the sequels in the series.', 0, '2024-01-18T11:00:00Z', '2024-01-18T11:00:00Z');
+INSERT INTO USER_NOTES (ID, USER_ID, BOOK_ID, NOTE, CREATED_AT, UPDATED_AT) VALUES
+(1, 1, 1, 'Remember to recommend this to my nephew.', '2024-01-18T10:00:00Z', '2024-01-18T10:00:00Z'),
+(2, 1, 4, 'Start reading book 2 when it arrives.', '2024-01-19T10:00:00Z', '2024-01-19T10:00:00Z'),
+(3, 2, 8, 'Check out the sequels in the series.', '2024-01-18T11:00:00Z', '2024-01-18T11:00:00Z');
 
 -- ============================================================================
 -- DOWNLOADS

@@ -49,16 +49,24 @@ class ImportStats {
         inpFilesProcessed.addAndFetch(1)
     }
 
-    fun incInvalidBooks() {
-        bookErrors.addAndFetch(1)
-    }
-
     fun incDeletedBooks() {
         booksDeleted.addAndFetch(1)
     }
 
     fun incAddedBooks() {
         booksAdded.addAndFetch(1)
+    }
+
+    fun incInvalidBooks() {
+        bookErrors.addAndFetch(1)
+    }
+
+    fun incAddedCovers() {
+        coversAdded.addAndFetch(1)
+    }
+
+    fun incInvalidCovers() {
+        coverErrors.addAndFetch(1)
     }
 }
 

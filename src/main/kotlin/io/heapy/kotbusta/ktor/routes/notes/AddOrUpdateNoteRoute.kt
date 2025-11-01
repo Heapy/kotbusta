@@ -15,7 +15,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class NoteRequest(
     val note: String,
-    val isPrivate: Boolean = true,
 )
 
 context(applicationModule: ApplicationModule)
@@ -31,7 +30,6 @@ fun Route.addOrUpdateNoteRoute() {
                 userService.addOrUpdateNote(
                     bookId = bookId,
                     note = request.note,
-                    isPrivate = request.isPrivate,
                 )
             }
 

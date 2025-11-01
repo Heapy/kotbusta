@@ -7,6 +7,8 @@ import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.nio.file.Path
@@ -86,15 +88,17 @@ class ImportJobService(
 
         jobStats.addMessage("Processing ${archives.size} archives in parallel...")
 
-        // Process archives in parallel
         coroutineScope {
             archives
-                .forEach { archive ->
-                    fb2Parser.extractBookCovers(
-                        archivePath = archive.toString(),
-                        stats = jobStats,
-                    )
+                .map { archive ->
+                    async(Dispatchers.IO) {
+                        fb2Parser.extractBookCovers(
+                            archivePath = archive.toString(),
+                            stats = jobStats,
+                        )
+                    }
                 }
+                .awaitAll()
         }
 
         jobStats.addMessage("Cover extraction completed successfully with parallel processing!")

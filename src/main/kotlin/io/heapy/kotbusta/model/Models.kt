@@ -77,7 +77,6 @@ data class UserNote(
     val id: Int,
     val bookId: Int,
     val note: String,
-    val isPrivate: Boolean,
     val createdAt: Instant,
     val updatedAt: Instant,
 )

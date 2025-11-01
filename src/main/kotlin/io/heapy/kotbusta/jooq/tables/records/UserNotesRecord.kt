@@ -34,19 +34,13 @@ open class UserNotesRecord private constructor() : UpdatableRecordImpl<UserNotes
         set(value): Unit = set(3, value)
         get(): String = get(3) as String
 
-    @Suppress("INAPPLICABLE_JVM_NAME")
-    @set:JvmName("setIsPrivate")
-    open var isPrivate: Int
-        set(value): Unit = set(4, value)
-        get(): Int = get(4) as Int
-
     open var createdAt: Instant
-        set(value): Unit = set(5, value)
-        get(): Instant = get(5) as Instant
+        set(value): Unit = set(4, value)
+        get(): Instant = get(4) as Instant
 
     open var updatedAt: Instant
-        set(value): Unit = set(6, value)
-        get(): Instant = get(6) as Instant
+        set(value): Unit = set(5, value)
+        get(): Instant = get(5) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -57,12 +51,11 @@ open class UserNotesRecord private constructor() : UpdatableRecordImpl<UserNotes
     /**
      * Create a detached, initialised UserNotesRecord
      */
-    constructor(id: Int? = null, userId: Int, bookId: Int, note: String, isPrivate: Int, createdAt: Instant, updatedAt: Instant): this() {
+    constructor(id: Int? = null, userId: Int, bookId: Int, note: String, createdAt: Instant, updatedAt: Instant): this() {
         this.id = id
         this.userId = userId
         this.bookId = bookId
         this.note = note
-        this.isPrivate = isPrivate
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         resetTouchedOnNotNull()

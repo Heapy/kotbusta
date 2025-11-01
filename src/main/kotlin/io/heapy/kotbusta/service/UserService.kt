@@ -8,8 +8,6 @@ import io.heapy.kotbusta.jooq.tables.references.USERS
 import io.heapy.kotbusta.jooq.tables.references.USER_COMMENTS
 import io.heapy.kotbusta.jooq.tables.references.USER_NOTES
 import io.heapy.kotbusta.ktor.UserSession
-import io.heapy.kotbusta.mapper.BooleanIntMapper
-import io.heapy.kotbusta.mapper.mapUsing
 import io.heapy.kotbusta.model.Download
 import io.heapy.kotbusta.model.RecentActivity
 import io.heapy.kotbusta.model.UserComment
@@ -117,7 +115,6 @@ class UserService {
     fun addOrUpdateNote(
         bookId: Int,
         note: String,
-        isPrivate: Boolean = true,
         updatedAt: Instant = Clock.System.now(),
     ): UserNote? = useTx { dslContext ->
         // Check if note already exists
@@ -133,7 +130,6 @@ class UserService {
             val updated = dslContext
                 .update(USER_NOTES)
                 .set(USER_NOTES.NOTE, note)
-                .set(USER_NOTES.IS_PRIVATE, isPrivate mapUsing BooleanIntMapper)
                 .set(USER_NOTES.UPDATED_AT, updatedAt)
                 .where(USER_NOTES.ID.eq(existingNote.get(USER_NOTES.ID)))
                 .execute()
@@ -151,7 +147,6 @@ class UserService {
                 .set(USER_NOTES.USER_ID, userSession.userId)
                 .set(USER_NOTES.BOOK_ID, bookId)
                 .set(USER_NOTES.NOTE, note)
-                .set(USER_NOTES.IS_PRIVATE, isPrivate mapUsing BooleanIntMapper)
                 .set(USER_NOTES.CREATED_AT, updatedAt)
                 .set(USER_NOTES.UPDATED_AT, updatedAt)
                 .returningResult(USER_NOTES.ID)
@@ -183,7 +178,6 @@ class UserService {
                     USER_NOTES.ID,
                     USER_NOTES.BOOK_ID,
                     USER_NOTES.NOTE,
-                    USER_NOTES.IS_PRIVATE,
                     USER_NOTES.CREATED_AT,
                     USER_NOTES.UPDATED_AT,
                 )
@@ -195,7 +189,6 @@ class UserService {
                         id = record.get(USER_NOTES.ID)!!,
                         bookId = record.get(USER_NOTES.BOOK_ID)!!,
                         note = record.get(USER_NOTES.NOTE)!!,
-                        isPrivate = record.get(USER_NOTES.IS_PRIVATE)!! mapUsing BooleanIntMapper,
                         createdAt = record.get(USER_NOTES.CREATED_AT)!!,
                         updatedAt = record.get(USER_NOTES.UPDATED_AT)!!,
                     )
