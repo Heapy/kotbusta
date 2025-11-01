@@ -43,7 +43,7 @@ export function BookDetail({ bookId, onBack, onRefresh, onSelectBook }) {
 
   const loadSimilarBooks = async () => {
     try {
-      const res = await api.get(`/api/books/${bookId}/similar?limit=6`);
+      const res = await api.get(`/api/books/${bookId}/similar`);
       setSimilarBooks(res.data || []);
     } catch (err) {
       console.error('Failed to load similar books:', err);
