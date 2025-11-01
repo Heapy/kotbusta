@@ -151,9 +151,7 @@ export function AdminPanel() {
           h('div', null, 'Files: ', jobStatus.inpFilesProcessed),
           h('div', null, 'Added: ', jobStatus.booksAdded),
           h('div', null, 'Deleted: ', jobStatus.bookDeleted),
-          h('div', null, 'Covers: ', jobStatus.coversAdded),
-          jobStatus.bookErrors > 0 && h('div', { style: { color: '#e74c3c' } }, 'Book Errors: ', jobStatus.bookErrors),
-          jobStatus.coverErrors > 0 && h('div', { style: { color: '#e74c3c' } }, 'Cover Errors: ', jobStatus.coverErrors)
+          h('div', { style: { color: '#e74c3c' } }, 'Book Errors: ', jobStatus.bookErrors)
         ),
 
         jobStatus.completedAt && h('div', {

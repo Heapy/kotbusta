@@ -11,9 +11,9 @@ import io.heapy.kotbusta.database.PragmaDataSource
 import io.heapy.kotbusta.ktor.GoogleOauthConfig
 import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
-import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.AdminService
+import io.heapy.kotbusta.service.CoverService
 import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
 import io.heapy.kotbusta.service.ImportJobService
@@ -138,10 +138,8 @@ class ApplicationModule {
         UserService()
     }
 
-    val fb2Parser by bean {
-        Fb2Parser(
-            transactionProvider = transactionProvider.value,
-        )
+    val coverService by bean {
+        CoverService()
     }
 
     val inpxParser by bean {
@@ -160,7 +158,6 @@ class ApplicationModule {
     val importJobService by bean {
         ImportJobService(
             booksDataPath = booksDataPath.value,
-            fb2Parser = fb2Parser.value,
             inpxParser = inpxParser.value,
         )
     }

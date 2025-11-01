@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.model
 
+import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.model.ImportJob.JobStatus
 import kotlinx.serialization.Serializable
 import java.util.concurrent.ConcurrentHashMap
@@ -16,8 +17,6 @@ data class ImportJob(
     val booksAdded: Int,
     val bookErrors: Int,
     val bookDeleted: Int,
-    val coversAdded: Int,
-    val coverErrors: Int,
     val startedAt: Instant,
     val completedAt: Instant? = null,
 ) {
@@ -38,10 +37,14 @@ class ImportStats {
     val booksAdded = AtomicInt(0)
     val booksDeleted = AtomicInt(0)
     val bookErrors = AtomicInt(0)
-    val coversAdded = AtomicInt(0)
-    val coverErrors = AtomicInt(0)
 
-    fun addMessage(msg: String) {
+    fun addMessage(msg: String, exception: Exception? = null) {
+        if (exception != null) {
+            log.error(msg, exception)
+        } else {
+            log.info(msg)
+        }
+
         message[Clock.System.now()] = msg
     }
 
@@ -61,13 +64,7 @@ class ImportStats {
         bookErrors.addAndFetch(1)
     }
 
-    fun incAddedCovers() {
-        coversAdded.addAndFetch(1)
-    }
-
-    fun incInvalidCovers() {
-        coverErrors.addAndFetch(1)
-    }
+    private companion object : Logger()
 }
 
 fun ImportStats.toImportJob() = ImportJob(
@@ -77,8 +74,6 @@ fun ImportStats.toImportJob() = ImportJob(
     booksAdded = booksAdded.load(),
     bookErrors = bookErrors.load(),
     bookDeleted = booksDeleted.load(),
-    coversAdded = coversAdded.load(),
-    coverErrors = coverErrors.load(),
     startedAt = startedAt.load(),
     completedAt = completedAt.load(),
 )

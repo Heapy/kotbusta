@@ -55,14 +55,14 @@ class InpxParser(
                     .filter { it.name.endsWith(".inp") }
                     .toList()
 
-                log.info("Found ${entries.size} .inp files to process")
+                stats.addMessage("Found ${entries.size} .inp files to process")
 
                 // Process INP files in parallel and collect all books
                 entries
                     .mapIndexed { index, entry ->
                         stats.incInpFiles()
                         async(Dispatchers.IO) {
-                            log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
+                            stats.addMessage("Processing ${entry.name} (${index + 1}/${entries.size})")
 
                             val lines = zipFile.getInputStream(entry)
                                 .bufferedReader(Charsets.UTF_8)
@@ -75,7 +75,7 @@ class InpxParser(
                                 parseBookLine(line, archiveName, stats)
                             }
 
-                            log.info("Completed parsing ${entry.name}: ${books.size} books parsed")
+                            stats.addMessage("Completed parsing ${entry.name}: ${books.size} books parsed")
                             books
                         }
                     }
@@ -85,44 +85,43 @@ class InpxParser(
             }
         }
 
-        log.info("Total books parsed: ${allBooks.size}")
         stats.addMessage("Parsed ${allBooks.size} books, now persisting to database...")
 
         transactionProvider.transaction(READ_WRITE) {
-            bulkInsertBooks(allBooks)
+            bulkInsertBooks(stats, allBooks)
         }
 
-        log.info("INPX parsing and import completed successfully")
+        stats.addMessage("INPX parsing and import completed successfully")
     }
 
     context(_: TransactionContext)
     private fun bulkInsertBooks(
+        stats: ImportStats,
         books: List<ParsedBook>,
         createdAt: Instant = Clock.System.now(),
     ) = useTx { dslContext ->
-        log.info("Starting bulk insert of ${books.size} books")
+        stats.addMessage("Starting bulk insert of ${books.size} books")
         dslContext.truncateTable(BOOK_AUTHORS).execute()
         dslContext.truncateTable(BOOKS).execute()
         dslContext.truncateTable(AUTHORS).execute()
         dslContext.truncateTable(SERIES).execute()
 
-        val uniqueSeries = storeSeries(books)
-        val uniqueAuthors = storeAuthors(books)
+        val uniqueSeries = storeSeries(stats, books)
+        val uniqueAuthors = storeAuthors(stats, books)
 
-        storeBooks(books, uniqueSeries, createdAt)
+        storeBooks(stats, books, uniqueSeries, createdAt)
 
-        val relationshipCount = storeBooksAuthors(books, uniqueAuthors)
+        val relationshipCount = storeBooksAuthors(stats, books, uniqueAuthors)
 
-        log.info("Bulk insert completed: ${books.size} books, ${uniqueAuthors.size} authors, ${uniqueSeries.size} series, $relationshipCount relationships")
+        stats.addMessage("Bulk insert completed: ${books.size} books, ${uniqueAuthors.size} authors, ${uniqueSeries.size} series, $relationshipCount relationships")
     }
 
     context(_: TransactionContext)
     private fun storeBooksAuthors(
+        stats: ImportStats,
         books: List<ParsedBook>,
         uniqueAuthors: MutableMap<String, Int>,
     ): Int = useTx { dslContext ->
-        log.info("Inserting book-author relationships")
-
         val bookAuthorPairs = books
             .flatMap { book ->
                 book.authors
@@ -132,6 +131,8 @@ class InpxParser(
                         book.bookId to authorId
                     }
             }
+
+        stats.addMessage("Inserting ${bookAuthorPairs.size} book-author relationships")
 
         if (bookAuthorPairs.isNotEmpty()) {
             dslContext
@@ -151,11 +152,12 @@ class InpxParser(
 
     context(_: TransactionContext)
     private fun storeBooks(
+        stats: ImportStats,
         books: List<ParsedBook>,
         uniqueSeries: MutableMap<String, Int>,
         createdAt: Instant,
     ) = useTx { dslContext ->
-        log.info("Inserting ${books.size} books")
+        stats.addMessage("Inserting ${books.size} books")
 
         if (books.isNotEmpty()) {
             dslContext
@@ -188,6 +190,7 @@ class InpxParser(
 
     context(_: TransactionContext)
     private fun storeAuthors(
+        stats: ImportStats,
         books: List<ParsedBook>,
     ): MutableMap<String, Int> = useTx { dslContext ->
         var authorId = 0
@@ -200,7 +203,7 @@ class InpxParser(
                 acc
             }
 
-        log.info("Inserting ${uniqueAuthors.size} new authors")
+        stats.addMessage("Inserting ${uniqueAuthors.size} new authors")
 
         // Batch insert new authors
         if (uniqueAuthors.isNotEmpty()) {
@@ -221,6 +224,7 @@ class InpxParser(
 
     context(_: TransactionContext)
     private fun storeSeries(
+        stats: ImportStats,
         books: List<ParsedBook>,
     ): MutableMap<String, Int> = useTx { dslContext ->
         var seriesId = 0
@@ -233,7 +237,7 @@ class InpxParser(
                 acc
             }
 
-        log.info("Inserting ${uniqueSeries.size} unique series")
+        stats.addMessage("Inserting ${uniqueSeries.size} unique series")
 
         if (uniqueSeries.isNotEmpty()) {
             dslContext

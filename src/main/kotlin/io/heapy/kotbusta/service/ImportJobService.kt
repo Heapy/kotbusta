@@ -1,24 +1,21 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.model.ImportJob
+import io.heapy.kotbusta.model.ImportJob.JobStatus.COMPLETED
+import io.heapy.kotbusta.model.ImportJob.JobStatus.FAILED
+import io.heapy.kotbusta.model.ImportJob.JobStatus.RUNNING
 import io.heapy.kotbusta.model.ImportStats
-import io.heapy.kotbusta.parser.Fb2Parser
 import io.heapy.kotbusta.parser.InpxParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.nio.file.Path
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicReference
-import kotlin.io.path.listDirectoryEntries
+import kotlin.time.Clock
 
 class ImportJobService(
     private val booksDataPath: Path,
-    private val fb2Parser: Fb2Parser,
     private val inpxParser: InpxParser,
 ) {
     private val stats = AtomicReference(ImportStats())
@@ -52,13 +49,16 @@ class ImportJobService(
         return if (startJob()) {
             applicationScope.launch(Dispatchers.IO) {
                 val jobStats = stats.load()
+                jobStats.status.store(RUNNING)
                 try {
                     startDataImport(jobStats)
-                    startCoverExtraction(jobStats)
+                    jobStats.status.store(COMPLETED)
+                    jobStats.completedAt.store(Clock.System.now())
+                    jobStats.addMessage("Import completed successfully!")
+                    stopJob()
                 } catch (e: Exception) {
-                    jobStats.status.store(ImportJob.JobStatus.FAILED)
-                    jobStats.addMessage("Error importing data: ${e.message}")
-                    log.error("Error during import", e)
+                    jobStats.status.store(FAILED)
+                    jobStats.addMessage("Error importing data: ${e.message}", e)
                     stopJob()
                 }
             }
@@ -70,38 +70,7 @@ class ImportJobService(
     }
 
     suspend fun startDataImport(jobStats: ImportStats) {
-        jobStats.addMessage("Parsing INPX data")
         inpxParser.parseAndImport(booksDataPath, jobStats)
-        jobStats.addMessage("Parsing INPX data completed")
-    }
-
-    suspend fun startCoverExtraction(jobStats: ImportStats) {
-        jobStats.addMessage("Finding FB2 archives")
-        val archives = booksDataPath.listDirectoryEntries("*.zip")
-            .filter { it.fileName.toString().contains("fb2") }
-            .sorted()
-
-        if (archives.isEmpty()) {
-            jobStats.addMessage("No FB2 archives found in $booksDataPath")
-            return
-        }
-
-        jobStats.addMessage("Processing ${archives.size} archives in parallel...")
-
-        coroutineScope {
-            archives
-                .map { archive ->
-                    async(Dispatchers.IO) {
-                        fb2Parser.extractBookCovers(
-                            archivePath = archive.toString(),
-                            stats = jobStats,
-                        )
-                    }
-                }
-                .awaitAll()
-        }
-
-        jobStats.addMessage("Cover extraction completed successfully with parallel processing!")
     }
 
     private companion object : Logger()
