@@ -3,7 +3,7 @@ FROM bellsoft/liberica-openjre-debian:25
 
 # Install dependencies
 RUN apt-get update && \
-    apt-get install -y wget && \
+    apt-get install -y wget texlive-xetex && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
