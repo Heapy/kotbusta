@@ -41,7 +41,7 @@ class CoverService {
                 coverImage
             }
         } catch (e: Exception) {
-            log.warn("Error extracting cover for book $bookId from $archivePath: ${e.message}")
+            log.warn("Error extracting cover for book $bookId from $archivePath: ${e.message}", e)
             null
         }
     }

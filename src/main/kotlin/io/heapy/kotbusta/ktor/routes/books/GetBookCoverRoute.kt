@@ -15,6 +15,7 @@ context(applicationModule: ApplicationModule)
 fun Route.getBookCoverRoute() {
     val transactionProvider = applicationModule.transactionProvider.value
     val coverService = applicationModule.coverService.value
+    val booksDataPath = applicationModule.booksDataPath.value
 
     get("/books/{id}/cover") {
         requireApprovedUser {
@@ -35,8 +36,11 @@ fun Route.getBookCoverRoute() {
                 notFoundError("Book $bookId not found")
             }
 
+            // Resolve full archive path
+            val fullArchivePath = booksDataPath.resolve("${archivePath}.zip").toString()
+
             // Extract cover on-demand from the archive
-            val coverImage = coverService.extractCoverForBook(archivePath, bookId)
+            val coverImage = coverService.extractCoverForBook(fullArchivePath, bookId)
 
             if (coverImage != null) {
                 call.respondBytes(coverImage, ContentType.Image.JPEG)
