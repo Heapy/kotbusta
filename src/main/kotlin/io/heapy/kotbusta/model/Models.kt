@@ -153,14 +153,6 @@ data class SendToKindleRequest(
 )
 
 @Serializable
-data class DeviceResponse(
-    val id: Int,
-    val email: String,
-    val name: String,
-    val createdAt: Instant,
-)
-
-@Serializable
 data class SendHistoryResponse(
     val id: Int,
     val deviceName: String,

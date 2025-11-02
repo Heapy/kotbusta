@@ -101,21 +101,10 @@ suspend fun getUserInfo(): UserInfo? {
     return user.toUserInfo()
 }
 
-// Convert State.KindleDevice to API DeviceResponse
-fun toDeviceResponse(device: State.KindleDevice): DeviceResponse {
-    return DeviceResponse(
-        id = device.id.value,
-        email = device.email,
-        name = device.name,
-        createdAt = kotlin.time.Clock.System.now(),
-        // TODO: Add createdAt to State.KindleDevice if needed
-    )
-}
-
 context(applicationModule: ApplicationModule, userSession: UserSession)
-suspend fun getKindleDevices(): List<DeviceResponse> {
+suspend fun getKindleDevices(): List<Any> {
     val user = getUser(userSession.userId) ?: return emptyList()
-    return user.kindleDevices.map { toDeviceResponse(it) }
+    return user.kindleDevices
 }
 
 context(applicationModule: ApplicationModule, userSession: UserSession)

@@ -1,8 +1,6 @@
 package io.heapy.kotbusta.ktor
 
 import io.heapy.kotbusta.ApplicationModule
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import io.heapy.kotbusta.ktor.routes.activity.getActivityRoute
 import io.heapy.kotbusta.ktor.routes.admin.adminRoutes
 import io.heapy.kotbusta.ktor.routes.auth.googleOauthRoutes
@@ -26,7 +24,6 @@ import io.heapy.kotbusta.ktor.routes.kindle.deleteDeviceRoute
 import io.heapy.kotbusta.ktor.routes.kindle.getDevicesRoute
 import io.heapy.kotbusta.ktor.routes.kindle.getSendHistoryRoute
 import io.heapy.kotbusta.ktor.routes.kindle.sendToKindleRoute
-import io.heapy.kotbusta.ktor.routes.kindle.updateDeviceRoute
 import io.heapy.kotbusta.ktor.routes.notes.addOrUpdateNoteRoute
 import io.heapy.kotbusta.ktor.routes.notes.deleteNoteRoute
 import io.heapy.kotbusta.ktor.routes.staticFilesRoute
@@ -65,7 +62,6 @@ fun Application.configureRouting() {
                 downloadBookRoute()
                 getDevicesRoute()
                 createDeviceRoute()
-                updateDeviceRoute()
                 deleteDeviceRoute()
                 sendToKindleRoute(this@configureRouting)
                 getSendHistoryRoute()
