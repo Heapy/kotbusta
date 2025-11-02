@@ -88,13 +88,8 @@ fun Route.downloadBookRoute() {
                         val tempFb2File = File(tempDir, "${bookId}_${book.filePath}")
                         tempFb2File.writeBytes(zipFile.getInputStream(fb2Entry).readBytes())
 
-                        // Sanitize filename: handle empty titles, limit length, remove unsafe characters
-                        val sanitizedTitle = book.title
-                            .ifBlank { "book_${bookId}" }
-                            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
-                            .take(100)
-                        val outputFileName = "${sanitizedTitle}.${format}"
-                        val outputFile = File(tempDir, "${bookId}_${outputFileName}")
+                        val outputFileName = "book_${bookId}.${format}"
+                        val outputFile = File(tempDir, outputFileName)
 
                         try {
                             val conversionResult = conversionService.convertFb2(
