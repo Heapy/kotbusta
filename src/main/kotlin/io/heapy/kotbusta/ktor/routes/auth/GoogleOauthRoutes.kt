@@ -3,16 +3,11 @@ package io.heapy.kotbusta.ktor.routes.auth
 import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.handleGoogleCallback
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.OAuthAccessTokenResponse
-import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.principal
-import io.ktor.server.response.respond
-import io.ktor.server.response.respondRedirect
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.get
-import io.ktor.server.sessions.sessions
-import io.ktor.server.sessions.set
+import io.ktor.http.*
+import io.ktor.server.auth.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.sessions.*
 
 private val log = logger {}
 

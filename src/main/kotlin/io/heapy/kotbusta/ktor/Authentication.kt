@@ -2,16 +2,12 @@ package io.heapy.kotbusta.ktor
 
 import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.dao.UserStatusMapper
-import io.heapy.kotbusta.dao.findUserByGoogleId
-import io.heapy.kotbusta.dao.insertUser
-import io.heapy.kotbusta.dao.updateUser
 import io.heapy.kotbusta.dao.validateUserSession
-import io.heapy.kotbusta.database.TransactionType.READ_ONLY
-import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.mapper.mapUsing
-import io.heapy.kotbusta.model.User
-import io.heapy.kotbusta.model.UserStatus.PENDING
+import io.heapy.kotbusta.model.State
+import io.heapy.kotbusta.model.State.UserId
+import io.heapy.kotbusta.model.UpsertUser
+import io.heapy.kotbusta.model.requireSuccess
+import io.heapy.kotbusta.run
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -25,9 +21,10 @@ import kotlin.time.Duration.Companion.days
 
 @Serializable
 data class UserSession(
-    val userId: Int,
+    val userId: UserId,
     val email: String,
     val name: String,
+    val isAdmin: Boolean,
 )
 
 @Serializable
@@ -47,7 +44,6 @@ context(applicationModule: ApplicationModule)
 fun Application.configureAuthentication() {
     val googleOauthConfig = applicationModule.googleOauthConfig.value
     val httpClient = applicationModule.httpClient.value
-    val transactionProvider = applicationModule.transactionProvider.value
     val sessionConfig = applicationModule.sessionConfig.value
 
     install(Sessions) {
@@ -70,10 +66,8 @@ fun Application.configureAuthentication() {
         session<UserSession>("auth-session") {
             validate { session ->
                 // Validate session by checking if user exists in database
-                transactionProvider.transaction(READ_ONLY) {
-                    val exists = validateUserSession(session.userId)
-                    if (exists) session else null
-                }
+                val exists = validateUserSession(session.userId)
+                if (exists) session else null
             }
         }
 
@@ -109,8 +103,9 @@ suspend fun handleGoogleCallback(
     principal: OAuthAccessTokenResponse.OAuth2,
 ): UserSession {
     val httpClient = applicationModule.httpClient.value
+    val adminEmail = applicationModule.adminEmail.value
 
-    val userInfo: GoogleUserInfo = httpClient
+    val googleUserInfo: GoogleUserInfo = httpClient
         .get("https://www.googleapis.com/oauth2/v1/userinfo") {
             headers {
                 append(
@@ -122,67 +117,22 @@ suspend fun handleGoogleCallback(
         .body()
 
     // Insert or update user in database
-    val user = insertOrUpdateUser(userInfo)
+    val user = insertOrUpdateUser(googleUserInfo)
 
     return UserSession(
         userId = user.id,
         email = user.email,
         name = user.name,
+        isAdmin = user.email == adminEmail,
     )
 }
 
 context(applicationModule: ApplicationModule)
 private suspend fun insertOrUpdateUser(
     googleUserInfo: GoogleUserInfo,
-): User {
-    val transactionProvider = applicationModule.transactionProvider.value
-    val timeService = applicationModule.timeService.value
-
-    return transactionProvider.transaction(READ_WRITE) {
-        // Try to find existing user
-        val existingUser = findUserByGoogleId(googleUserInfo.id)
-        val now = timeService.now()
-
-        if (existingUser != null) {
-            // Update existing user
-            val userId = existingUser.id!!
-
-            updateUser(
-                userId = userId,
-                email = googleUserInfo.email,
-                name = googleUserInfo.name,
-                avatarUrl = googleUserInfo.avatarUrl,
-            )
-
-            User(
-                id = userId,
-                googleId = googleUserInfo.id,
-                email = googleUserInfo.email,
-                name = googleUserInfo.name,
-                avatarUrl = googleUserInfo.avatarUrl,
-                status = existingUser.status mapUsing UserStatusMapper,
-                createdAt = existingUser.createdAt,
-                updatedAt = now,
-            )
-        } else {
-            // Insert new user
-            val userId = insertUser(
-                googleId = googleUserInfo.id,
-                email = googleUserInfo.email,
-                name = googleUserInfo.name,
-                avatarUrl = googleUserInfo.avatarUrl,
-            )
-
-            User(
-                id = userId,
-                googleId = googleUserInfo.id,
-                email = googleUserInfo.email,
-                name = googleUserInfo.name,
-                avatarUrl = googleUserInfo.avatarUrl,
-                status = PENDING,
-                createdAt = now,
-                updatedAt = now,
-            )
-        }
-    }
+): State.User {
+    return applicationModule
+        .run(UpsertUser(googleUserInfo))
+        .requireSuccess
+        .result
 }

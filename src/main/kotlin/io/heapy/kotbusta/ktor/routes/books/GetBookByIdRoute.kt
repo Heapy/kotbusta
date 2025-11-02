@@ -13,7 +13,7 @@ import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.getBookByIdRoute() {
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     get("/books/{id}") {
         requireApprovedUser {

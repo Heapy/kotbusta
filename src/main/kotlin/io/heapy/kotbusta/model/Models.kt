@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.model
 
+import io.heapy.kotbusta.model.State.UserId
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
@@ -132,18 +133,17 @@ data class RecentActivity(
 
 @Serializable
 data class UserInfo(
-    val userId: Int,
+    val userId: UserId,
     val email: String,
     val name: String,
+    val isAdmin: Boolean,
     val avatarUrl: String?,
     val status: UserStatus,
 )
 
 @Serializable
 data class PendingUsersResponse(
-    val users: List<User>,
-    val total: Long,
-    val hasMore: Boolean,
+    val users: List<UserId>,
 )
 
 @Serializable

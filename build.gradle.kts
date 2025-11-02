@@ -10,8 +10,6 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":dataops"))
-
     implementation(ktorLibs.server.cio)
     implementation(ktorLibs.server.contentNegotiation)
     implementation(ktorLibs.serialization.kotlinx.json)

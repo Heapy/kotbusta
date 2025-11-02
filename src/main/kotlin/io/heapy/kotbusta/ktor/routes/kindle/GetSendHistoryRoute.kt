@@ -10,7 +10,7 @@ import io.ktor.server.routing.*
 context(applicationModule: ApplicationModule)
 fun Route.getSendHistoryRoute() {
     val kindleService = applicationModule.kindleService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     get("/kindle/sends") {
         requireApprovedUser {

@@ -1,18 +1,13 @@
 [versions]
-jooq = "3.20.8"
 komok = "1.0.13"
 kotlin = "2.3.0-Beta2"
 kotlinx-serialization = "1.9.0"
 kotlinx-coroutines = "1.10.2"
 logback = "1.5.20"
-sqlite = "3.50.3.0"
 junit = "6.0.0"
 aws-sdk = "1.5.69"
 
 [libraries]
-jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
-jooq-codegen = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
-
 komok-tech-logging = { module = "io.heapy.komok:komok-tech-logging", version.ref = "komok"  }
 komok-tech-to-be-injected = { module = "io.heapy.komok:komok-tech-to-be-injected", version.ref = "komok"  }
 komok-tech-config-dotenv = { module = "io.heapy.komok:komok-tech-config-dotenv", version.ref = "komok"  }
@@ -22,8 +17,6 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback"}
-
-sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 
 aws-sdk-ses = { module = "aws.sdk.kotlin:ses", version.ref = "aws-sdk" }
 

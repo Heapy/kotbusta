@@ -15,7 +15,7 @@ import io.ktor.server.routing.*
 context(applicationModule: ApplicationModule)
 fun Route.updateDeviceRoute() {
     val kindleService = applicationModule.kindleService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     put("/kindle/devices/{deviceId}") {
         requireApprovedUser {

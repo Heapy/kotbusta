@@ -8,9 +8,6 @@ import io.heapy.kotbusta.dao.findQueueItemById
 import io.heapy.kotbusta.dao.incrementQueueItemAttempts
 import io.heapy.kotbusta.dao.markQueueItemAsProcessing
 import io.heapy.kotbusta.dao.updateQueueItemStatus
-import io.heapy.kotbusta.database.TransactionContext
-import io.heapy.kotbusta.database.TransactionProvider
-import io.heapy.kotbusta.database.TransactionType
 import io.heapy.kotbusta.model.KindleSendStatus
 import io.heapy.kotbusta.service.EmailResult
 import io.heapy.kotbusta.service.EmailService
@@ -28,7 +25,6 @@ import kotlin.time.Duration.Companion.minutes
 
 class KindleSendWorker(
     private val emailService: EmailService,
-    private val transactionProvider: TransactionProvider,
     private val batchSize: Int,
     private val maxRetries: Int,
     private val getBookFile: (String, String) -> File,
@@ -240,17 +236,6 @@ class KindleSendWorker(
                 log.error("Permanent failure for queue item $queueId: ${result.error}")
             }
         }
-    }
-
-    private fun calculateNextRunTime(attempts: Int): kotlin.time.Instant {
-        // Exponential backoff: 2^attempts minutes
-        val baseDelayMinutes = 2.0.pow(attempts.toDouble()).toLong()
-
-        // Add jitter: ±20%
-        val jitterFactor = 1.0 + (Random.nextDouble(-0.2, 0.2))
-        val delayMinutes = (baseDelayMinutes * jitterFactor).toLong()
-
-        return Clock.System.now() + delayMinutes.minutes
     }
 
     private companion object : Logger()

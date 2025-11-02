@@ -12,7 +12,7 @@ import io.ktor.server.routing.*
 context(applicationModule: ApplicationModule)
 fun Route.deleteDeviceRoute() {
     val kindleService = applicationModule.kindleService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     delete("/kindle/devices/{deviceId}") {
         requireApprovedUser {

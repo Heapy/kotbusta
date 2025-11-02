@@ -13,7 +13,7 @@ import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.getBookCoverRoute() {
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
     val coverService = applicationModule.coverService.value
     val booksDataPath = applicationModule.booksDataPath.value
 

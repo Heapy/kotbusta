@@ -16,7 +16,7 @@ import io.ktor.server.routing.*
 context(applicationModule: ApplicationModule)
 fun Route.sendToKindleRoute() {
     val kindleService = applicationModule.kindleService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     post("/books/{bookId}/send-to-kindle") {
         requireApprovedUser {

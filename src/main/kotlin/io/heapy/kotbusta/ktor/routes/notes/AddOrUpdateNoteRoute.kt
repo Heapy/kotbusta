@@ -20,7 +20,7 @@ data class NoteRequest(
 context(applicationModule: ApplicationModule)
 fun Route.addOrUpdateNoteRoute() {
     val userService = applicationModule.userService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     post("/books/{id}/notes") {
         requireApprovedUser {

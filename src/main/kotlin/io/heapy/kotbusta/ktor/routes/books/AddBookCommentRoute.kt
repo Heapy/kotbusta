@@ -20,7 +20,7 @@ data class CommentRequest(
 context(applicationModule: ApplicationModule)
 fun Route.addBookCommentRoute() {
     val userService = applicationModule.userService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     post("/books/{id}/comments") {
         requireApprovedUser {

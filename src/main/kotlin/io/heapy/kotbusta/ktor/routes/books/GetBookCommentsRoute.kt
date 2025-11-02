@@ -11,7 +11,7 @@ import io.ktor.server.routing.*
 context(applicationModule: ApplicationModule)
 fun Route.getBookCommentsRoute() {
     val userService = applicationModule.userService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     get("/books/{id}/comments") {
         requireApprovedUser {

@@ -11,7 +11,7 @@ import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.starBookRoute() {
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     post("/books/{id}/star") {
         requireApprovedUser {

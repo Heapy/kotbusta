@@ -1,76 +1,49 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.model.ImportJob.JobStatus.COMPLETED
-import io.heapy.kotbusta.model.ImportJob.JobStatus.FAILED
-import io.heapy.kotbusta.model.ImportJob.JobStatus.RUNNING
-import io.heapy.kotbusta.model.ImportStats
+import io.heapy.kotbusta.model.Books
 import io.heapy.kotbusta.parser.InpxParser
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.nio.file.Path
-import kotlin.concurrent.atomics.AtomicBoolean
+import kotlinx.coroutines.runBlocking
 import kotlin.concurrent.atomics.AtomicReference
-import kotlin.time.Clock
 
 class ImportJobService(
-    private val booksDataPath: Path,
     private val inpxParser: InpxParser,
 ) {
-    private val stats = AtomicReference(ImportStats())
-    private val jobRunning = AtomicBoolean(false)
+    val data = AtomicReference(
+        Books(
+            books = emptyMap(),
+            titles = emptyMap(),
+            authors = emptyMap(),
+        ),
+    )
 
-    private fun startJob(): Boolean {
-        val started = jobRunning
-            .compareAndSet(
-                expectedValue = false,
-                newValue = true,
-            )
-
-        if (started) {
-            stats.store(ImportStats())
-        }
-
-        return started
-    }
-
-    private fun stopJob(): Boolean {
-        return jobRunning
-            .compareAndSet(
-                expectedValue = true,
-                newValue = false,
-            )
-    }
-
-    fun stats(): ImportStats = stats.load()
-
-    fun startImport(applicationScope: CoroutineScope): Boolean {
-        return if (startJob()) {
-            applicationScope.launch(Dispatchers.IO) {
-                val jobStats = stats.load()
-                jobStats.status.store(RUNNING)
-                try {
-                    startDataImport(jobStats)
-                    jobStats.status.store(COMPLETED)
-                    jobStats.completedAt.store(Clock.System.now())
-                    jobStats.addMessage("Import completed successfully!")
-                    stopJob()
-                } catch (e: Exception) {
-                    jobStats.status.store(FAILED)
-                    jobStats.addMessage("Error importing data: ${e.message}", e)
-                    stopJob()
+    fun importBooks() {
+        runBlocking {
+            val books = inpxParser.parseAndImport()
+            val titles = books
+                .asSequence()
+                .associateBy(
+                    { (_, book) -> book.title.lowercase() },
+                    { (bookId, _) -> bookId },
+                )
+            val authors = books
+                .asSequence()
+                .flatMap { (bookId, book) ->
+                    book.authors.map { author -> author to bookId }
                 }
-            }
-            true
-        } else {
-            log.warn("Another job is already running")
-            false
-        }
-    }
+                .groupBy(
+                    { (author, _) -> author.lowercase() },
+                    { (_, bookId) -> bookId },
+                )
 
-    suspend fun startDataImport(jobStats: ImportStats) {
-        inpxParser.parseAndImport(booksDataPath, jobStats)
+            data.store(
+                Books(
+                    books = books,
+                    titles = titles,
+                    authors = authors,
+                )
+            )
+        }
     }
 
     private companion object : Logger()

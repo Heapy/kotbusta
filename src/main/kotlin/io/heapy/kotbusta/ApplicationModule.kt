@@ -5,14 +5,12 @@ import io.heapy.komok.tech.config.dotenv.dotenv
 import io.heapy.komok.tech.di.delegate.MutableBean
 import io.heapy.komok.tech.di.delegate.bean
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.database.JooqTransactionProvider
-import io.heapy.kotbusta.database.LimitingConnectionProvider
-import io.heapy.kotbusta.database.PragmaDataSource
 import io.heapy.kotbusta.ktor.GoogleOauthConfig
 import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
+import io.heapy.kotbusta.model.Database
+import io.heapy.kotbusta.model.JsonDatabase
 import io.heapy.kotbusta.parser.InpxParser
-import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.CoverService
 import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
@@ -31,10 +29,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
-import org.jooq.SQLDialect
-import org.jooq.impl.DSL
-import org.sqlite.SQLiteDataSource
-import runMigrations
 import java.io.File
 import java.security.SecureRandom
 import kotlin.concurrent.thread
@@ -70,6 +64,10 @@ class ApplicationModule {
 
     val timeService: MutableBean<TimeService> by bean {
         DefaultTimeService()
+    }
+
+    val database by bean<Database> {
+        JsonDatabase()
     }
 
     val adminEmail by bean {
@@ -149,20 +147,12 @@ class ApplicationModule {
 
     val inpxParser by bean {
         InpxParser(
-            transactionProvider = transactionProvider.value,
-            timeService = timeService.value,
-        )
-    }
-
-    val adminService by bean {
-        AdminService(
-            adminEmail = adminEmail.value,
+            booksDataPath = booksDataPath.value,
         )
     }
 
     val importJobService by bean {
         ImportJobService(
-            booksDataPath = booksDataPath.value,
             inpxParser = inpxParser.value,
         )
     }
@@ -209,7 +199,6 @@ class ApplicationModule {
     val kindleSendWorker by bean {
         KindleSendWorker(
             emailService = emailService.value,
-            transactionProvider = transactionProvider.value,
             batchSize = kindleWorkerBatchSize.value,
             maxRetries = kindleWorkerMaxRetries.value,
             getBookFile = { bookId, format ->
@@ -219,61 +208,8 @@ class ApplicationModule {
         )
     }
 
-    val roDslContext by bean {
-        System.setProperty("org.jooq.no-logo", "true")
-        System.setProperty("org.jooq.no-tips", "true")
-        DSL.using(LimitingConnectionProvider(roDataSource.value, 2), SQLDialect.SQLITE)
-    }
-
-    val rwDslContext by bean {
-        System.setProperty("org.jooq.no-logo", "true")
-        System.setProperty("org.jooq.no-tips", "true")
-        DSL.using(LimitingConnectionProvider(rwDataSource.value, 1), SQLDialect.SQLITE)
-    }
-
-    val transactionProvider by bean {
-        JooqTransactionProvider(
-            roDslContext = roDslContext.value,
-            rwDslContext = rwDslContext.value,
-            ioDispatcher = Dispatchers.IO,
-        )
-    }
-
     val dbPath by bean {
         env["KOTBUSTA_DB_PATH"] ?: "kotbusta.db"
-    }
-
-    val roDataSource by bean {
-        val base = SQLiteDataSource().apply {
-            url = "jdbc:sqlite:${dbPath.value}"
-        }
-        PragmaDataSource(
-            base,
-            listOf(
-                "PRAGMA busy_timeout=5000",
-                "PRAGMA synchronous=NORMAL",
-                "PRAGMA query_only=ON"
-            )
-        )
-    }
-
-    // Writer: normal RW URL, per-connection PRAGMAs
-    val rwDataSource by bean {
-        val base = SQLiteDataSource().apply {
-            url = "jdbc:sqlite:${dbPath.value}"
-        }
-        PragmaDataSource(
-            base,
-            listOf(
-                "PRAGMA busy_timeout=5000",
-                "PRAGMA synchronous=NORMAL",
-                "PRAGMA journal_mode=WAL",
-            )
-        )
-    }
-
-    fun initializeDatabase() {
-        runMigrations(rwDataSource.value)
     }
 
     fun initializeKindleSendWorker() {
@@ -307,6 +243,10 @@ class ApplicationModule {
                 close()
             },
         )
+    }
+
+    fun initializeDatabase() {
+        importJobService.value.importBooks()
     }
 
     fun initialize() {

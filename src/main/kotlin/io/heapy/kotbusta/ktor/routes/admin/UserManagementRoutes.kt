@@ -1,118 +1,84 @@
 package io.heapy.kotbusta.ktor.routes.admin
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.dao.countPendingUsers
-import io.heapy.kotbusta.dao.listPendingUsers
-import io.heapy.kotbusta.dao.updateUserStatus
-import io.heapy.kotbusta.database.TransactionType.READ_ONLY
-import io.heapy.kotbusta.database.TransactionType.READ_WRITE
+import io.heapy.kotbusta.dao.toUserInfo
+import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requiredParameter
-import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.ApiResponse.Success
+import io.heapy.kotbusta.model.ChangeUserStatus
+import io.heapy.kotbusta.model.ErrorResult
 import io.heapy.kotbusta.model.PendingUsersResponse
+import io.heapy.kotbusta.model.State.UserId
+import io.heapy.kotbusta.model.SuccessResult
 import io.heapy.kotbusta.model.UserStatus
-import io.ktor.http.*
+import io.heapy.kotbusta.model.getUsers
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.userManagementRoutes() {
-    val adminService = applicationModule.adminService.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val database = applicationModule.database.value
 
-    get("/users/pending") {
-        adminService.requireAdminRights {
-            val limit = call.requiredParameter<Int>("limit")
-            val offset = call.requiredParameter<Int>("offset")
-
-            val response = transactionProvider.transaction(READ_ONLY) {
-                val users = listPendingUsers(limit, offset)
-                val total = countPendingUsers()
-                val hasMore = (offset + limit) < total
-
-                PendingUsersResponse(
-                    users = users,
-                    total = total,
-                    hasMore = hasMore
-                )
+    get("/users") {
+        requireAdminRights {
+            val response = getUsers().map { (_, user) ->
+                user.toUserInfo()
             }
 
             call.respond(Success(data = response))
         }
     }
 
-    post("/users/{userId}/approve") {
-        adminService.requireAdminRights {
+    get("/users/pending") {
+        requireAdminRights {
+            val users = getUsers()
+                .values
+                .filter { it.status == UserStatus.PENDING }
+                .map { user -> user.id }
+
+            val response = PendingUsersResponse(
+                users = users,
+            )
+
+            call.respond(Success(data = response))
+        }
+    }
+
+    suspend fun RoutingContext.updateUserStatus(
+        newStatus: UserStatus,
+    ) {
+        requireAdminRights {
             val userId = call.requiredParameter<Int>("userId")
+                .let(::UserId)
 
-            val success = transactionProvider.transaction(READ_WRITE) {
-                updateUserStatus(userId, UserStatus.APPROVED)
-            }
+            val operation = ChangeUserStatus(
+                userId = userId,
+                newStatus = newStatus,
+            )
 
-            if (success) {
-                call.respond(
+            when (database.run(operation)) {
+                is SuccessResult<*> -> call.respond(
                     Success(
                         data = mapOf(
-                            "message" to "User approved successfully",
+                            "message" to "User updated successfully",
                         ),
                     ),
                 )
-            } else {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    Error(message = "User not found"),
-                )
+
+                is ErrorResult -> notFoundError("User $userId not found")
             }
         }
+    }
+
+    post("/users/{userId}/approve") {
+        updateUserStatus(UserStatus.APPROVED)
     }
 
     post("/users/{userId}/reject") {
-        adminService.requireAdminRights {
-            val userId = call.requiredParameter<Int>("userId")
-
-            val success = transactionProvider.transaction(READ_WRITE) {
-                updateUserStatus(userId, UserStatus.REJECTED)
-            }
-
-            if (success) {
-                call.respond(
-                    Success(
-                        data = mapOf(
-                            "message" to "User rejected successfully",
-                        ),
-                    ),
-                )
-            } else {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    Error(message = "User not found"),
-                )
-            }
-        }
+        updateUserStatus(UserStatus.REJECTED)
     }
 
     post("/users/{userId}/deactivate") {
-        adminService.requireAdminRights {
-            val userId = call.requiredParameter<Int>("userId")
-
-            val success = transactionProvider.transaction(READ_WRITE) {
-                updateUserStatus(userId, UserStatus.DEACTIVATED)
-            }
-
-            if (success) {
-                call.respond(
-                    Success(
-                        data = mapOf(
-                            "message" to "User deactivated successfully",
-                        ),
-                    ),
-                )
-            } else {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    Error(message = "User not found"),
-                )
-            }
-        }
+        updateUserStatus(UserStatus.DEACTIVATED)
     }
 }

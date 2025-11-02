@@ -32,26 +32,6 @@ val KindleSendStatusMapper = TypeMapper<KindleSendStatus, String>(
 // Device queries
 
 context(_: TransactionContext)
-fun createKindleDevice(
-    userId: Int,
-    email: String,
-    name: String,
-    createdAt: Instant = Clock.System.now(),
-    updatedAt: Instant = Clock.System.now(),
-): KindleDevicesRecord = useTx { dslContext ->
-    dslContext
-        .insertInto(KINDLE_DEVICES)
-        .set(KINDLE_DEVICES.USER_ID, userId)
-        .set(KINDLE_DEVICES.EMAIL, email)
-        .set(KINDLE_DEVICES.NAME, name)
-        .set(KINDLE_DEVICES.CREATED_AT, createdAt)
-        .set(KINDLE_DEVICES.UPDATED_AT, updatedAt)
-        .returning()
-        .fetchOne()
-        ?: error("Failed to create device")
-}
-
-context(_: TransactionContext)
 fun findKindleDevicesByUserId(
     userId: Int,
 ): List<KindleDevicesRecord> = useTx { dslContext ->

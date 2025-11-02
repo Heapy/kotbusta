@@ -4,8 +4,6 @@ plugins {
 
 rootProject.name = "kotbusta"
 
-include("dataops")
-
 dependencyResolutionManagement {
     repositories {
         mavenCentral()

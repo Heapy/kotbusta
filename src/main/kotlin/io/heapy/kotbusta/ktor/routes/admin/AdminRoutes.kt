@@ -6,9 +6,6 @@ import io.ktor.server.routing.*
 context(applicationModule: ApplicationModule)
 fun Route.adminRoutes() {
     route("/admin") {
-        statusRoute()
-        importRoute()
-        getJobsRoute()
         userManagementRoutes()
     }
 }

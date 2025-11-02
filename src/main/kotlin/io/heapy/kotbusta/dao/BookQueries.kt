@@ -1,8 +1,5 @@
 package io.heapy.kotbusta.dao
 
-import io.heapy.kotbusta.database.TransactionContext
-import io.heapy.kotbusta.database.useTx
-import io.heapy.kotbusta.jooq.tables.references.*
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.Book
@@ -10,14 +7,9 @@ import io.heapy.kotbusta.model.BookSummary
 import io.heapy.kotbusta.model.SearchQuery
 import io.heapy.kotbusta.model.SearchResult
 import io.heapy.kotbusta.model.Series
-import org.jooq.Condition
-import org.jooq.Record
-import org.jooq.Result
-import org.jooq.impl.DSL
 import kotlin.time.Clock
 import kotlin.time.Instant
 
-context(_: TransactionContext)
 fun getBooks(
     limit: Int,
     offset: Int,

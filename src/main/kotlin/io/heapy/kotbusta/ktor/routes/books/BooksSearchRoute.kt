@@ -11,7 +11,7 @@ import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.bookSearchRoute() {
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
 
     get("/books/search") {
         val query = call.request.queryParameters["q"].orEmpty()

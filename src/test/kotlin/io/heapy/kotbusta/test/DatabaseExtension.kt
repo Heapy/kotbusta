@@ -1,14 +1,12 @@
 package io.heapy.kotbusta.test
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.database.TransactionProvider
 import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.BeforeEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import org.junit.jupiter.api.extension.ParameterContext
 import org.junit.jupiter.api.extension.ParameterResolver
 import java.nio.file.Files
-import javax.sql.DataSource
 
 /**
  * JUnit 5 extension that provides test database setup using ApplicationModule.
@@ -60,7 +58,7 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         applicationModule.initializeDatabase()
 
         // Load test fixtures using the same data source
-        loadTestFixtures(applicationModule.rwDataSource.value)
+        loadTestFixtures()
 
         // Store in test context
         context.getStore(NAMESPACE).put(APP_MODULE_KEY, applicationModule)
@@ -79,8 +77,7 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         extensionContext: ExtensionContext,
     ): Boolean {
         return when (parameterContext.parameter.type) {
-            ApplicationModule::class.java,
-            TransactionProvider::class.java -> true
+            ApplicationModule::class.java -> true
             else -> false
         }
     }
@@ -93,26 +90,11 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
 
         return when (parameterContext.parameter.type) {
             ApplicationModule::class.java -> applicationModule
-            TransactionProvider::class.java -> applicationModule.transactionProvider.value
             else -> error("Unsupported parameter type: ${parameterContext.parameter.type}")
         }
     }
 
-    private fun loadTestFixtures(dataSource: DataSource) {
-        // Load the test fixtures SQL file from test resources
-        val fixturesStream = this::class.java.classLoader
-            .getResourceAsStream("sql/test-fixtures.sql")
-            ?: throw IllegalStateException("test-fixtures.sql file not found in test resources")
-
-        val sql = fixturesStream.bufferedReader().use { it.readText() }
-
-        // Use JDBC connection directly to execute the SQL script
-        // This allows SQLite to handle multiple statements more reliably
-        dataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeUpdate(sql)
-            }
-        }
+    private fun loadTestFixtures() {
     }
 
     companion object {

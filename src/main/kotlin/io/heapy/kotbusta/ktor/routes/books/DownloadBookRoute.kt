@@ -21,7 +21,7 @@ context(applicationModule: ApplicationModule)
 fun Route.downloadBookRoute() {
     val userService = applicationModule.userService.value
     val booksDataPath = applicationModule.booksDataPath.value
-    val transactionProvider = applicationModule.transactionProvider.value
+    val transactionProvider = applicationModule.applicationState.value
     val conversionService = applicationModule.conversionService.value
 
     get("/books/{id}/download/{format}") {
