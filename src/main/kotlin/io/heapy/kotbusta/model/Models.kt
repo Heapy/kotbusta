@@ -155,20 +155,6 @@ enum class UserStatus {
 }
 
 @Serializable
-enum class KindleFormat {
-    EPUB,
-    MOBI;
-}
-
-@Serializable
-enum class KindleSendStatus {
-    PENDING,
-    PROCESSING,
-    COMPLETED,
-    FAILED;
-}
-
-@Serializable
 data class KindleDevice(
     val id: Int,
     val userId: Int,

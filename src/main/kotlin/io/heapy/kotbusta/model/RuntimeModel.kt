@@ -13,6 +13,20 @@ import kotlinx.serialization.Serializable
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.time.Instant
 
+@Serializable
+enum class KindleFormat {
+    EPUB,
+    MOBI,
+}
+
+@Serializable
+enum class KindleSendStatus {
+    PENDING,
+    PROCESSING,
+    COMPLETED,
+    FAILED,
+}
+
 interface Database {
     suspend fun <T> run(operation: DatabaseOperation<T>): OperationResult<T>
 }
@@ -84,6 +98,9 @@ interface ApplicationState {
     val books: Map<BookId, ParsedBook>
     val titles: Map<String, BookId>
     val authors: Map<String, List<BookId>>
+    val comments: Map<BookId, List<State.UserComment>>
+    val notes: Map<BookId, List<State.UserNote>>
+    val sendEvents: Map<SendEventId, State.KindleSendEvent>
 }
 
 private object EmptyState : ApplicationState {
@@ -91,21 +108,33 @@ private object EmptyState : ApplicationState {
     override val books: Map<BookId, ParsedBook> = emptyMap()
     override val titles: Map<String, BookId> = emptyMap()
     override val authors: Map<String, List<BookId>> = emptyMap()
-    override val sequences: Sequences = Sequences(-1, -1)
+    override val comments: Map<BookId, List<State.UserComment>> = emptyMap()
+    override val notes: Map<BookId, List<State.UserNote>> = emptyMap()
+    override val sendEvents: Map<SendEventId, State.KindleSendEvent> = emptyMap()
+    override val sequences: Sequences = Sequences(-1, -1, -1, -1)
 }
 
 fun ApplicationState.copy(
     users: Map<UserId, User>? = null,
     sequences: Sequences? = null,
+    comments: Map<BookId, List<State.UserComment>>? = null,
+    notes: Map<BookId, List<State.UserNote>>? = null,
+    sendEvents: Map<SendEventId, State.KindleSendEvent>? = null,
 ): ApplicationState {
     val newUsers = users ?: this.users
     val newSequences = sequences ?: this.sequences
+    val newComments = comments ?: this.comments
+    val newNotes = notes ?: this.notes
+    val newSendEvents = sendEvents ?: this.sendEvents
     return DefaultApplicationState(
         users = newUsers,
         books = books,
         titles = titles,
         authors = authors,
         sequences = newSequences,
+        comments = newComments,
+        notes = newNotes,
+        sendEvents = newSendEvents,
     )
 }
 
@@ -115,6 +144,9 @@ private class DefaultApplicationState(
     override val titles: Map<String, BookId>,
     override val authors: Map<String, List<BookId>>,
     override val sequences: Sequences,
+    override val comments: Map<BookId, List<State.UserComment>>,
+    override val notes: Map<BookId, List<State.UserNote>>,
+    override val sendEvents: Map<SendEventId, State.KindleSendEvent>,
 ) : ApplicationState
 
 object State {
@@ -137,6 +169,8 @@ object State {
     data class Sequences(
         val userId: Int,
         val kindleId: Int,
+        val commentId: Int,
+        val sendEventId: Int,
     )
 
     @Serializable
@@ -183,7 +217,51 @@ object State {
         val bookId: BookId,
         val eventTime: Instant,
     )
+
+    @Serializable
+    data class UserComment(
+        val id: CommentId,
+        val userId: UserId,
+        val bookId: BookId,
+        val comment: String,
+        val createdAt: Instant,
+        val updatedAt: Instant,
+    )
+
+    @Serializable
+    data class UserNote(
+        val userId: UserId,
+        val bookId: BookId,
+        val note: String,
+        val createdAt: Instant,
+        val updatedAt: Instant,
+    )
+
+    @Serializable
+    data class KindleSendEvent(
+        val id: SendEventId,
+        val userId: UserId,
+        val deviceId: KindleId,
+        val bookId: BookId,
+        val format: KindleFormat,
+        val status: KindleSendStatus,
+        val lastError: String?,
+        val createdAt: Instant,
+        val updatedAt: Instant,
+    )
 }
+
+@Serializable
+@JvmInline
+value class CommentId(
+    val id: Int,
+)
+
+@Serializable
+@JvmInline
+value class SendEventId(
+    val id: Int,
+)
 
 @Serializable
 @JvmInline
