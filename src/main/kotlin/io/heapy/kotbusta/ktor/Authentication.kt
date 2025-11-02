@@ -103,7 +103,6 @@ suspend fun handleGoogleCallback(
     principal: OAuthAccessTokenResponse.OAuth2,
 ): UserSession {
     val httpClient = applicationModule.httpClient.value
-    val adminEmail = applicationModule.adminEmail.value
 
     val googleUserInfo: GoogleUserInfo = httpClient
         .get("https://www.googleapis.com/oauth2/v1/userinfo") {
@@ -117,18 +116,18 @@ suspend fun handleGoogleCallback(
         .body()
 
     // Insert or update user in database
-    val user = insertOrUpdateUser(googleUserInfo)
+    val user = upsertGoogleUser(googleUserInfo)
 
     return UserSession(
         userId = user.id,
         email = user.email,
         name = user.name,
-        isAdmin = user.email == adminEmail,
+        isAdmin = user.isAdmin,
     )
 }
 
 context(applicationModule: ApplicationModule)
-private suspend fun insertOrUpdateUser(
+private suspend fun upsertGoogleUser(
     googleUserInfo: GoogleUserInfo,
 ): State.User {
     return applicationModule

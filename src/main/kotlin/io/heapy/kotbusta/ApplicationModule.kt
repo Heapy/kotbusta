@@ -161,7 +161,7 @@ class ApplicationModule {
     }
 
     val dbPath by bean {
-        env["KOTBUSTA_DB_PATH"] ?: "kotbusta.db"
+        env["KOTBUSTA_DB_PATH"]
     }
 
     fun stopHttpClient() {

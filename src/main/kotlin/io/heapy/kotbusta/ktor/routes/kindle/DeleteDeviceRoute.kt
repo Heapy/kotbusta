@@ -18,8 +18,10 @@ fun Route.deleteDeviceRoute() {
         requireApprovedUser {
             val deviceId = KindleId(call.requiredParameter<Int>("deviceId"))
 
-            val result = applicationModule.run(DeleteKindleDevice(deviceId))
-            val deleted = result.requireSuccess.result
+            val deleted = applicationModule
+                .run(DeleteKindleDevice(deviceId))
+                .requireSuccess
+                .result
 
             if (deleted) {
                 call.respond(HttpStatusCode.NoContent)
