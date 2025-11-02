@@ -1,10 +1,10 @@
 package io.heapy.kotbusta.ktor.routes
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.dao.getUserInfo
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.UserStatus.APPROVED
+import io.heapy.kotbusta.model.getUserInfo
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*

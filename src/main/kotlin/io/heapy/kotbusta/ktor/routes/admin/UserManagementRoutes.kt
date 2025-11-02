@@ -1,7 +1,6 @@
 package io.heapy.kotbusta.ktor.routes.admin
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.dao.toUserInfo
 import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Success
@@ -12,6 +11,7 @@ import io.heapy.kotbusta.model.State.UserId
 import io.heapy.kotbusta.model.SuccessResult
 import io.heapy.kotbusta.model.UserStatus
 import io.heapy.kotbusta.model.getUsers
+import io.heapy.kotbusta.model.toUserInfo
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 

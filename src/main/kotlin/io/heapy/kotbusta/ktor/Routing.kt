@@ -1,6 +1,8 @@
 package io.heapy.kotbusta.ktor
 
 import io.heapy.kotbusta.ApplicationModule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import io.heapy.kotbusta.ktor.routes.activity.getActivityRoute
 import io.heapy.kotbusta.ktor.routes.admin.adminRoutes
 import io.heapy.kotbusta.ktor.routes.auth.googleOauthRoutes
@@ -65,7 +67,7 @@ fun Application.configureRouting() {
                 createDeviceRoute()
                 updateDeviceRoute()
                 deleteDeviceRoute()
-                sendToKindleRoute()
+                sendToKindleRoute(CoroutineScope(Dispatchers.IO))
                 getSendHistoryRoute()
             }
         }

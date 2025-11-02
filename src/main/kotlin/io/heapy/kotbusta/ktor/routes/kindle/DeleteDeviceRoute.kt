@@ -1,26 +1,25 @@
 package io.heapy.kotbusta.ktor.routes.kindle
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
+import io.heapy.kotbusta.model.DeleteKindleDevice
+import io.heapy.kotbusta.model.State.KindleId
+import io.heapy.kotbusta.model.requireSuccess
+import io.heapy.kotbusta.run
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.deleteDeviceRoute() {
-    val kindleService = applicationModule.kindleService.value
-    val transactionProvider = applicationModule.applicationState.value
-
     delete("/kindle/devices/{deviceId}") {
         requireApprovedUser {
-            val deviceId = call.requiredParameter<Int>("deviceId")
+            val deviceId = KindleId(call.requiredParameter<Int>("deviceId"))
 
-            val deleted = transactionProvider.transaction(READ_WRITE) {
-                kindleService.deleteDevice(deviceId)
-            }
+            val result = applicationModule.run(DeleteKindleDevice(deviceId))
+            val deleted = result.requireSuccess.result
 
             if (deleted) {
                 call.respond(HttpStatusCode.NoContent)

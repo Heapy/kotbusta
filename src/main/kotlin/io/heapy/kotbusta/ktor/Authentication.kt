@@ -2,11 +2,11 @@ package io.heapy.kotbusta.ktor
 
 import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.dao.validateUserSession
 import io.heapy.kotbusta.model.State
 import io.heapy.kotbusta.model.State.UserId
 import io.heapy.kotbusta.model.UpsertUser
 import io.heapy.kotbusta.model.requireSuccess
+import io.heapy.kotbusta.model.validateUserSession
 import io.heapy.kotbusta.run
 import io.ktor.client.call.*
 import io.ktor.client.request.*
@@ -132,7 +132,12 @@ private suspend fun insertOrUpdateUser(
     googleUserInfo: GoogleUserInfo,
 ): State.User {
     return applicationModule
-        .run(UpsertUser(googleUserInfo))
+        .run(
+            UpsertUser(
+                googleUserInfo = googleUserInfo,
+                adminEmail = applicationModule.adminEmail.value,
+            ),
+        )
         .requireSuccess
         .result
 }

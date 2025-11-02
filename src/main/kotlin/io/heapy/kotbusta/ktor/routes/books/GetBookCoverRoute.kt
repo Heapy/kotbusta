@@ -1,46 +1,33 @@
 package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.database.TransactionType.READ_ONLY
-import io.heapy.kotbusta.database.useTx
-import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
+import io.heapy.kotbusta.model.BookId
+import io.heapy.kotbusta.model.getBook
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.getBookCoverRoute() {
-    val transactionProvider = applicationModule.applicationState.value
     val coverService = applicationModule.coverService.value
     val booksDataPath = applicationModule.booksDataPath.value
 
     get("/books/{id}/cover") {
         requireApprovedUser {
-            val bookId = call.requiredParameter<Int>("id")
+            val bookId = BookId(call.requiredParameter<Int>("id"))
 
-            // Get the archive path for the book from database
-            val archivePath = transactionProvider.transaction(READ_ONLY) {
-                useTx { dslContext ->
-                    dslContext
-                        .select(BOOKS.ARCHIVE_PATH)
-                        .from(BOOKS)
-                        .where(BOOKS.ID.eq(bookId))
-                        .fetchOne(BOOKS.ARCHIVE_PATH)
-                }
-            }
-
-            if (archivePath == null) {
-                notFoundError("Book $bookId not found")
-            }
+            // Get the archive path for the book from in-memory state
+            val book = getBook(bookId)
+                ?: notFoundError("Book ${bookId.id} not found")
 
             // Resolve full archive path
-            val fullArchivePath = booksDataPath.resolve("${archivePath}.zip").toString()
+            val fullArchivePath = booksDataPath.resolve("${book.archivePath}.zip").toString()
 
             // Extract cover on-demand from the archive
-            val coverImage = coverService.extractCoverForBook(fullArchivePath, bookId)
+            val coverImage = coverService.extractCoverForBook(fullArchivePath, bookId.id)
 
             if (coverImage != null) {
                 call.respondBytes(coverImage, ContentType.Image.JPEG)

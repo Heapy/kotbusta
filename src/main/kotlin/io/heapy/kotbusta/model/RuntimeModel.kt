@@ -192,11 +192,11 @@ object State {
         val name: String,
         val googleId: String,
         val avatarUrl: String?,
-        val idAdmin: Boolean,
         val status: UserStatus,
         val kindleDevices: List<KindleDevice>,
         val downloads: List<Download>,
         val stars: List<Star>,
+        val isAdmin: Boolean,
     )
 
     @Serializable

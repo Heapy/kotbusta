@@ -1,14 +1,16 @@
 package io.heapy.kotbusta.ktor.routes.books
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.dao.getBookById
-import io.heapy.kotbusta.database.TransactionType.READ_ONLY
-import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.badRequestError
 import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
+import io.heapy.kotbusta.model.BookId
+import io.heapy.kotbusta.model.RecordDownload
+import io.heapy.kotbusta.model.getBook
+import io.heapy.kotbusta.model.toBook
+import io.heapy.kotbusta.run
 import io.heapy.kotbusta.service.ConversionFormat
 import io.ktor.http.*
 import io.ktor.server.response.*
@@ -19,9 +21,7 @@ import kotlin.io.path.exists
 
 context(applicationModule: ApplicationModule)
 fun Route.downloadBookRoute() {
-    val userService = applicationModule.userService.value
     val booksDataPath = applicationModule.booksDataPath.value
-    val transactionProvider = applicationModule.applicationState.value
     val conversionService = applicationModule.conversionService.value
 
     get("/books/{id}/download/{format}") {
@@ -34,16 +34,13 @@ fun Route.downloadBookRoute() {
                 badRequestError("Unsupported format: $format. Supported formats: ${supportedFormats.joinToString(", ")}")
             }
 
-            val book = transactionProvider
-                .transaction(READ_ONLY) {
-                    getBookById(bookId)
-                }
+            val parsedBook = getBook(BookId(bookId))
                 ?: notFoundError("Book $bookId not found")
 
-            transactionProvider
-                .transaction(READ_WRITE) {
-                    userService.recordDownload(bookId, format)
-                }
+            // Record the download
+            applicationModule.run(RecordDownload(BookId(bookId)))
+
+            val book = toBook(parsedBook)
 
             when (format) {
                 "fb2" -> {

@@ -1,12 +1,12 @@
 package io.heapy.kotbusta.model
 
 import io.heapy.kotbusta.ktor.GoogleUserInfo
-import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.State.User
 import io.heapy.kotbusta.model.State.UserId
 
 class UpsertUser(
     private val googleUserInfo: GoogleUserInfo,
+    private val adminEmail: String?,
 ) : DatabaseOperation<User> {
     override fun process(state: ApplicationState): OperationResult<User> {
         val existingUser =
@@ -27,6 +27,7 @@ class UpsertUser(
                 kindleDevices = emptyList(),
                 downloads = emptyList(),
                 stars = emptyList(),
+                isAdmin = (googleUserInfo.email == adminEmail),
             )
             SuccessResult(
                 state = state

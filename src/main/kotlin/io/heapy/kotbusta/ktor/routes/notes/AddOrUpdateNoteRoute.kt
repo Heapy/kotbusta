@@ -3,10 +3,12 @@ package io.heapy.kotbusta.ktor.routes.notes
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
-import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.model.ApiResponse.Error
+import io.heapy.kotbusta.model.AddOrUpdateNote
 import io.heapy.kotbusta.model.ApiResponse.Success
-import io.ktor.http.*
+import io.heapy.kotbusta.model.BookId
+import io.heapy.kotbusta.model.requireSuccess
+import io.heapy.kotbusta.model.toUserNoteAPI
+import io.heapy.kotbusta.run
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -19,30 +21,18 @@ data class NoteRequest(
 
 context(applicationModule: ApplicationModule)
 fun Route.addOrUpdateNoteRoute() {
-    val userService = applicationModule.userService.value
-    val transactionProvider = applicationModule.applicationState.value
-
     post("/books/{id}/notes") {
         requireApprovedUser {
-            val bookId = call.requiredParameter<Int>("id")
+            val bookId = BookId(call.requiredParameter<Int>("id"))
             val request = call.receive<NoteRequest>()
-            val note = transactionProvider.transaction(READ_WRITE) {
-                userService.addOrUpdateNote(
-                    bookId = bookId,
-                    note = request.note,
-                )
-            }
 
-            if (note != null) {
-                call.respond(Success(data = note))
-            } else {
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    Error(
-                        message = "Failed to save note",
-                    ),
-                )
-            }
+            val result = applicationModule.run(AddOrUpdateNote(bookId, request.note))
+            val stateNote = result.requireSuccess.result
+
+            // Convert to API model
+            val apiNote = toUserNoteAPI(stateNote)
+
+            call.respond(Success(data = apiNote))
         }
     }
 }

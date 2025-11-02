@@ -15,28 +15,18 @@ import io.heapy.kotbusta.service.CoverService
 import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
 import io.heapy.kotbusta.service.ImportJobService
-import io.heapy.kotbusta.service.KindleService
 import io.heapy.kotbusta.service.PandocConversionService
 import io.heapy.kotbusta.service.TimeService
-import io.heapy.kotbusta.service.UserService
-import io.heapy.kotbusta.worker.KindleSendWorker
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
-import java.io.File
 import java.security.SecureRandom
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
 
 class ApplicationModule {
-    private val workerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     val staticFilesConfig by bean {
         val staticFilesPath = env["KOTBUSTA_STATIC_FILES_PATH"]
         StaticFilesConfig(
@@ -133,10 +123,6 @@ class ApplicationModule {
         }
     }
 
-    val userService by bean {
-        UserService()
-    }
-
     val coverService by bean {
         CoverService()
     }
@@ -167,22 +153,6 @@ class ApplicationModule {
             ?: error("KOTBUSTA_SES_SENDER_EMAIL not configured")
     }
 
-    val kindleDailyQuota by bean {
-        env["KOTBUSTA_KINDLE_DAILY_QUOTA"]?.toIntOrNull() ?: 20
-    }
-
-    val kindleWorkerBatchSize by bean {
-        env["KOTBUSTA_KINDLE_WORKER_BATCH_SIZE"]?.toIntOrNull() ?: 10
-    }
-
-    val kindleWorkerMaxRetries by bean {
-        env["KOTBUSTA_KINDLE_WORKER_MAX_RETRIES"]?.toIntOrNull() ?: 5
-    }
-
-    val kindleWorkerIntervalMs by bean {
-        env["KOTBUSTA_KINDLE_WORKER_INTERVAL_MS"]?.toLongOrNull() ?: 30_000L
-    }
-
     val emailService by bean {
         EmailService(
             sesClient = sesClient.value,
@@ -190,40 +160,8 @@ class ApplicationModule {
         )
     }
 
-    val kindleService by bean {
-        KindleService(
-            dailyQuotaLimit = kindleDailyQuota.value,
-        )
-    }
-
-    val kindleSendWorker by bean {
-        KindleSendWorker(
-            emailService = emailService.value,
-            batchSize = kindleWorkerBatchSize.value,
-            maxRetries = kindleWorkerMaxRetries.value,
-            getBookFile = { bookId, format ->
-                // TODO: Implement proper book file resolution
-                File(booksDataPath.value.toFile(), "$bookId.$format")
-            },
-        )
-    }
-
     val dbPath by bean {
         env["KOTBUSTA_DB_PATH"] ?: "kotbusta.db"
-    }
-
-    fun initializeKindleSendWorker() {
-        kindleSendWorker.value.start(
-            scope = workerScope,
-            intervalMillis = kindleWorkerIntervalMs.value,
-        )
-    }
-
-    fun stopKindleSendWorker() {
-        if (kindleSendWorker.isInitialized) {
-            kindleSendWorker.value.stop()
-        }
-        workerScope.cancel()
     }
 
     fun stopHttpClient() {
@@ -233,7 +171,6 @@ class ApplicationModule {
     }
 
     fun close() {
-        stopKindleSendWorker()
         stopHttpClient()
     }
 
@@ -251,7 +188,6 @@ class ApplicationModule {
 
     fun initialize() {
         initializeDatabase()
-        initializeKindleSendWorker()
         initializeShutdownHook()
     }
 

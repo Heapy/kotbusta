@@ -1,37 +1,35 @@
 package io.heapy.kotbusta.ktor.routes.kindle
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
-import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.ApiResponse.Success
+import io.heapy.kotbusta.model.State.KindleId
 import io.heapy.kotbusta.model.UpdateDeviceRequest
-import io.ktor.http.*
+import io.heapy.kotbusta.model.UpdateKindleDevice
+import io.heapy.kotbusta.model.getKindleDevice
+import io.heapy.kotbusta.model.requireSuccess
+import io.heapy.kotbusta.model.toDeviceResponse
+import io.heapy.kotbusta.run
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.updateDeviceRoute() {
-    val kindleService = applicationModule.kindleService.value
-    val transactionProvider = applicationModule.applicationState.value
-
     put("/kindle/devices/{deviceId}") {
         requireApprovedUser {
-            try {
-                val deviceId = call.requiredParameter<Int>("deviceId")
+            val deviceId = KindleId(call.requiredParameter<Int>("deviceId"))
+            val request = call.receive<UpdateDeviceRequest>()
 
-                val request = call.receive<UpdateDeviceRequest>()
-                val device = transactionProvider.transaction(READ_WRITE) {
-                    kindleService.updateDevice(deviceId, request)
-                }
-                call.respond(Success(data = device))
-            } catch (e: NoSuchElementException) {
-                call.respond(HttpStatusCode.NotFound, Error(e.message ?: "Device not found"))
-            } catch (e: IllegalArgumentException) {
-                call.respond(HttpStatusCode.BadRequest, Error(e.message ?: "Invalid request"))
-            }
+            applicationModule.run(UpdateKindleDevice(deviceId, request.name))
+                .requireSuccess
+
+            // Get updated device to return
+            val updatedDevice = getKindleDevice(deviceId)
+                ?: error("Device not found after update")
+
+            call.respond(Success(data = toDeviceResponse(updatedDevice)))
         }
     }
 }
