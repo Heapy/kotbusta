@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.model
 
 import io.heapy.kotbusta.ktor.UserSession
+import io.heapy.kotbusta.model.State.CommentId
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -24,7 +25,7 @@ class UpdateComment(
 ) : DatabaseOperation<Boolean> {
     override fun process(state: ApplicationState): OperationResult<Boolean> {
         // Find the comment across all books
-        var foundBookId: BookId? = null
+        var foundBookId: Int? = null
         var foundComment: State.UserComment? = null
 
         for ((bookId, comments) in state.comments) {

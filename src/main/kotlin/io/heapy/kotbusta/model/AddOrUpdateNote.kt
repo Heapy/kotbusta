@@ -7,7 +7,7 @@ import kotlin.time.Instant
 
 context(userSession: UserSession)
 fun AddOrUpdateNote(
-    bookId: BookId,
+    bookId: Int,
     note: String,
     updatedAt: Instant = Clock.System.now(),
 ) = AddOrUpdateNote(
@@ -18,7 +18,7 @@ fun AddOrUpdateNote(
 )
 
 class AddOrUpdateNote(
-    private val bookId: BookId,
+    private val bookId: Int,
     private val note: String,
     private val userSession: UserSession,
     private val updatedAt: Instant,

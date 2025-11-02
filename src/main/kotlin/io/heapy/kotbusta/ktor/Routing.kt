@@ -67,7 +67,7 @@ fun Application.configureRouting() {
                 createDeviceRoute()
                 updateDeviceRoute()
                 deleteDeviceRoute()
-                sendToKindleRoute(CoroutineScope(Dispatchers.IO))
+                sendToKindleRoute(this@configureRouting)
                 getSendHistoryRoute()
             }
         }

@@ -3,13 +3,14 @@ package io.heapy.kotbusta.model
 import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.State.KindleId
 import io.heapy.kotbusta.model.State.KindleSendEvent
+import io.heapy.kotbusta.model.State.SendEventId
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 context(userSession: UserSession)
 fun CreateKindleSendEvent(
     deviceId: KindleId,
-    bookId: BookId,
+    bookId: Int,
     format: KindleFormat,
     status: KindleSendStatus = KindleSendStatus.PENDING,
     lastError: String? = null,
@@ -26,7 +27,7 @@ fun CreateKindleSendEvent(
 
 class CreateKindleSendEvent(
     private val deviceId: KindleId,
-    private val bookId: BookId,
+    private val bookId: Int,
     private val format: KindleFormat,
     private val status: KindleSendStatus,
     private val lastError: String?,

@@ -4,7 +4,6 @@ import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
-import io.heapy.kotbusta.model.BookId
 import io.heapy.kotbusta.model.getBook
 import io.ktor.http.*
 import io.ktor.server.response.*
@@ -17,17 +16,17 @@ fun Route.getBookCoverRoute() {
 
     get("/books/{id}/cover") {
         requireApprovedUser {
-            val bookId = BookId(call.requiredParameter<Int>("id"))
+            val bookId = call.requiredParameter<Int>("id")
 
             // Get the archive path for the book from in-memory state
             val book = getBook(bookId)
-                ?: notFoundError("Book ${bookId.id} not found")
+                ?: notFoundError("Book ${bookId} not found")
 
             // Resolve full archive path
             val fullArchivePath = booksDataPath.resolve("${book.archivePath}.zip").toString()
 
             // Extract cover on-demand from the archive
-            val coverImage = coverService.extractCoverForBook(fullArchivePath, bookId.id)
+            val coverImage = coverService.extractCoverForBook(fullArchivePath, bookId)
 
             if (coverImage != null) {
                 call.respondBytes(coverImage, ContentType.Image.JPEG)

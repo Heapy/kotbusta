@@ -4,14 +4,14 @@ import io.heapy.kotbusta.ktor.UserSession
 
 context(userSession: UserSession)
 fun UnstarBook(
-    bookId: BookId,
+    bookId: Int,
 ) = UnstarBook(
     bookId = bookId,
     userSession = userSession,
 )
 
 class UnstarBook(
-    private val bookId: BookId,
+    private val bookId: Int,
     private val userSession: UserSession,
 ) : DatabaseOperation<Boolean> {
     override fun process(state: ApplicationState): OperationResult<Boolean> {

@@ -74,15 +74,6 @@ data class UserComment(
 )
 
 @Serializable
-data class UserNote(
-    val id: Int,
-    val bookId: Int,
-    val note: String,
-    val createdAt: Instant,
-    val updatedAt: Instant,
-)
-
-@Serializable
 data class Download(
     val id: Int,
     val userId: Int,
@@ -91,16 +82,6 @@ data class Download(
     val bookTitle: String,
     val format: String,
     val createdAt: Instant,
-)
-
-@Serializable
-data class SearchQuery(
-    val query: String,
-    val genre: String? = null,
-    val language: String? = null,
-    val author: String? = null,
-    val limit: Int = 20,
-    val offset: Int = 0,
 )
 
 @Serializable
@@ -155,16 +136,6 @@ enum class UserStatus {
 }
 
 @Serializable
-data class KindleDevice(
-    val id: Int,
-    val userId: Int,
-    val email: String,
-    val name: String,
-    val createdAt: Instant,
-    val updatedAt: Instant,
-)
-
-@Serializable
 data class CreateDeviceRequest(
     val email: String,
     val name: String,
@@ -207,7 +178,3 @@ data class SendHistoryResult(
     val hasMore: Boolean,
 )
 
-@Serializable
-data class EnqueueResponse(
-    val queueId: Int,
-)

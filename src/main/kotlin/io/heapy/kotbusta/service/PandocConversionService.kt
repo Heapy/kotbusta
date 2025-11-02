@@ -1,13 +1,15 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class PandocConversionService : ConversionService {
+class PandocConversionService(
+    private val dispatcher: CoroutineDispatcher,
+) : ConversionService {
 
     companion object : Logger() {
         private const val PANDOC_TIMEOUT_SECONDS = 120L
@@ -33,7 +35,7 @@ class PandocConversionService : ConversionService {
         inputFile: File,
         outputFormat: String,
         outputFile: File
-    ): ConversionResult = withContext(Dispatchers.IO) {
+    ): ConversionResult = withContext(dispatcher) {
         log.debug("Starting conversion: ${inputFile.name} -> $outputFormat")
 
         if (!inputFile.exists()) {
@@ -135,7 +137,7 @@ class PandocConversionService : ConversionService {
         }
     }
 
-    private suspend fun isPandocAvailable(): Boolean = withContext(Dispatchers.IO) {
+    private suspend fun isPandocAvailable(): Boolean = withContext(dispatcher) {
         try {
             val process = ProcessBuilder("pandoc", "--version").start()
             val completed = process.waitFor(5, TimeUnit.SECONDS)

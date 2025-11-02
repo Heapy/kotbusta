@@ -7,16 +7,19 @@ import kotlin.time.Instant
 
 context(userSession: UserSession)
 fun RecordDownload(
-    bookId: BookId,
+    bookId: Int,
+    format: String,
     createdAt: Instant = Clock.System.now(),
 ) = RecordDownload(
     bookId = bookId,
+    format = format,
     userSession = userSession,
     createdAt = createdAt,
 )
 
 class RecordDownload(
-    private val bookId: BookId,
+    private val bookId: Int,
+    private val format: String,
     private val userSession: UserSession,
     private val createdAt: Instant,
 ) : DatabaseOperation<Boolean> {
@@ -29,7 +32,7 @@ class RecordDownload(
             return ErrorResult("Book not found")
         }
 
-        val newDownload = Download(bookId = bookId, eventTime = createdAt)
+        val newDownload = Download(bookId = bookId, format = format, eventTime = createdAt)
         val updatedUser = user.copy(downloads = user.downloads + newDownload)
 
         return SuccessResult(

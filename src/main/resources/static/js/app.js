@@ -101,12 +101,8 @@ function App() {
       console.log('User response:', userRes);
       setUser(userRes);
 
-      try {
-        const adminRes = await api.get('/api/admin/status');
-        setIsAdmin(adminRes.data.isAdmin || false);
-      } catch (err) {
-        setIsAdmin(false);
-      }
+      // isAdmin is now part of the /me response
+      setIsAdmin(userRes.data.isAdmin || false);
     } catch (err) {
       console.error('Failed to load user:', err);
 

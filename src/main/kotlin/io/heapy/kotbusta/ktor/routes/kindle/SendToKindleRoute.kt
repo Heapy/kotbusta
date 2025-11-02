@@ -5,7 +5,6 @@ import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Success
-import io.heapy.kotbusta.model.BookId
 import io.heapy.kotbusta.model.CreateKindleSendEvent
 import io.heapy.kotbusta.model.KindleSendStatus
 import io.heapy.kotbusta.model.SendToKindleRequest
@@ -21,7 +20,6 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 context(applicationModule: ApplicationModule)
@@ -32,15 +30,15 @@ fun Route.sendToKindleRoute(applicationScope: CoroutineScope) {
 
     post("/books/{bookId}/send-to-kindle") {
         requireApprovedUser {
-            val bookId = BookId(call.requiredParameter<Int>("bookId"))
+            val bookId = call.requiredParameter<Int>("bookId")
             val request = call.receive<SendToKindleRequest>()
             val deviceId = KindleId(request.deviceId)
 
             // Validate book and device exist
             val book = getBook(bookId)
-                ?: notFoundError("Book ${bookId.id} not found")
+                ?: notFoundError("Book $bookId not found")
             val device = getKindleDevice(deviceId)
-                ?: notFoundError("Device ${deviceId.id} not found")
+                ?: notFoundError("Device ${deviceId.value} not found")
 
             // Create send event with PENDING status
             val createResult = applicationModule.run(

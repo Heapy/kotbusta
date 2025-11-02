@@ -6,7 +6,7 @@ import io.heapy.kotbusta.model.State.UserId
 import io.heapy.kotbusta.run
 
 context(applicationModule: ApplicationModule)
-suspend fun getBooks(): Map<BookId, State.ParsedBook> =
+suspend fun getBooks(): Map<Int, State.ParsedBook> =
     applicationModule
         .run(Read)
         .requireSuccess
@@ -14,17 +14,17 @@ suspend fun getBooks(): Map<BookId, State.ParsedBook> =
         .books
 
 context(applicationModule: ApplicationModule)
-suspend fun getBook(bookId: BookId): State.ParsedBook? =
+suspend fun getBook(bookId: Int): State.ParsedBook? =
     getBooks()[bookId]
 
 context(applicationModule: ApplicationModule, userSession: UserSession)
-suspend fun isBookStarred(bookId: BookId): Boolean {
+suspend fun isBookStarred(bookId: Int): Boolean {
     val user = getUser(userSession.userId) ?: return false
     return user.stars.any { it.bookId == bookId }
 }
 
 context(applicationModule: ApplicationModule, userSession: UserSession)
-suspend fun getUserNote(bookId: BookId): String? {
+suspend fun getUserNote(bookId: Int): String? {
     val state = applicationModule.run(Read).requireSuccess.state
     return state.notes[bookId]?.find { it.userId == userSession.userId }?.note
 }
@@ -36,11 +36,11 @@ suspend fun toUserCommentAPI(comment: State.UserComment): UserComment {
     val book = getBook(comment.bookId)
 
     return UserComment(
-        id = comment.id.id,
+        id = comment.id.value,
         userId = comment.userId.value,
         userName = user?.name ?: "Unknown",
         userAvatarUrl = user?.avatarUrl,
-        bookId = comment.bookId.id,
+        bookId = comment.bookId,
         bookTitle = book?.title ?: "Unknown",
         comment = comment.comment,
         createdAt = comment.createdAt,
@@ -48,21 +48,9 @@ suspend fun toUserCommentAPI(comment: State.UserComment): UserComment {
     )
 }
 
-// Convert State.UserNote to API UserNote
-context(applicationModule: ApplicationModule)
-suspend fun toUserNoteAPI(note: State.UserNote): UserNote {
-    return UserNote(
-        id = note.userId.value, // Using userId as id since notes don't have separate IDs
-        bookId = note.bookId.id,
-        note = note.note,
-        createdAt = note.createdAt,
-        updatedAt = note.updatedAt,
-    )
-}
-
 context(applicationModule: ApplicationModule)
 suspend fun getBookComments(
-    bookId: BookId,
+    bookId: Int,
     limit: Int = 20,
     offset: Int = 0,
 ): List<UserComment> {
@@ -76,14 +64,8 @@ suspend fun getBookComments(
         .map { toUserCommentAPI(it) }
 }
 
-context(applicationModule: ApplicationModule)
-suspend fun getAllComments(): Map<BookId, List<State.UserComment>> {
-    val state = applicationModule.run(Read).requireSuccess.state
-    return state.comments
-}
-
 context(applicationModule: ApplicationModule, userSession: UserSession)
-suspend fun getStarredBookIds(): List<BookId> {
+suspend fun getStarredBookIds(): List<Int> {
     val user = getUser(userSession.userId) ?: return emptyList()
     return user.stars.map { it.bookId }
 }
@@ -113,7 +95,7 @@ fun State.User.toUserInfo(): UserInfo {
 }
 
 // Get user info for current session
-context(applicationModule: ApplicationModule, userSession: io.heapy.kotbusta.ktor.UserSession)
+context(applicationModule: ApplicationModule, userSession: UserSession)
 suspend fun getUserInfo(): UserInfo? {
     val user = getUser(userSession.userId) ?: return null
     return user.toUserInfo()
@@ -122,10 +104,11 @@ suspend fun getUserInfo(): UserInfo? {
 // Convert State.KindleDevice to API DeviceResponse
 fun toDeviceResponse(device: State.KindleDevice): DeviceResponse {
     return DeviceResponse(
-        id = device.id.id,
+        id = device.id.value,
         email = device.email,
         name = device.name,
-        createdAt = kotlin.time.Clock.System.now(), // TODO: Add createdAt to State.KindleDevice if needed
+        createdAt = kotlin.time.Clock.System.now(),
+        // TODO: Add createdAt to State.KindleDevice if needed
     )
 }
 
@@ -148,7 +131,7 @@ suspend fun toSendHistoryResponse(event: State.KindleSendEvent): SendHistoryResp
     val book = getBook(event.bookId)
 
     return SendHistoryResponse(
-        id = event.id.id,
+        id = event.id.value,
         deviceName = device?.name ?: "Unknown Device",
         bookTitle = book?.title ?: "Unknown Book",
         format = event.format,
@@ -181,20 +164,6 @@ suspend fun getKindleSendHistory(
     )
 }
 
-context(applicationModule: ApplicationModule)
-suspend fun getAllDownloads(): List<Pair<UserId, State.Download>> {
-    val state = applicationModule.run(Read).requireSuccess.state
-    return state.users.values.flatMap { user ->
-        user.downloads.map { download -> user.id to download }
-    }
-}
-
-context(applicationModule: ApplicationModule, userSession: UserSession)
-suspend fun getUserDownloads(): List<State.Download> {
-    val user = getUser(userSession.userId) ?: return emptyList()
-    return user.downloads
-}
-
 // Convert State.Download to API Download
 context(applicationModule: ApplicationModule)
 suspend fun toDownloadAPI(userId: UserId, download: State.Download): Download {
@@ -205,9 +174,9 @@ suspend fun toDownloadAPI(userId: UserId, download: State.Download): Download {
         id = 0, // Downloads don't have IDs in the new model
         userId = userId.value,
         userName = user?.name ?: "Unknown",
-        bookId = download.bookId.id,
+        bookId = download.bookId,
         bookTitle = book?.title ?: "Unknown",
-        format = "epub", // TODO: Add format to State.Download if needed
+        format = download.format,
         createdAt = download.eventTime,
     )
 }
@@ -256,7 +225,7 @@ suspend fun toBook(parsedBook: State.ParsedBook): Book {
     }
 
     return Book(
-        id = parsedBook.bookId.id,
+        id = parsedBook.bookId,
         title = parsedBook.title,
         annotation = null, // ParsedBook doesn't have annotation
         genres = parsedBook.genres,
@@ -268,7 +237,7 @@ suspend fun toBook(parsedBook: State.ParsedBook): Book {
         archivePath = parsedBook.archivePath,
         fileSize = parsedBook.fileSize,
         dateAdded = kotlin.time.Clock.System.now(), // TODO: Add dateAdded to ParsedBook if needed
-        coverImageUrl = "/api/books/${parsedBook.bookId.id}/cover",
+        coverImageUrl = "/api/books/${parsedBook.bookId}/cover",
         isStarred = isStarred,
         userNote = userNote,
     )
@@ -279,14 +248,14 @@ context(applicationModule: ApplicationModule, userSession: UserSession)
 suspend fun toBookSummary(book: State.ParsedBook): BookSummary {
     val isStarred = isBookStarred(book.bookId)
     return BookSummary(
-        id = book.bookId.id,
+        id = book.bookId,
         title = book.title,
         authors = book.authors,
         genres = book.genres,
         language = book.language,
         series = book.series,
         seriesNumber = book.seriesNumber,
-        coverImageUrl = "/api/books/${book.bookId.id}/cover",
+        coverImageUrl = "/api/books/${book.bookId}/cover",
         isStarred = isStarred,
     )
 }
@@ -296,7 +265,7 @@ suspend fun getBooksPage(
     limit: Int = 20,
     offset: Int = 0,
 ): SearchResult {
-    val allBooks = getBooks().values.sortedByDescending { it.bookId.id }
+    val allBooks = getBooks().values.sortedByDescending { it.bookId }
     val total = allBooks.size.toLong()
 
     val paginated = allBooks
@@ -355,7 +324,7 @@ suspend fun searchBooks(
 
     val total = filtered.size.toLong()
     val paginated = filtered
-        .sortedByDescending { it.bookId.id }
+        .sortedByDescending { it.bookId }
         .drop(offset)
         .take(limit)
         .map { toBookSummary(it) }
@@ -393,7 +362,7 @@ suspend fun getStarredBooks(
 
 context(applicationModule: ApplicationModule, userSession: UserSession)
 suspend fun getSimilarBooks(
-    bookId: BookId,
+    bookId: Int,
     limit: Int = 10,
 ): List<BookSummary> {
     val book = getBook(bookId) ?: return emptyList()

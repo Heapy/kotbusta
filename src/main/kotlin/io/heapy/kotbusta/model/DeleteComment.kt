@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.model
 
 import io.heapy.kotbusta.ktor.UserSession
+import io.heapy.kotbusta.model.State.CommentId
 
 context(userSession: UserSession)
 fun DeleteComment(
@@ -16,7 +17,7 @@ class DeleteComment(
 ) : DatabaseOperation<Boolean> {
     override fun process(state: ApplicationState): OperationResult<Boolean> {
         // Find the comment across all books
-        var foundBookId: BookId? = null
+        var foundBookId: Int? = null
 
         for ((bookId, comments) in state.comments) {
             if (comments.any { it.id == commentId && it.userId == userSession.userId }) {

@@ -6,7 +6,6 @@ import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
-import io.heapy.kotbusta.model.BookId
 import io.heapy.kotbusta.model.RecordDownload
 import io.heapy.kotbusta.model.getBook
 import io.heapy.kotbusta.model.toBook
@@ -34,11 +33,11 @@ fun Route.downloadBookRoute() {
                 badRequestError("Unsupported format: $format. Supported formats: ${supportedFormats.joinToString(", ")}")
             }
 
-            val parsedBook = getBook(BookId(bookId))
+            val parsedBook = getBook(bookId)
                 ?: notFoundError("Book $bookId not found")
 
             // Record the download
-            applicationModule.run(RecordDownload(BookId(bookId)))
+            applicationModule.run(RecordDownload(bookId, format))
 
             val book = toBook(parsedBook)
 

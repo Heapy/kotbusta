@@ -7,7 +7,7 @@ import kotlin.time.Instant
 
 context(userSession: UserSession)
 fun StarBook(
-    bookId: BookId,
+    bookId: Int,
     createdAt: Instant = Clock.System.now(),
 ) = StarBook(
     bookId = bookId,
@@ -16,7 +16,7 @@ fun StarBook(
 )
 
 class StarBook(
-    private val bookId: BookId,
+    private val bookId: Int,
     private val userSession: UserSession,
     private val createdAt: Instant,
 ) : DatabaseOperation<Boolean> {

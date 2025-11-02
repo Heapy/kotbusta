@@ -5,6 +5,7 @@
     </option>
     <option name="MAIN_CLASS_NAME" value="io.heapy.kotbusta.Application" />
     <module name="kotbusta.main" />
+    <option name="VM_PARAMETERS" value="-Xmx1024m" />
     <extension name="coverage">
       <pattern>
         <option name="PATTERN" value="io.heapy.kotbusta.*" />
@@ -18,7 +19,7 @@
     <option name="passParentEnvs" value="true" />
     <option name="programParameters" value="" />
     <option name="shortenCommandLine" />
-    <option name="vmParameters" />
+    <option name="vmParameters" value="-Xmx1024m" />
     <option name="workingDirectory" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />

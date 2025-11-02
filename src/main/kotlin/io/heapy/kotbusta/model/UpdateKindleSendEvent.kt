@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.model
 
+import io.heapy.kotbusta.model.State.SendEventId
 import kotlin.time.Clock
 import kotlin.time.Instant
 

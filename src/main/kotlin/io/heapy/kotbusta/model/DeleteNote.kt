@@ -4,14 +4,14 @@ import io.heapy.kotbusta.ktor.UserSession
 
 context(userSession: UserSession)
 fun DeleteNote(
-    bookId: BookId,
+    bookId: Int,
 ) = DeleteNote(
     bookId = bookId,
     userSession = userSession,
 )
 
 class DeleteNote(
-    private val bookId: BookId,
+    private val bookId: Int,
     private val userSession: UserSession,
 ) : DatabaseOperation<Boolean> {
     override fun process(state: ApplicationState): OperationResult<Boolean> {

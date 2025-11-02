@@ -1,13 +1,14 @@
 package io.heapy.kotbusta.model
 
 import io.heapy.kotbusta.ktor.UserSession
+import io.heapy.kotbusta.model.State.CommentId
 import io.heapy.kotbusta.model.State.UserComment
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 context(userSession: UserSession)
 fun AddComment(
-    bookId: BookId,
+    bookId: Int,
     comment: String,
     createdAt: Instant = Clock.System.now(),
 ) = AddComment(
@@ -18,7 +19,7 @@ fun AddComment(
 )
 
 class AddComment(
-    private val bookId: BookId,
+    private val bookId: Int,
     private val comment: String,
     private val userSession: UserSession,
     private val createdAt: Instant,

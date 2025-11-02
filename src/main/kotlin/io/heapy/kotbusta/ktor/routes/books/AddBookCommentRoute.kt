@@ -5,7 +5,6 @@ import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.AddComment
 import io.heapy.kotbusta.model.ApiResponse.Success
-import io.heapy.kotbusta.model.BookId
 import io.heapy.kotbusta.model.requireSuccess
 import io.heapy.kotbusta.model.toUserCommentAPI
 import io.heapy.kotbusta.run
@@ -23,7 +22,7 @@ context(applicationModule: ApplicationModule)
 fun Route.addBookCommentRoute() {
     post("/books/{id}/comments") {
         requireApprovedUser {
-            val bookId = BookId(call.requiredParameter<Int>("id"))
+            val bookId = call.requiredParameter<Int>("id")
             val request = call.receive<CommentRequest>()
 
             val result = applicationModule.run(AddComment(bookId, request.comment))

@@ -5,7 +5,6 @@ import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Error
 import io.heapy.kotbusta.model.ApiResponse.Success
-import io.heapy.kotbusta.model.BookId
 import io.heapy.kotbusta.model.getBook
 import io.heapy.kotbusta.model.toBook
 import io.ktor.http.*
@@ -16,7 +15,7 @@ context(applicationModule: ApplicationModule)
 fun Route.getBookByIdRoute() {
     get("/books/{id}") {
         requireApprovedUser {
-            val bookId = BookId(call.requiredParameter<Int>("id"))
+            val bookId = call.requiredParameter<Int>("id")
             val parsedBook = getBook(bookId)
 
             if (parsedBook != null) {

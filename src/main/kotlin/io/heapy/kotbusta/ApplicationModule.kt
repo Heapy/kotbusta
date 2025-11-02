@@ -10,17 +10,19 @@ import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.model.Database
 import io.heapy.kotbusta.model.JsonDatabase
+import io.heapy.kotbusta.model.LoadBooks
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.CoverService
 import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
-import io.heapy.kotbusta.service.ImportJobService
 import io.heapy.kotbusta.service.PandocConversionService
 import io.heapy.kotbusta.service.TimeService
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import java.security.SecureRandom
 import kotlin.concurrent.thread
@@ -128,18 +130,15 @@ class ApplicationModule {
     }
 
     val conversionService by bean {
-        PandocConversionService()
+        PandocConversionService(
+            dispatcher = dispatcher.value,
+        )
     }
 
     val inpxParser by bean {
         InpxParser(
             booksDataPath = booksDataPath.value,
-        )
-    }
-
-    val importJobService by bean {
-        ImportJobService(
-            inpxParser = inpxParser.value,
+            dispatcher = dispatcher.value,
         )
     }
 
@@ -164,6 +163,11 @@ class ApplicationModule {
         env["KOTBUSTA_DB_PATH"]
     }
 
+    val dispatcher by bean {
+        val availableProcessors = Runtime.getRuntime().availableProcessors()
+        Dispatchers.IO.limitedParallelism(availableProcessors.coerceAtLeast(4))
+    }
+
     fun stopHttpClient() {
         if (httpClient.isInitialized) {
             httpClient.value.close()
@@ -183,7 +187,10 @@ class ApplicationModule {
     }
 
     fun initializeDatabase() {
-        importJobService.value.importBooks()
+        runBlocking {
+            val books = inpxParser.value.parseAndImport()
+            run(LoadBooks(books))
+        }
     }
 
     fun initialize() {

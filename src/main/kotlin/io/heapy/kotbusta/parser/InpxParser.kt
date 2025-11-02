@@ -1,9 +1,8 @@
 package io.heapy.kotbusta.parser
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.model.BookId
 import io.heapy.kotbusta.model.State.ParsedBook
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -14,13 +13,14 @@ import kotlin.concurrent.atomics.incrementAndFetch
 
 class InpxParser(
     private val booksDataPath: Path,
+    private val dispatcher: CoroutineDispatcher,
 ) {
     private val inpFilesProcessed = AtomicInt(0)
     private val booksAdded = AtomicInt(0)
     private val booksDeleted = AtomicInt(0)
     private val bookErrors = AtomicInt(0)
 
-    suspend fun parseAndImport(): Map<BookId, ParsedBook> {
+    suspend fun parseAndImport(): Map<Int, ParsedBook> {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         log.info("Starting INPX parsing from: $inpxFilePath")
 
@@ -36,7 +36,7 @@ class InpxParser(
                 entries
                     .mapIndexed { index, entry ->
                         inpFilesProcessed.incrementAndFetch()
-                        async(Dispatchers.IO) {
+                        async(dispatcher) {
                             log.info("Processing ${entry.name} (${index + 1}/${entries.size})")
 
                             val lines = zipFile.getInputStream(entry)
@@ -142,7 +142,7 @@ class InpxParser(
 
             // Return parsed book data
             ParsedBook(
-                bookId = BookId(bookId!!),
+                bookId = bookId!!,
                 title = title.trim(),
                 authors = authors,
                 series = series,
