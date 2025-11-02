@@ -43,7 +43,7 @@ export function KindleManagement() {
   const deleteDevice = async (deviceId) => {
     if (!confirm('Delete this device?')) return;
     try {
-      await api.delete(`/api/kindle/devices/\${deviceId}`);
+      await api.delete(`/api/kindle/devices/${deviceId}`);
       await loadData();
     } catch (err) {
       alert('Failed to delete device: ' + err.message);
