@@ -21,7 +21,7 @@ jobs:
         run: src/test/resources/unpack-flibusta-sample.sh
       - name: "Run tests and build distribution"
         run: ./gradlew test distTar
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         with:
           name: "Kotlin Application"
           path: "build/distributions/kotbusta.tar"
