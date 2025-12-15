@@ -7,7 +7,7 @@ kotlinx-coroutines = "1.10.2"
 logback = "1.5.21"
 sqlite = "3.51.1.0"
 junit = "6.0.0"
-aws-sdk = "1.5.97"
+aws-sdk = "1.5.102"
 
 [libraries]
 jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
