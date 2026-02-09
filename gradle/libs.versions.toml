@@ -1,13 +1,13 @@
 [versions]
 jooq = "3.20.11"
 komok = "1.0.13"
-kotlin = "2.3.0"
+kotlin = "2.3.10"
 kotlinx-serialization = "1.10.0"
 kotlinx-coroutines = "1.10.2"
-logback = "1.5.27"
+logback = "1.5.28"
 sqlite = "3.51.1.0"
 junit = "6.0.0"
-aws-sdk = "1.6.7"
+aws-sdk = "1.6.12"
 
 [libraries]
 jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
