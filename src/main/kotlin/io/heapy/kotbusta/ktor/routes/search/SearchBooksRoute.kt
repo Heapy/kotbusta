@@ -1,8 +1,7 @@
-package io.heapy.kotbusta.ktor.routes.books
+package io.heapy.kotbusta.ktor.routes.search
 
 import io.heapy.kotbusta.ApplicationModule
-import io.heapy.kotbusta.dao.searchBooks
-import io.heapy.kotbusta.database.TransactionType.READ_ONLY
+import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.model.ApiResponse.Success
 import io.heapy.kotbusta.model.SearchQuery
@@ -10,10 +9,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
-fun Route.bookSearchRoute() {
-    val transactionProvider = applicationModule.transactionProvider.value
+fun Route.searchBooksRoute() {
+    val bookSearchService = applicationModule.bookSearchService.value
 
-    get("/books/search") {
+    get("/search/books") {
         val query = call.request.queryParameters["q"].orEmpty()
         val genre = call.request.queryParameters["genre"]
         val language = call.request.queryParameters["language"]
@@ -27,18 +26,18 @@ fun Route.bookSearchRoute() {
 
         requireApprovedUser {
             val searchQuery = SearchQuery(
-                query,
-                genre,
-                language,
-                author,
-                limit,
-                offset,
+                query = query,
+                genre = genre,
+                language = language,
+                author = author,
+                limit = limit,
+                offset = offset,
             )
-            val result = transactionProvider.transaction(READ_ONLY) {
-                searchBooks(
-                    query = searchQuery,
-                )
-            }
+            val result = bookSearchService.search(
+                query = searchQuery,
+                userId = contextOf<UserSession>().userId,
+            )
+
             call.respond(
                 Success(
                     data = result,

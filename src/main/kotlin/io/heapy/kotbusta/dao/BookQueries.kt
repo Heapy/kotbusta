@@ -7,10 +7,9 @@ import io.heapy.kotbusta.ktor.UserSession
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.Book
 import io.heapy.kotbusta.model.BookSummary
-import io.heapy.kotbusta.model.SearchQuery
+import io.heapy.kotbusta.model.SearchIndexBook
 import io.heapy.kotbusta.model.SearchResult
 import io.heapy.kotbusta.model.Series
-import org.jooq.Condition
 import org.jooq.Record
 import org.jooq.Result
 import org.jooq.impl.DSL
@@ -214,54 +213,6 @@ fun getStarredBooks(limit: Int, offset: Int): SearchResult =
         )
     }
 
-context(_: TransactionContext, userSession: UserSession)
-fun searchBooks(query: SearchQuery): SearchResult = useTx { dslContext ->
-    val conditions = buildSearchConditions(query)
-
-    val selectQuery = dslContext
-        .selectDistinct(
-            BOOKS.ID,
-            BOOKS.TITLE,
-            BOOKS.LANGUAGE,
-            BOOKS.SERIES_ID,
-            BOOKS.SERIES_NUMBER,
-            SERIES.NAME.`as`("series_name"),
-            DSL.case_()
-                .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
-                .otherwise(DSL.inline(false))
-                .`as`("is_starred"),
-        )
-        .from(BOOKS)
-        .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
-        .leftJoin(BOOK_AUTHORS).on(BOOKS.ID.eq(BOOK_AUTHORS.BOOK_ID))
-        .leftJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
-        .leftJoin(USER_STARS)
-        .on(
-            BOOKS.ID.eq(USER_STARS.BOOK_ID)
-                .and(USER_STARS.USER_ID.eq(userSession.userId)),
-        )
-
-    val results = if (conditions.isNotEmpty()) {
-        selectQuery.where(DSL.and(conditions))
-    } else {
-        selectQuery
-    }
-        .orderBy(BOOKS.ID.desc())
-        .limit(query.limit)
-        .offset(query.offset)
-        .fetch()
-
-    val books = buildBookSummaryList(results)
-
-    val total = getSearchResultsCount(query)
-
-    SearchResult(
-        books = books,
-        total = total,
-        hasMore = query.offset + query.limit < total,
-    )
-}
-
 context(_: TransactionContext)
 fun getSimilarBooks(
     bookId: Int,
@@ -303,6 +254,87 @@ fun getSimilarBooks(
     buildBookSummaryList(results)
 }
 
+/**
+ * Returns a page of books for search indexing using keyset pagination on the
+ * primary key (ids greater than [afterId], ascending). Lets the index build
+ * stream the whole catalog in bounded-memory batches.
+ */
+context(_: TransactionContext)
+fun getSearchIndexBooksPage(
+    afterId: Int,
+    limit: Int,
+): List<SearchIndexBook> = useTx { dslContext ->
+    val baseRecords = dslContext
+        .select(
+            BOOKS.ID,
+            BOOKS.TITLE,
+            BOOKS.LANGUAGE,
+            SERIES.NAME.`as`("series_name"),
+        )
+        .from(BOOKS)
+        .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
+        .where(BOOKS.ID.gt(afterId))
+        .orderBy(BOOKS.ID.asc())
+        .limit(limit)
+        .fetch()
+
+    if (baseRecords.isEmpty()) {
+        return@useTx emptyList()
+    }
+
+    val bookIds = baseRecords.mapNotNull { it.get(BOOKS.ID) }
+    val authorsByBookId = getBookAuthorsMap(bookIds)
+    val genresByBookId = getBookGenresMap(bookIds)
+
+    baseRecords.map { record ->
+        val bookId = record.get(BOOKS.ID)!!
+        SearchIndexBook(
+            bookId = bookId,
+            title = record.get(BOOKS.TITLE)!!,
+            authors = authorsByBookId[bookId] ?: emptyList(),
+            series = record.get("series_name", String::class.java),
+            language = record.get(BOOKS.LANGUAGE)!!,
+            genres = genresByBookId[bookId] ?: emptyList(),
+        )
+    }
+}
+
+context(_: TransactionContext)
+fun getBookSummariesByIds(
+    bookIds: List<Int>,
+    userId: Int,
+): List<BookSummary> = useTx { dslContext ->
+    if (bookIds.isEmpty()) {
+        return@useTx emptyList()
+    }
+
+    val results = dslContext
+        .selectDistinct(
+            BOOKS.ID,
+            BOOKS.TITLE,
+            BOOKS.LANGUAGE,
+            BOOKS.SERIES_ID,
+            BOOKS.SERIES_NUMBER,
+            SERIES.NAME.`as`("series_name"),
+            DSL.case_()
+                .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
+                .otherwise(DSL.inline(false))
+                .`as`("is_starred"),
+        )
+        .from(BOOKS)
+        .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
+        .leftJoin(USER_STARS)
+        .on(
+            BOOKS.ID.eq(USER_STARS.BOOK_ID)
+                .and(USER_STARS.USER_ID.eq(userId)),
+        )
+        .where(BOOKS.ID.`in`(bookIds))
+        .fetch()
+
+    val booksById = buildBookSummaryList(results).associateBy(BookSummary::id)
+    bookIds.mapNotNull(booksById::get)
+}
+
 // Helper functions
 
 private context(_: TransactionContext)
@@ -335,6 +367,7 @@ fun getBookGenres(
         .innerJoin(BOOK_GENRES).on(GENRES.ID.eq(BOOK_GENRES.GENRE_ID))
         .where(BOOK_GENRES.BOOK_ID.eq(bookId))
         .fetch(GENRES.NAME)
+        .filterNotNull()
 }
 
 private context(_: TransactionContext)
@@ -365,42 +398,8 @@ fun buildBookSummaryList(
             )
         }
 
-        val bookAuthors = mutableMapOf<Int, MutableList<String>>()
-        val bookGenres = mutableMapOf<Int, MutableList<String>>()
-
-        if (bookIds.isNotEmpty()) {
-            dslContext
-                .select(
-                    BOOK_AUTHORS.BOOK_ID,
-                    AUTHORS.FULL_NAME,
-                )
-                .from(BOOK_AUTHORS)
-                .innerJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
-                .where(BOOK_AUTHORS.BOOK_ID.`in`(bookIds))
-                .fetch()
-                .forEach { record ->
-                    val bookId = record.get(BOOK_AUTHORS.BOOK_ID)!!
-                    val authorName = record.get(AUTHORS.FULL_NAME)!!
-                    bookAuthors.computeIfAbsent(bookId) { mutableListOf() }
-                        .add(authorName)
-                }
-
-            dslContext
-                .select(
-                    BOOK_GENRES.BOOK_ID,
-                    GENRES.NAME,
-                )
-                .from(BOOK_GENRES)
-                .innerJoin(GENRES).on(BOOK_GENRES.GENRE_ID.eq(GENRES.ID))
-                .where(BOOK_GENRES.BOOK_ID.`in`(bookIds))
-                .fetch()
-                .forEach { record ->
-                    val bookId = record.get(BOOK_GENRES.BOOK_ID)!!
-                    val genreName = record.get(GENRES.NAME)!!
-                    bookGenres.computeIfAbsent(bookId) { mutableListOf() }
-                        .add(genreName)
-                }
-        }
+        val bookAuthors = getBookAuthorsMap(bookIds)
+        val bookGenres = getBookGenresMap(bookIds)
 
         books.map { book ->
             book.copy(
@@ -410,56 +409,65 @@ fun buildBookSummaryList(
         }
     }
 
-private context(_: TransactionContext)
-fun buildSearchConditions(query: SearchQuery): List<Condition> {
-    val conditions = mutableListOf<Condition>()
-
-    if (query.query.isNotBlank()) {
-        val searchTerm = "%${query.query}%"
-        conditions.add(
-            BOOKS.TITLE.likeIgnoreCase(searchTerm)
-                .or(AUTHORS.FULL_NAME.likeIgnoreCase(searchTerm)),
-        )
+internal context(_: TransactionContext)
+fun getBookAuthorsMap(bookIds: Collection<Int>): Map<Int, List<String>> = useTx { dslContext ->
+    if (bookIds.isEmpty()) {
+        return@useTx emptyMap()
     }
 
-    if (!query.genre.isNullOrBlank()) {
-        conditions.add(
-            BOOKS.ID.`in`(
-                DSL.select(BOOK_GENRES.BOOK_ID)
-                    .from(BOOK_GENRES)
-                    .innerJoin(GENRES).on(BOOK_GENRES.GENRE_ID.eq(GENRES.ID))
-                    .where(GENRES.NAME.eq(query.genre))
+    val normalizedIds = bookIds.distinct()
+    val bookAuthors = mutableMapOf<Int, MutableList<String>>()
+    normalizedIds.chunked(SQLITE_ID_LOOKUP_BATCH_SIZE).forEach { batch ->
+        dslContext
+            .select(
+                BOOK_AUTHORS.BOOK_ID,
+                AUTHORS.FULL_NAME,
             )
-        )
+            .from(BOOK_AUTHORS)
+            .innerJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
+            .where(BOOK_AUTHORS.BOOK_ID.`in`(batch))
+            .fetch()
+            .forEach { record ->
+                val bookId = record.get(BOOK_AUTHORS.BOOK_ID)!!
+                val authorName = record.get(AUTHORS.FULL_NAME)!!
+                bookAuthors.computeIfAbsent(bookId) { mutableListOf() }
+                    .add(authorName)
+            }
     }
 
-    if (!query.language.isNullOrBlank()) {
-        conditions.add(BOOKS.LANGUAGE.eq(query.language))
-    }
-
-    if (!query.author.isNullOrBlank()) {
-        conditions.add(AUTHORS.FULL_NAME.likeIgnoreCase("%${query.author}%"))
-    }
-
-    return conditions
+    bookAuthors
 }
 
-private context(_: TransactionContext)
-fun getSearchResultsCount(query: SearchQuery): Long = useTx { dslContext ->
-    val conditions = buildSearchConditions(query)
+internal context(_: TransactionContext)
+fun getBookGenresMap(bookIds: Collection<Int>): Map<Int, List<String>> = useTx { dslContext ->
+    if (bookIds.isEmpty()) {
+        return@useTx emptyMap()
+    }
 
-    val countQuery = dslContext
-        .selectCount()
-        .from(BOOKS)
-        .leftJoin(BOOK_AUTHORS).on(BOOKS.ID.eq(BOOK_AUTHORS.BOOK_ID))
-        .leftJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
+    val normalizedIds = bookIds.distinct()
+    val bookGenres = mutableMapOf<Int, MutableList<String>>()
+    normalizedIds.chunked(SQLITE_ID_LOOKUP_BATCH_SIZE).forEach { batch ->
+        dslContext
+            .select(
+                BOOK_GENRES.BOOK_ID,
+                GENRES.NAME,
+            )
+            .from(BOOK_GENRES)
+            .innerJoin(GENRES).on(BOOK_GENRES.GENRE_ID.eq(GENRES.ID))
+            .where(BOOK_GENRES.BOOK_ID.`in`(batch))
+            .fetch()
+            .forEach { record ->
+                val bookId = record.get(BOOK_GENRES.BOOK_ID)!!
+                val genreName = record.get(GENRES.NAME)!!
+                bookGenres.computeIfAbsent(bookId) { mutableListOf() }
+                    .add(genreName)
+            }
+    }
 
-    if (conditions.isNotEmpty()) {
-        countQuery.where(DSL.and(conditions))
-    } else {
-        countQuery
-    }.fetchOne(0, Long::class.java) ?: 0L
+    bookGenres
 }
+
+private const val SQLITE_ID_LOOKUP_BATCH_SIZE = 500
 
 context(_: TransactionContext)
 fun updateBookCover(
@@ -472,4 +480,3 @@ fun updateBookCover(
         .where(BOOKS.ID.eq(bookId))
         .execute()
 }
-

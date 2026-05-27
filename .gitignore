@@ -16,8 +16,8 @@ build
 # Configuration
 .env
 
-# Database
-.database
+# Lucene index and database
+.data
 
 # Test Unpacked Data
 src/test/resources/flibusta-sample/

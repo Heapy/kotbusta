@@ -13,10 +13,7 @@ import io.heapy.kotbusta.jooq.tables.references.GENRES
 import io.heapy.kotbusta.jooq.tables.references.SERIES
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.service.TimeService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import org.jooq.DSLContext
 import java.nio.file.Path
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -44,287 +41,197 @@ class InpxParser(
         val dateAdded: Instant,
     )
 
+    /**
+     * Streams the INPX file-by-file, persisting each `.inp` entry in its own
+     * transaction with chunked, conflict-safe inserts. Only the (bounded) author/
+     * series/genre id registries are held across the whole import, so peak memory
+     * stays small even for libraries with hundreds of thousands of books.
+     */
     suspend fun parseAndImport(
         booksDataPath: Path,
         stats: ImportStats,
+        createdAt: Instant = Clock.System.now(),
     ) {
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         stats.addMessage("Starting INPX parsing from: $inpxFilePath")
 
-        val allBooks = coroutineScope {
-            ZipFile(inpxFilePath.toString()).use { zipFile ->
-                val entries = zipFile.entries().asSequence()
-                    .filter { it.name.endsWith(".inp") }
-                    .toList()
-
-                stats.addMessage("Found ${entries.size} .inp files to process")
-
-                // Process INP files in parallel and collect all books
-                entries
-                    .mapIndexed { index, entry ->
-                        stats.incInpFiles()
-                        async(Dispatchers.IO) {
-                            stats.addMessage("Processing ${entry.name} (${index + 1}/${entries.size})")
-
-                            val lines = zipFile.getInputStream(entry)
-                                .bufferedReader(Charsets.UTF_8)
-                                .useLines(Sequence<String>::toList)
-
-                            val archiveName = entry.name.removeSuffix(".inp")
-
-                            // Parse all lines and collect books in memory
-                            val books = lines.mapNotNull { line ->
-                                parseBookLine(line, archiveName, stats)
-                            }
-
-                            stats.addMessage("Completed parsing ${entry.name}: ${books.size} books parsed")
-                            books
-                        }
-                    }
-                    .awaitAll()
-                    .flatten()
-                    .distinctBy { it.bookId }
-            }
-        }
-
-        stats.addMessage("Parsed ${allBooks.size} books, now persisting to database...")
-
+        // Reset target tables once, before streaming inserts.
         transactionProvider.transaction(READ_WRITE) {
-            bulkInsertBooks(stats, allBooks)
+            truncateAll()
         }
 
-        stats.addMessage("INPX parsing and import completed successfully")
-    }
+        val authors = IdRegistry()
+        val series = IdRegistry()
+        val genres = IdRegistry()
 
-    context(_: TransactionContext)
-    private fun bulkInsertBooks(
-        stats: ImportStats,
-        books: List<ParsedBook>,
-        createdAt: Instant = Clock.System.now(),
-    ) = useTx { dslContext ->
-        stats.addMessage("Starting bulk insert of ${books.size} books")
-        dslContext.truncateTable(BOOK_GENRES).execute()
-        dslContext.truncateTable(BOOK_AUTHORS).execute()
-        dslContext.truncateTable(BOOKS).execute()
-        dslContext.truncateTable(GENRES).execute()
-        dslContext.truncateTable(AUTHORS).execute()
-        dslContext.truncateTable(SERIES).execute()
+        ZipFile(inpxFilePath.toString()).use { zipFile ->
+            val entries = zipFile.entries().asSequence()
+                .filter { it.name.endsWith(".inp") }
+                .toList()
 
-        val uniqueSeries = storeSeries(stats, books)
-        val uniqueAuthors = storeAuthors(stats, books)
-        val uniqueGenres = storeGenres(stats, books)
+            stats.addMessage("Found ${entries.size} .inp files to process")
 
-        storeBooks(stats, books, uniqueSeries, createdAt)
+            entries.forEachIndexed { index, entry ->
+                stats.incInpFiles()
+                val archiveName = entry.name.removeSuffix(".inp")
 
-        val authorRelationshipCount = storeBooksAuthors(stats, books, uniqueAuthors)
-        val genreRelationshipCount = storeBooksGenres(stats, books, uniqueGenres)
-
-        stats.addMessage("Bulk insert completed: ${books.size} books, ${uniqueAuthors.size} authors, ${uniqueSeries.size} series, ${uniqueGenres.size} genres, $authorRelationshipCount author relationships, $genreRelationshipCount genre relationships")
-    }
-
-    context(_: TransactionContext)
-    private fun storeBooksAuthors(
-        stats: ImportStats,
-        books: List<ParsedBook>,
-        uniqueAuthors: MutableMap<String, Int>,
-    ): Int = useTx { dslContext ->
-        val bookAuthorPairs = books
-            .flatMap { book ->
-                book.authors
-                    .map { author ->
-                        val authorId = uniqueAuthors[author]
-                            ?: error("Author not found: $author")
-                        book.bookId to authorId
+                val books = zipFile.getInputStream(entry)
+                    .bufferedReader(Charsets.UTF_8)
+                    .useLines { lines ->
+                        lines.mapNotNull { line -> parseBookLine(line, archiveName, stats) }.toList()
                     }
+
+                if (books.isNotEmpty()) {
+                    transactionProvider.transaction(READ_WRITE) {
+                        persist(books, authors, series, genres, createdAt)
+                    }
+                }
+
+                stats.addMessage("Processed ${entry.name} (${index + 1}/${entries.size}): ${books.size} books")
             }
-
-        stats.addMessage("Inserting ${bookAuthorPairs.size} book-author relationships")
-
-        if (bookAuthorPairs.isNotEmpty()) {
-            dslContext
-                .batch(
-                    bookAuthorPairs.map { (bookId, authorId) ->
-                        dslContext
-                            .insertInto(BOOK_AUTHORS)
-                            .set(BOOK_AUTHORS.BOOK_ID, bookId)
-                            .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
-                    },
-                )
-                .execute()
         }
 
-        bookAuthorPairs.size
+        stats.addMessage(
+            "INPX import completed: ${stats.booksAdded.load()} books, " +
+                "${authors.size} authors, ${series.size} series, ${genres.size} genres",
+        )
     }
 
     context(_: TransactionContext)
-    private fun storeBooks(
-        stats: ImportStats,
+    private fun truncateAll() = useTx { dsl ->
+        dsl.truncateTable(BOOK_GENRES).execute()
+        dsl.truncateTable(BOOK_AUTHORS).execute()
+        dsl.truncateTable(BOOKS).execute()
+        dsl.truncateTable(GENRES).execute()
+        dsl.truncateTable(AUTHORS).execute()
+        dsl.truncateTable(SERIES).execute()
+    }
+
+    context(_: TransactionContext)
+    private fun persist(
         books: List<ParsedBook>,
-        uniqueSeries: MutableMap<String, Int>,
+        authors: IdRegistry,
+        series: IdRegistry,
+        genres: IdRegistry,
         createdAt: Instant,
-    ) = useTx { dslContext ->
-        stats.addMessage("Inserting ${books.size} books")
+    ) = useTx { dsl ->
+        // Resolve ids first; newly seen names are queued for insertion.
+        books.forEach { book ->
+            book.authors.forEach(authors::resolve)
+            book.series?.let(series::resolve)
+            book.genres.forEach(genres::resolve)
+        }
 
-        if (books.isNotEmpty()) {
-            dslContext
-                .batch(
-                    books.map { book ->
-                        val seriesId = book.series
-                            ?.let { seriesId ->
-                                uniqueSeries[seriesId]
-                            }
+        insertAuthors(dsl, authors.drainPending())
+        insertSeries(dsl, series.drainPending())
+        insertGenres(dsl, genres.drainPending())
 
-                        dslContext
-                            .insertInto(BOOKS)
-                            .set(BOOKS.ID, book.bookId)
-                            .set(BOOKS.TITLE, book.title)
-                            .set(BOOKS.LANGUAGE, book.language)
-                            .set(BOOKS.SERIES_ID, seriesId)
-                            .set(BOOKS.SERIES_NUMBER, book.seriesNumber)
-                            .set(BOOKS.FILE_FORMAT, book.fileFormat)
-                            .set(BOOKS.FILE_PATH, book.filePath)
-                            .set(BOOKS.ARCHIVE_PATH, book.archivePath)
-                            .set(BOOKS.FILE_SIZE, book.fileSize)
-                            .set(BOOKS.DATE_ADDED, book.dateAdded)
-                            .set(BOOKS.CREATED_AT, createdAt)
-                    },
-                )
-                .execute()
+        insertBooks(dsl, books, series.ids, createdAt)
+        insertBookAuthors(dsl, books, authors.ids)
+        insertBookGenres(dsl, books, genres.ids)
+    }
+
+    private fun insertAuthors(dsl: DSLContext, entries: List<Pair<String, Int>>) {
+        entries.chunked(CHUNK_SIZE).forEach { chunk ->
+            dsl.batch(
+                chunk.map { (name, id) ->
+                    dsl.insertInto(AUTHORS)
+                        .set(AUTHORS.ID, id)
+                        .set(AUTHORS.FULL_NAME, name)
+                },
+            ).execute()
         }
     }
 
-    context(_: TransactionContext)
-    private fun storeAuthors(
-        stats: ImportStats,
-        books: List<ParsedBook>,
-    ): MutableMap<String, Int> = useTx { dslContext ->
-        var authorId = 0
-        val uniqueAuthors = books
-            .fold(mutableMapOf<String, Int>()) { acc, book ->
-                book.authors.forEach { author ->
-                    val existingId = acc[author]
-                    acc[author] = existingId ?: ++authorId
-                }
-                acc
-            }
-
-        stats.addMessage("Inserting ${uniqueAuthors.size} new authors")
-
-        // Batch insert new authors
-        if (uniqueAuthors.isNotEmpty()) {
-            dslContext
-                .batch(
-                    uniqueAuthors.map { (author, id) ->
-                        dslContext
-                            .insertInto(AUTHORS)
-                            .set(AUTHORS.ID, id)
-                            .set(AUTHORS.FULL_NAME, author)
-                    },
-                )
-                .execute()
+    private fun insertSeries(dsl: DSLContext, entries: List<Pair<String, Int>>) {
+        entries.chunked(CHUNK_SIZE).forEach { chunk ->
+            dsl.batch(
+                chunk.map { (name, id) ->
+                    dsl.insertInto(SERIES)
+                        .set(SERIES.ID, id)
+                        .set(SERIES.NAME, name)
+                },
+            ).execute()
         }
-
-        uniqueAuthors
     }
 
-    context(_: TransactionContext)
-    private fun storeSeries(
-        stats: ImportStats,
-        books: List<ParsedBook>,
-    ): MutableMap<String, Int> = useTx { dslContext ->
-        var seriesId = 0
-        val uniqueSeries = books
-            .fold(mutableMapOf<String, Int>()) { acc, book ->
-                book.series?.let { series ->
-                    val existingId = acc[series]
-                    acc[series] = existingId ?: ++seriesId
-                }
-                acc
-            }
-
-        stats.addMessage("Inserting ${uniqueSeries.size} unique series")
-
-        if (uniqueSeries.isNotEmpty()) {
-            dslContext
-                .batch(
-                    uniqueSeries.map { (series, id) ->
-                        dslContext
-                            .insertInto(SERIES)
-                            .set(SERIES.ID, id)
-                            .set(SERIES.NAME, series)
-                    },
-                )
-                .execute()
+    private fun insertGenres(dsl: DSLContext, entries: List<Pair<String, Int>>) {
+        entries.chunked(CHUNK_SIZE).forEach { chunk ->
+            dsl.batch(
+                chunk.map { (name, id) ->
+                    dsl.insertInto(GENRES)
+                        .set(GENRES.ID, id)
+                        .set(GENRES.NAME, name)
+                },
+            ).execute()
         }
-
-        uniqueSeries
     }
 
-    context(_: TransactionContext)
-    private fun storeGenres(
-        stats: ImportStats,
+    private fun insertBooks(
+        dsl: DSLContext,
         books: List<ParsedBook>,
-    ): MutableMap<String, Int> = useTx { dslContext ->
-        var genreId = 0
-        val uniqueGenres = books
-            .fold(mutableMapOf<String, Int>()) { acc, book ->
-                book.genres.forEach { genre ->
-                    val existingId = acc[genre]
-                    acc[genre] = existingId ?: ++genreId
-                }
-                acc
-            }
-
-        stats.addMessage("Inserting ${uniqueGenres.size} unique genres")
-
-        if (uniqueGenres.isNotEmpty()) {
-            dslContext
-                .batch(
-                    uniqueGenres.map { (genre, id) ->
-                        dslContext
-                            .insertInto(GENRES)
-                            .set(GENRES.ID, id)
-                            .set(GENRES.NAME, genre)
-                    },
-                )
-                .execute()
+        seriesIds: Map<String, Int>,
+        createdAt: Instant,
+    ) {
+        books.chunked(CHUNK_SIZE).forEach { chunk ->
+            dsl.batch(
+                chunk.map { book ->
+                    dsl.insertInto(BOOKS)
+                        .set(BOOKS.ID, book.bookId)
+                        .set(BOOKS.TITLE, book.title)
+                        .set(BOOKS.LANGUAGE, book.language)
+                        .set(BOOKS.SERIES_ID, book.series?.let(seriesIds::getValue))
+                        .set(BOOKS.SERIES_NUMBER, book.seriesNumber)
+                        .set(BOOKS.FILE_FORMAT, book.fileFormat)
+                        .set(BOOKS.FILE_PATH, book.filePath)
+                        .set(BOOKS.ARCHIVE_PATH, book.archivePath)
+                        .set(BOOKS.FILE_SIZE, book.fileSize)
+                        .set(BOOKS.DATE_ADDED, book.dateAdded)
+                        .set(BOOKS.CREATED_AT, createdAt)
+                        .onConflictDoNothing()
+                },
+            ).execute()
         }
-
-        uniqueGenres
     }
 
-    context(_: TransactionContext)
-    private fun storeBooksGenres(
-        stats: ImportStats,
+    private fun insertBookAuthors(
+        dsl: DSLContext,
         books: List<ParsedBook>,
-        uniqueGenres: MutableMap<String, Int>,
-    ): Int = useTx { dslContext ->
-        val bookGenrePairs = books
-            .flatMap { book ->
-                book.genres
-                    .map { genre ->
-                        val genreId = uniqueGenres[genre]
-                            ?: error("Genre not found: $genre")
-                        book.bookId to genreId
-                    }
-            }
-
-        stats.addMessage("Inserting ${bookGenrePairs.size} book-genre relationships")
-
-        if (bookGenrePairs.isNotEmpty()) {
-            dslContext
-                .batch(
-                    bookGenrePairs.map { (bookId, genreId) ->
-                        dslContext
-                            .insertInto(BOOK_GENRES)
-                            .set(BOOK_GENRES.BOOK_ID, bookId)
-                            .set(BOOK_GENRES.GENRE_ID, genreId)
-                    },
-                )
-                .execute()
+        authorIds: Map<String, Int>,
+    ) {
+        val pairs = books.flatMap { book ->
+            book.authors.map { author -> book.bookId to authorIds.getValue(author) }
         }
+        pairs.chunked(CHUNK_SIZE).forEach { chunk ->
+            dsl.batch(
+                chunk.map { (bookId, authorId) ->
+                    dsl.insertInto(BOOK_AUTHORS)
+                        .set(BOOK_AUTHORS.BOOK_ID, bookId)
+                        .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
+                        .onConflictDoNothing()
+                },
+            ).execute()
+        }
+    }
 
-        bookGenrePairs.size
+    private fun insertBookGenres(
+        dsl: DSLContext,
+        books: List<ParsedBook>,
+        genreIds: Map<String, Int>,
+    ) {
+        val pairs = books.flatMap { book ->
+            book.genres.map { genre -> book.bookId to genreIds.getValue(genre) }
+        }
+        pairs.chunked(CHUNK_SIZE).forEach { chunk ->
+            dsl.batch(
+                chunk.map { (bookId, genreId) ->
+                    dsl.insertInto(BOOK_GENRES)
+                        .set(BOOK_GENRES.BOOK_ID, bookId)
+                        .set(BOOK_GENRES.GENRE_ID, genreId)
+                        .onConflictDoNothing()
+                },
+            ).execute()
+        }
     }
 
     private fun parseBookLine(
@@ -333,7 +240,7 @@ class InpxParser(
         stats: ImportStats,
     ): ParsedBook? {
         return try {
-            val parts = line.split('\u0004') // Field separator in INP files
+            val parts = line.split('') // Field separator in INP files
             if (parts.size < 8) {
                 log.warn("Invalid line: $line")
                 stats.incInvalidBooks()
@@ -448,5 +355,32 @@ class InpxParser(
         }
     }
 
-    private companion object : Logger()
+    /**
+     * Assigns stable, sequential ids to distinct names and remembers which names
+     * still need to be inserted into the database.
+     */
+    private class IdRegistry {
+        val ids = HashMap<String, Int>()
+        private val pending = ArrayList<Pair<String, Int>>()
+        private var next = 1
+
+        val size: Int get() = ids.size
+
+        fun resolve(name: String): Int =
+            ids[name] ?: (next++).also { id ->
+                ids[name] = id
+                pending += name to id
+            }
+
+        fun drainPending(): List<Pair<String, Int>> {
+            if (pending.isEmpty()) return emptyList()
+            val out = ArrayList(pending)
+            pending.clear()
+            return out
+        }
+    }
+
+    private companion object : Logger() {
+        private const val CHUNK_SIZE = 1000
+    }
 }

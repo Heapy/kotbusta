@@ -29,38 +29,7 @@ import javax.sql.DataSource
  */
 class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolver {
     override fun beforeEach(context: ExtensionContext) {
-        // Use a temporary file-based database instead of in-memory
-        // This ensures proper persistence across connections
-        val dbUrl = Files
-            .createTempFile("test-kotbusta-", ".db")
-            .toAbsolutePath()
-            .toString()
-
-        val testEnv = mapOf(
-            "KOTBUSTA_DB_PATH" to dbUrl,
-            // Disable worker auto-start in tests
-            "KOTBUSTA_KINDLE_WORKER_INTERVAL_MS" to "0",
-            // Provide mock AWS credentials to prevent errors
-            "AWS_ACCESS_KEY_ID" to "test",
-            "AWS_SECRET_ACCESS_KEY" to "test",
-            "AWS_REGION" to "us-east-1",
-            // Provide required email config with test values
-            "KOTBUSTA_SES_SENDER_EMAIL" to "test@example.com",
-            // Provide required OAuth config with test values
-            "KOTBUSTA_GOOGLE_CLIENT_ID" to "test-client-id",
-            "KOTBUSTA_GOOGLE_CLIENT_SECRET" to "test-client-secret",
-            "KOTBUSTA_GOOGLE_REDIRECT_URI" to "http://localhost/callback",
-        )
-
-        // Create application module with test configuration
-        val applicationModule = ApplicationModule()
-        applicationModule.envOverrides.setValue(testEnv)
-
-        // Initialize database (runs migrations)
-        applicationModule.initializeDatabase()
-
-        // Load test fixtures using the same data source
-        loadTestFixtures(applicationModule.rwDataSource.value)
+        val applicationModule = createApplicationModule()
 
         // Store in test context
         context.getStore(NAMESPACE).put(APP_MODULE_KEY, applicationModule)
@@ -98,23 +67,6 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
         }
     }
 
-    private fun loadTestFixtures(dataSource: DataSource) {
-        // Load the test fixtures SQL file from test resources
-        val fixturesStream = this::class.java.classLoader
-            .getResourceAsStream("sql/test-fixtures.sql")
-            ?: throw IllegalStateException("test-fixtures.sql file not found in test resources")
-
-        val sql = fixturesStream.bufferedReader().use { it.readText() }
-
-        // Use JDBC connection directly to execute the SQL script
-        // This allows SQLite to handle multiple statements more reliably
-        dataSource.connection.use { conn ->
-            conn.createStatement().use { stmt ->
-                stmt.executeUpdate(sql)
-            }
-        }
-    }
-
     companion object {
         private val NAMESPACE = ExtensionContext.Namespace.create(DatabaseExtension::class.java)
         private const val APP_MODULE_KEY = "applicationModule"
@@ -123,6 +75,61 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
             return context.getStore(NAMESPACE)
                 .get(APP_MODULE_KEY, ApplicationModule::class.java)
                 ?: error("DatabaseExtension not registered")
+        }
+
+        fun createApplicationModule(
+            extraEnv: Map<String, String> = emptyMap(),
+        ): ApplicationModule {
+            // Use a temporary file-based database instead of in-memory
+            // This ensures proper persistence across connections
+            val dbUrl = Files
+                .createTempFile("test-kotbusta-", ".db")
+                .toAbsolutePath()
+                .toString()
+            val luceneIndexPath = Files
+                .createTempDirectory("test-kotbusta-lucene-")
+                .toAbsolutePath()
+                .toString()
+
+            val testEnv = mapOf(
+                "KOTBUSTA_DB_PATH" to dbUrl,
+                "KOTBUSTA_LUCENE_INDEX_PATH" to luceneIndexPath,
+                // Disable worker auto-start in tests
+                "KOTBUSTA_KINDLE_WORKER_INTERVAL_MS" to "0",
+                // Provide mock AWS credentials to prevent errors
+                "AWS_ACCESS_KEY_ID" to "test",
+                "AWS_SECRET_ACCESS_KEY" to "test",
+                "AWS_REGION" to "us-east-1",
+                // Provide required email config with test values
+                "KOTBUSTA_SES_SENDER_EMAIL" to "test@example.com",
+                // Provide required OAuth config with test values
+                "KOTBUSTA_GOOGLE_CLIENT_ID" to "test-client-id",
+                "KOTBUSTA_GOOGLE_CLIENT_SECRET" to "test-client-secret",
+                "KOTBUSTA_GOOGLE_REDIRECT_URI" to "http://localhost/callback",
+            ) + extraEnv
+
+            val applicationModule = ApplicationModule()
+            applicationModule.envOverrides.setValue(testEnv)
+            applicationModule.initializeDatabase()
+            loadTestFixtures(applicationModule.rwDataSource.value)
+            return applicationModule
+        }
+
+        fun loadTestFixtures(dataSource: DataSource) {
+            // Load the test fixtures SQL file from test resources
+            val fixturesStream = DatabaseExtension::class.java.classLoader
+                .getResourceAsStream("sql/test-fixtures.sql")
+                ?: throw IllegalStateException("test-fixtures.sql file not found in test resources")
+
+            val sql = fixturesStream.bufferedReader().use { it.readText() }
+
+            // Use JDBC connection directly to execute the SQL script
+            // This allows SQLite to handle multiple statements more reliably
+            dataSource.connection.use { conn ->
+                conn.createStatement().use { stmt ->
+                    stmt.executeUpdate(sql)
+                }
+            }
         }
     }
 }

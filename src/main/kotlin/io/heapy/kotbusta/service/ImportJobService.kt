@@ -17,6 +17,7 @@ import kotlin.time.Clock
 class ImportJobService(
     private val booksDataPath: Path,
     private val inpxParser: InpxParser,
+    private val bookSearchService: BookSearchService,
 ) {
     private val stats = AtomicReference(ImportStats())
     private val jobRunning = AtomicBoolean(false)
@@ -52,9 +53,10 @@ class ImportJobService(
                 jobStats.status.store(RUNNING)
                 try {
                     startDataImport(jobStats)
+                    bookSearchService.scheduleRebuild(applicationScope)
                     jobStats.status.store(COMPLETED)
                     jobStats.completedAt.store(Clock.System.now())
-                    jobStats.addMessage("Import completed successfully!")
+                    jobStats.addMessage("Import completed successfully! Lucene index rebuild scheduled.")
                     stopJob()
                 } catch (e: Exception) {
                     jobStats.status.store(FAILED)

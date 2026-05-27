@@ -5,16 +5,17 @@ services:
   service:
     image: "ghcr.io/heapy/kotbusta:main"
     restart: "always"
-    mem_limit: "256m"
-    memswap_limit: "0m"
+    mem_limit: "1024m"
+    memswap_limit: "1024m"
     environment:
-      KOTBUSTA_OPTS: "-Xmx200m"
+      KOTBUSTA_OPTS: "-Xmx640m"
       KOTBUSTA_GOOGLE_CLIENT_ID: "${KOTBUSTA_GOOGLE_CLIENT_ID}"
       KOTBUSTA_GOOGLE_CLIENT_SECRET: "${KOTBUSTA_GOOGLE_CLIENT_SECRET}"
       KOTBUSTA_GOOGLE_REDIRECT_URI: "${KOTBUSTA_GOOGLE_REDIRECT_URI}"
       KOTBUSTA_SESSION_SIGN_KEY: "${KOTBUSTA_SESSION_SIGN_KEY}"
       KOTBUSTA_SESSION_ENCRYPT_KEY: "${KOTBUSTA_SESSION_ENCRYPT_KEY}"
       KOTBUSTA_DB_PATH: "${KOTBUSTA_DB_PATH}"
+      KOTBUSTA_LUCENE_INDEX_PATH: "/data/db/lucene"
       KOTBUSTA_ADMIN_EMAIL: "${KOTBUSTA_ADMIN_EMAIL}"
       KOTBUSTA_BOOKS_DATA_PATH: "/data/books"
     volumes:

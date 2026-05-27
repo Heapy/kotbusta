@@ -10,7 +10,7 @@ A modern web application for browsing, searching, and downloading books that usi
 - 🔍 **Advanced Search**: Search by title, author, genre, and language
 - ⭐ **Favorites**: Star books and create personal collections
 - 📝 **Notes & Comments**: Add private notes and public comments
-- 📥 **Format Conversion**: Download books in FB2, EPUB, or MOBI formats
+- 📥 **Format Conversion**: Download books as the original FB2 or convert to EPUB (via Pandoc)
 - 🔐 **Google OAuth**: Secure authentication with Google accounts
 - 📱 **Responsive Design**: Works on desktop and mobile devices
 
@@ -19,6 +19,7 @@ A modern web application for browsing, searching, and downloading books that usi
 **Backend:**
 - Kotlin + Ktor
 - SQLite database with jOOQ
+- Embedded Lucene search index
 - Google OAuth authentication
 - RESTful API design
 
@@ -61,7 +62,8 @@ A modern web application for browsing, searching, and downloading books that usi
    - `KOTBUSTA_SESSION_SIGN_KEY` - Session signing key (will be auto-generated if not provided)
    - `KOTBUSTA_SESSION_ENCRYPT_KEY` - Session encryption key (will be auto-generated if not provided)
    - `KOTBUSTA_ADMIN_EMAIL` - Your admin email address
-   - `KOTBUSTA_DB_PATH` - Path to SQLite database file (optional, defaults to `kotbusta.db`)
+   - `KOTBUSTA_DB_PATH` - Path to SQLite database file (required; e.g. `/data/db/kotbusta.db`)
+   - `KOTBUSTA_LUCENE_INDEX_PATH` - Path to the Lucene search index (required; must be writable. In the prod compose it is set to `/data/db/lucene`)
    - `KOTBUSTA_BOOKS_DATA_PATH_LOCAL` - Local path to your Flibusta book archives
 
 3. **Prepare your Flibusta data**
@@ -151,7 +153,7 @@ A modern web application for browsing, searching, and downloading books that usi
 ### Authenticated Endpoints
 - `GET /api/user/info` - Get current user information
 - `GET /api/books` - List books with pagination
-- `GET /api/books/search` - Search books
+- `GET /api/search/books` - Search books
 - `GET /api/books/{id}` - Get book details
 - `GET /api/books/{id}/cover` - Get book cover image
 - `GET /api/books/{id}/similar` - Get similar books

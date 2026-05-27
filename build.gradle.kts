@@ -27,10 +27,14 @@ dependencies {
     implementation(libs.komok.tech.to.be.injected)
     implementation(libs.komok.tech.logging)
     implementation(libs.logback.classic)
+    implementation(libs.slf4j.jul.to.slf4j)
 
     implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.aws.sdk.ses)
+    implementation(libs.lucene.core)
+    implementation(libs.lucene.analysis.common)
+    implementation(libs.lucene.queryparser)
 
     testImplementation(ktorLibs.server.testHost)
 }
@@ -38,7 +42,7 @@ dependencies {
 application {
     applicationName = "kotbusta"
     mainClass.set("io.heapy.kotbusta.Application")
-    applicationDefaultJvmArgs = listOf()
+    applicationDefaultJvmArgs = listOf("--add-modules=jdk.incubator.vector")
 }
 
 tasks.distTar {
@@ -66,6 +70,10 @@ testing {
             useJUnitJupiter(libs.versions.junit)
         }
     }
+}
+
+tasks.test {
+    jvmArgs("--add-modules=jdk.incubator.vector")
 }
 
 jacoco {

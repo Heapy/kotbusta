@@ -5,7 +5,6 @@ import io.heapy.kotbusta.database.transaction
 import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.USER_STARS
 import io.heapy.kotbusta.ktor.UserSession
-import io.heapy.kotbusta.model.SearchQuery
 import io.heapy.kotbusta.test.DatabaseExtension
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -237,117 +236,6 @@ class BookQueriesTest {
         // Then: Should return 2 books with hasMore = true
         assertEquals(2, result.books.size)
         assertTrue(result.hasMore)
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `searchBooks should find books by title`() = transaction {
-        // Given: Books with "Harry Potter" in title
-        // When: Searching for "Harry"
-        val query = SearchQuery(
-            query = "Harry",
-            genre = null,
-            language = null,
-            author = null,
-            limit = 10,
-            offset = 0,
-        )
-        val result = with(user1Session) {
-            searchBooks(query)
-        }
-
-        // Then: Should return Harry Potter books
-        assertTrue(result.books.isNotEmpty())
-        assertTrue(result.books.any { it.title.contains("Harry") })
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `searchBooks should find books by author`() = transaction {
-        // Given: Books by J.K. Rowling
-        // When: Searching by author name
-        val query = SearchQuery(
-            query = "",
-            genre = null,
-            language = null,
-            author = "Rowling",
-            limit = 10,
-            offset = 0,
-        )
-        val result = with(user1Session) {
-            searchBooks(query)
-        }
-
-        // Then: Should return books by Rowling
-        assertTrue(result.books.isNotEmpty())
-        assertTrue(result.books.any { it.authors.any { author -> author.contains("Rowling") } })
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `searchBooks should filter by genre`() = transaction {
-        // Given: Books with Fantasy genre
-        // When: Searching by genre
-        val query = SearchQuery(
-            query = "",
-            genre = "Fantasy",
-            language = null,
-            author = null,
-            limit = 10,
-            offset = 0,
-        )
-        val result = with(user1Session) {
-            searchBooks(query)
-        }
-
-        // Then: Should return only Fantasy books
-        assertTrue(result.books.isNotEmpty())
-        assertTrue(result.books.all { it.genres.contains("Fantasy") })
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `searchBooks should filter by language`() = transaction {
-        // Given: Books in English
-        // When: Searching by language
-        val query = SearchQuery(
-            query = "",
-            genre = null,
-            language = "en",
-            author = null,
-            limit = 10,
-            offset = 0,
-        )
-        val result = with(user1Session) {
-            searchBooks(query)
-        }
-
-        // Then: Should return only English books
-        assertTrue(result.books.isNotEmpty())
-        assertTrue(result.books.all { it.language == "en" })
-    }
-
-    @Test
-    context(_: TransactionProvider)
-    fun `searchBooks should combine multiple filters`() = transaction {
-        // Given: Books in database
-        // When: Searching with multiple filters
-        val query = SearchQuery(
-            query = "Harry",
-            genre = "Fantasy",
-            language = "en",
-            author = null,
-            limit = 10,
-            offset = 0,
-        )
-        val result = with(user1Session) {
-            searchBooks(query)
-        }
-
-        // Then: Should return books matching all criteria
-        assertTrue(result.books.isNotEmpty())
-        assertTrue(result.books.all { it.genres.contains("Fantasy") && it.language == "en" })
-        assertTrue(result.books.any { it.title.contains("Harry") })
     }
 
     @Test

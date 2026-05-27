@@ -7,7 +7,6 @@ import io.heapy.kotbusta.ktor.routes.auth.googleOauthRoutes
 import io.heapy.kotbusta.ktor.routes.auth.loginRoute
 import io.heapy.kotbusta.ktor.routes.auth.logoutRoute
 import io.heapy.kotbusta.ktor.routes.books.addBookCommentRoute
-import io.heapy.kotbusta.ktor.routes.books.bookSearchRoute
 import io.heapy.kotbusta.ktor.routes.books.downloadBookRoute
 import io.heapy.kotbusta.ktor.routes.books.getBookByIdRoute
 import io.heapy.kotbusta.ktor.routes.books.getBookCommentsRoute
@@ -21,6 +20,7 @@ import io.heapy.kotbusta.ktor.routes.comments.deleteCommentRoute
 import io.heapy.kotbusta.ktor.routes.comments.updateCommentRoute
 import io.heapy.kotbusta.ktor.routes.notes.addOrUpdateNoteRoute
 import io.heapy.kotbusta.ktor.routes.notes.deleteNoteRoute
+import io.heapy.kotbusta.ktor.routes.search.searchBooksRoute
 import io.heapy.kotbusta.ktor.routes.staticFilesRoute
 import io.heapy.kotbusta.ktor.routes.user.userInfoRoute
 import io.heapy.kotbusta.ktor.routes.kindle.getDevicesRoute
@@ -45,8 +45,8 @@ fun Application.configureRouting() {
             authenticate("auth-session") {
                 adminRoutes()
                 userInfoRoute()
+                searchBooksRoute()
                 getBooksRoute()
-                bookSearchRoute()
                 getBookByIdRoute()
                 getSimilarBooksRoute()
                 getBookCoverRoute()

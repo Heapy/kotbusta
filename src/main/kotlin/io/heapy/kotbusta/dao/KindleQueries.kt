@@ -185,12 +185,12 @@ fun findQueueItemsByUserId(
         .offset(offset)
         .fetch().map { record ->
             SendHistoryResponse(
-                id = record.get(KINDLE_SEND_QUEUE.ID),
-                deviceName = record.get(KINDLE_DEVICES.NAME),
-                bookTitle = record.get(BOOKS.TITLE),
-                format = record.get(KINDLE_SEND_QUEUE.FORMAT) mapUsing KindleFormatMapper,
-                status = record.get(KINDLE_SEND_QUEUE.STATUS) mapUsing KindleSendStatusMapper,
-                createdAt = record.get(KINDLE_SEND_QUEUE.CREATED_AT),
+                id = record.get(KINDLE_SEND_QUEUE.ID)!!,
+                deviceName = record.get(KINDLE_DEVICES.NAME)!!,
+                bookTitle = record.get(BOOKS.TITLE)!!,
+                format = record.get(KINDLE_SEND_QUEUE.FORMAT)!! mapUsing KindleFormatMapper,
+                status = record.get(KINDLE_SEND_QUEUE.STATUS)!! mapUsing KindleSendStatusMapper,
+                createdAt = record.get(KINDLE_SEND_QUEUE.CREATED_AT)!!,
                 lastError = record.get(KINDLE_SEND_QUEUE.LAST_ERROR),
             )
         }

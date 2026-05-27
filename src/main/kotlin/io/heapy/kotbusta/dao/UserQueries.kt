@@ -95,11 +95,11 @@ fun getUserInfo(): UserInfo? = useTx { dslContext ->
         .where(USERS.ID.eq(userSession.userId))
         .fetchOne { record ->
             UserInfo(
-                userId = record.get(USERS.ID),
-                email = record.get(USERS.EMAIL),
-                name = record.get(USERS.NAME),
+                userId = record.get(USERS.ID)!!,
+                email = record.get(USERS.EMAIL)!!,
+                name = record.get(USERS.NAME)!!,
                 avatarUrl = record.get(USERS.AVATAR_URL),
-                status = record.get(USERS.STATUS) mapUsing UserStatusMapper,
+                status = record.get(USERS.STATUS)!! mapUsing UserStatusMapper,
             )
         }
 }
@@ -128,14 +128,14 @@ fun listPendingUsers(
         .offset(offset)
         .fetch { record ->
             User(
-                id = record.get(USERS.ID),
-                googleId = record.get(USERS.GOOGLE_ID),
-                email = record.get(USERS.EMAIL),
-                name = record.get(USERS.NAME),
+                id = record.get(USERS.ID)!!,
+                googleId = record.get(USERS.GOOGLE_ID)!!,
+                email = record.get(USERS.EMAIL)!!,
+                name = record.get(USERS.NAME)!!,
                 avatarUrl = record.get(USERS.AVATAR_URL),
-                status = record.get(USERS.STATUS) mapUsing UserStatusMapper,
-                createdAt = record.get(USERS.CREATED_AT),
-                updatedAt = record.get(USERS.UPDATED_AT),
+                status = record.get(USERS.STATUS)!! mapUsing UserStatusMapper,
+                createdAt = record.get(USERS.CREATED_AT)!!,
+                updatedAt = record.get(USERS.UPDATED_AT)!!,
             )
         }
 }

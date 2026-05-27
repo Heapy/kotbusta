@@ -31,7 +31,7 @@ export function BooksList({ starred = false, onSelectBook, initialOffset = 0, on
           limit,
           offset
         });
-        url = `/api/books/search?${params}`;
+        url = `/api/search/books?${params}`;
       } else if (starred) {
         url = `/api/books/starred?limit=${limit}&offset=${offset}`;
       } else {

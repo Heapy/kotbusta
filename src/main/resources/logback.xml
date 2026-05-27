@@ -1,4 +1,10 @@
 <configuration>
+    <!-- Propagate logback levels to java.util.logging so the jul-to-slf4j bridge
+         can skip disabled log calls instead of routing every record through SLF4J. -->
+    <contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+        <resetJUL>true</resetJUL>
+    </contextListener>
+
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} -%kvp- %msg%n</pattern>

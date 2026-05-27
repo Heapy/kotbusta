@@ -1,6 +1,7 @@
 package io.heapy.kotbusta.ktor
 
 import io.heapy.kotbusta.model.ApiResponse
+import io.heapy.kotbusta.service.SearchIndexNotReadyException
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
@@ -22,6 +23,15 @@ fun Application.configureStatusPages() {
             call.respond(
                 ApiResponse.Error(
                     message = "404: ${cause.message}",
+                )
+            )
+        }
+
+        exception<SearchIndexNotReadyException> { call, cause ->
+            call.response.status(HttpStatusCode.ServiceUnavailable)
+            call.respond(
+                ApiResponse.Error(
+                    message = "503: ${cause.message}",
                 )
             )
         }

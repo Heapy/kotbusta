@@ -13,11 +13,13 @@ import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.AdminService
+import io.heapy.kotbusta.service.BookSearchService
 import io.heapy.kotbusta.service.CoverService
 import io.heapy.kotbusta.service.DefaultTimeService
 import io.heapy.kotbusta.service.EmailService
 import io.heapy.kotbusta.service.ImportJobService
 import io.heapy.kotbusta.service.KindleService
+import io.heapy.kotbusta.service.LuceneBookSearchService
 import io.heapy.kotbusta.service.PandocConversionService
 import io.heapy.kotbusta.service.TimeService
 import io.heapy.kotbusta.service.UserService
@@ -94,7 +96,13 @@ class ApplicationModule {
     val booksDataPath by bean {
         env["KOTBUSTA_BOOKS_DATA_PATH"]
             ?.let(::Path)
-            ?: Path("data", "books")
+            ?: error("KOTBUSTA_BOOKS_DATA_PATH not found")
+    }
+
+    val luceneIndexPath by bean {
+        env["KOTBUSTA_LUCENE_INDEX_PATH"]
+            ?.let(::Path)
+            ?: error("KOTBUSTA_LUCENE_INDEX_PATH not found")
     }
 
     val sessionConfig by bean {
@@ -164,6 +172,14 @@ class ApplicationModule {
         ImportJobService(
             booksDataPath = booksDataPath.value,
             inpxParser = inpxParser.value,
+            bookSearchService = bookSearchService.value,
+        )
+    }
+
+    val bookSearchService: MutableBean<BookSearchService> by bean {
+        LuceneBookSearchService(
+            transactionProvider = transactionProvider.value,
+            indexPath = luceneIndexPath.value,
         )
     }
 
@@ -240,7 +256,9 @@ class ApplicationModule {
     }
 
     val dbPath by bean {
-        env["KOTBUSTA_DB_PATH"] ?: "kotbusta.db"
+        env["KOTBUSTA_DB_PATH"]
+            ?.let(::Path)
+            ?: error("KOTBUSTA_DB_PATH not configured")
     }
 
     val roDataSource by bean {
@@ -277,10 +295,27 @@ class ApplicationModule {
     }
 
     fun initializeKindleSendWorker() {
-        kindleSendWorker.value.start(
-            scope = workerScope,
-            intervalMillis = kindleWorkerIntervalMs.value,
-        )
+        // Kindle delivery is optional: only start the worker when both the interval
+        // and the SES sender are configured. This keeps the core app (search,
+        // download, conversion) runnable without any AWS/SES configuration.
+        val senderEmail = env["KOTBUSTA_SES_SENDER_EMAIL"]
+        when {
+            kindleWorkerIntervalMs.value <= 0L ->
+                log.info("Kindle send worker disabled because interval is ${kindleWorkerIntervalMs.value}ms")
+
+            senderEmail.isNullOrBlank() ->
+                log.info("Kindle send worker disabled because KOTBUSTA_SES_SENDER_EMAIL is not configured")
+
+            else ->
+                kindleSendWorker.value.start(
+                    scope = workerScope,
+                    intervalMillis = kindleWorkerIntervalMs.value,
+                )
+        }
+    }
+
+    fun initializeSearchService() {
+        bookSearchService.value.initialize(workerScope)
     }
 
     fun stopKindleSendWorker() {
@@ -290,6 +325,12 @@ class ApplicationModule {
         workerScope.cancel()
     }
 
+    fun stopSearchService() {
+        if (bookSearchService.isInitialized) {
+            bookSearchService.value.close()
+        }
+    }
+
     fun stopHttpClient() {
         if (httpClient.isInitialized) {
             httpClient.value.close()
@@ -297,6 +338,7 @@ class ApplicationModule {
     }
 
     fun close() {
+        stopSearchService()
         stopKindleSendWorker()
         stopHttpClient()
     }
@@ -311,6 +353,7 @@ class ApplicationModule {
 
     fun initialize() {
         initializeDatabase()
+        initializeSearchService()
         initializeKindleSendWorker()
         initializeShutdownHook()
     }
