@@ -90,10 +90,15 @@ class DatabaseExtension : BeforeEachCallback, AfterEachCallback, ParameterResolv
                 .createTempDirectory("test-kotbusta-lucene-")
                 .toAbsolutePath()
                 .toString()
+            val booksDataPath = Files
+                .createTempDirectory("test-kotbusta-books-")
+                .toAbsolutePath()
+                .toString()
 
             val testEnv = mapOf(
                 "KOTBUSTA_DB_PATH" to dbUrl,
                 "KOTBUSTA_LUCENE_INDEX_PATH" to luceneIndexPath,
+                "KOTBUSTA_BOOKS_DATA_PATH" to booksDataPath,
                 // Disable worker auto-start in tests
                 "KOTBUSTA_KINDLE_WORKER_INTERVAL_MS" to "0",
                 // Provide mock AWS credentials to prevent errors
