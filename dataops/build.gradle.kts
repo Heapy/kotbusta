@@ -15,7 +15,9 @@ dependencies {
     implementation(libs.logback.classic)
 }
 
-tasks.register<JavaExec>("migrate") {
+tasks.register<JavaExec>("regenerateJooq") {
+    group = "development"
+    description = "Drops local codegen DB, runs migrations, regenerates jOOQ classes."
     mainClass.set("GenerateJooqClasses")
     workingDir = rootDir
     classpath = sourceSets["main"].runtimeClasspath
