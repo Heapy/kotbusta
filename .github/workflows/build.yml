@@ -12,7 +12,7 @@ jobs:
     name: "Build Application"
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
         with:
           java-version: "25"
@@ -35,7 +35,7 @@ jobs:
       packages: write
     needs: build
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: "Kotlin Application"
