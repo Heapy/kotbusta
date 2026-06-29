@@ -4,12 +4,12 @@ komok = "1.1.0"
 kotlin = "2.4.0"
 kotlinx-serialization = "1.11.0"
 kotlinx-coroutines = "1.11.0"
-logback = "1.5.34"
+logback = "1.5.37"
 slf4j = "2.0.18"
 sqlite = "3.53.2.0"
 junit = "6.1.0"
-aws-sdk = "1.6.100"
-lucene = "10.4.0"
+aws-sdk = "1.6.102"
+lucene = "10.5.0"
 
 [libraries]
 jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
