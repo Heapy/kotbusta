@@ -81,6 +81,7 @@ class InpxParser(
             ZipFile(inpxFilePath.toString()).use { zipFile ->
                 val entries = zipFile.entries().asSequence()
                     .filter { it.name.endsWith(".inp") }
+                    .sortedBy { it.name }
                     .toList()
 
                 stats.addMessage("Found ${entries.size} .inp files to process")
@@ -93,6 +94,7 @@ class InpxParser(
                         .useLines { lines ->
                             lines.mapNotNull { line -> parseBookLine(line, archiveName, stats) }.toList()
                         }
+                        .deduplicateByBookId(stats)
 
                     if (books.isNotEmpty()) {
                         transactionProvider.transaction(READ_WRITE) {
@@ -205,31 +207,159 @@ class InpxParser(
         genreIds: MutableMap<String, Int>,
         createdAt: Instant,
     ) = useTx { dsl ->
+        val canonicalBooks = filterCanonicalBooks(dsl, staging, books)
+        if (canonicalBooks.isEmpty()) return@useTx
+
         resolveNames(
             dsl = dsl,
             table = staging.authors,
             nameColumn = "FULL_NAME",
-            names = books.flatMapTo(HashSet(), ParsedBook::authors),
+            names = canonicalBooks.flatMapTo(HashSet(), ParsedBook::authors),
             cache = authorIds,
         )
         resolveNames(
             dsl = dsl,
             table = staging.series,
             nameColumn = "NAME",
-            names = books.mapNotNullTo(HashSet(), ParsedBook::series),
+            names = canonicalBooks.mapNotNullTo(HashSet(), ParsedBook::series),
             cache = seriesIds,
         )
         resolveNames(
             dsl = dsl,
             table = staging.genres,
             nameColumn = "NAME",
-            names = books.flatMapTo(HashSet(), ParsedBook::genres),
+            names = canonicalBooks.flatMapTo(HashSet(), ParsedBook::genres),
             cache = genreIds,
         )
 
-        insertBooks(dsl, staging, books, seriesIds, createdAt)
-        insertBookAuthors(dsl, staging, books, authorIds)
-        insertBookGenres(dsl, staging, books, genreIds)
+        replaceExistingStagedBooks(dsl, staging, canonicalBooks.mapTo(HashSet(), ParsedBook::bookId))
+        insertBooks(dsl, staging, canonicalBooks, seriesIds, createdAt)
+        insertBookAuthors(dsl, staging, canonicalBooks, authorIds)
+        insertBookGenres(dsl, staging, canonicalBooks, genreIds)
+    }
+
+    private fun List<ParsedBook>.deduplicateByBookId(stats: ImportStats): List<ParsedBook> {
+        if (size < 2) return this
+
+        val booksById = LinkedHashMap<Int, ParsedBook>(size)
+        var duplicates = 0
+        for (book in this) {
+            if (booksById.put(book.bookId, book) != null) {
+                duplicates += 1
+            }
+        }
+
+        if (duplicates > 0) {
+            stats.addMessage(
+                "Found $duplicates duplicate book record(s) in one INP file; keeping the last record for each ID",
+            )
+        }
+
+        return booksById.values.toList()
+    }
+
+    private fun filterCanonicalBooks(
+        dsl: DSLContext,
+        staging: StagingTables,
+        books: List<ParsedBook>,
+    ): List<ParsedBook> {
+        val existingArchivePaths = selectExistingArchivePaths(
+            dsl = dsl,
+            staging = staging,
+            bookIds = books.mapTo(HashSet(), ParsedBook::bookId),
+        )
+
+        return books.filter { book ->
+            val existingArchivePath = existingArchivePaths[book.bookId]
+                ?: return@filter true
+
+            shouldReplaceStagedBook(
+                bookId = book.bookId,
+                existingArchivePath = existingArchivePath,
+                incomingArchivePath = book.archivePath,
+            )
+        }
+    }
+
+    private fun shouldReplaceStagedBook(
+        bookId: Int,
+        existingArchivePath: String,
+        incomingArchivePath: String,
+    ): Boolean {
+        val existingContainsBook = archiveContainsBook(existingArchivePath, bookId)
+        val incomingContainsBook = archiveContainsBook(incomingArchivePath, bookId)
+
+        return when {
+            incomingContainsBook && !existingContainsBook -> true
+            existingContainsBook && !incomingContainsBook -> false
+            else -> true
+        }
+    }
+
+    private fun archiveContainsBook(
+        archivePath: String,
+        bookId: Int,
+    ): Boolean {
+        val range = ARCHIVE_RANGE_REGEX.matchEntire(archivePath)
+            ?.let { match ->
+                val start = match.groupValues[1].toIntOrNull()
+                val end = match.groupValues[2].toIntOrNull()
+                if (start != null && end != null && start <= end) {
+                    start..end
+                } else {
+                    null
+                }
+            }
+
+        return range?.contains(bookId) == true
+    }
+
+    private fun selectExistingArchivePaths(
+        dsl: DSLContext,
+        staging: StagingTables,
+        bookIds: Set<Int>,
+    ): Map<Int, String> {
+        if (bookIds.isEmpty()) return emptyMap()
+
+        return buildMap {
+            bookIds.chunked(CHUNK_SIZE).forEach { chunk ->
+                val placeholders = chunk.joinToString(", ") { "?" }
+                dsl.resultQuery(
+                    "SELECT ID, ARCHIVE_PATH FROM ${staging.books} WHERE ID IN ($placeholders)",
+                    *chunk.toTypedArray(),
+                ).fetch().forEach { record ->
+                    put(
+                        record.get("ID", Int::class.java),
+                        record.get("ARCHIVE_PATH", String::class.java),
+                    )
+                }
+            }
+        }
+    }
+
+    private fun replaceExistingStagedBooks(
+        dsl: DSLContext,
+        staging: StagingTables,
+        bookIds: Set<Int>,
+    ) {
+        deleteRowsByBookIds(dsl, staging.bookAuthors, "BOOK_ID", bookIds)
+        deleteRowsByBookIds(dsl, staging.bookGenres, "BOOK_ID", bookIds)
+        deleteRowsByBookIds(dsl, staging.books, "ID", bookIds)
+    }
+
+    private fun deleteRowsByBookIds(
+        dsl: DSLContext,
+        table: String,
+        idColumn: String,
+        bookIds: Set<Int>,
+    ) {
+        bookIds.chunked(CHUNK_SIZE).forEach { chunk ->
+            val placeholders = chunk.joinToString(", ") { "?" }
+            dsl.query(
+                "DELETE FROM $table WHERE ${quoteIdentifier(idColumn)} IN ($placeholders)",
+                *chunk.toTypedArray(),
+            ).execute()
+        }
     }
 
     private fun resolveNames(
@@ -322,7 +452,7 @@ class InpxParser(
         authorIds: Map<String, Int>,
     ) {
         val pairs = books.flatMap { book ->
-            book.authors.map { author -> book.bookId to authorIds.getValue(author) }
+            book.authors.distinct().map { author -> book.bookId to authorIds.getValue(author) }
         }
         pairs.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
@@ -344,7 +474,7 @@ class InpxParser(
         genreIds: Map<String, Int>,
     ) {
         val pairs = books.flatMap { book ->
-            book.genres.map { genre -> book.bookId to genreIds.getValue(genre) }
+            book.genres.distinct().map { genre -> book.bookId to genreIds.getValue(genre) }
         }
         pairs.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
@@ -545,5 +675,6 @@ class InpxParser(
 
     private companion object : Logger() {
         private const val CHUNK_SIZE = 1000
+        private val ARCHIVE_RANGE_REGEX = Regex(""".*?(\d+)-(\d+)$""")
     }
 }
