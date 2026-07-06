@@ -5,9 +5,8 @@ import io.heapy.kotbusta.dao.getBookById
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
-import io.heapy.kotbusta.model.ApiResponse.Error
+import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Success
-import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
@@ -17,21 +16,14 @@ fun Route.getBookByIdRoute() {
 
     get("/books/{id}") {
         requireApprovedUser {
-            val bookId = call.parameters["id"]?.toIntOrNull()
+            val bookId = call.requiredParameter<Int>("id")
+            val book = transactionProvider
+                .transaction(READ_ONLY) {
+                    getBookById(bookId)
+                }
                 ?: notFoundError("Book not found")
-            val book = transactionProvider.transaction(READ_ONLY) {
-                getBookById(bookId)
-            }
-            if (book != null) {
-                call.respond(Success(data = book))
-            } else {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    Error(
-                        message = "Book not found",
-                    ),
-                )
-            }
+
+            call.respond(Success(data = book))
         }
     }
 }

@@ -6,14 +6,14 @@ package io.heapy.kotbusta.jooq.indexes
 
 
 import io.heapy.kotbusta.jooq.tables.Authors
+import io.heapy.kotbusta.jooq.tables.BookAuthors
+import io.heapy.kotbusta.jooq.tables.BookEnrichment
 import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
-import io.heapy.kotbusta.jooq.tables.Downloads
 import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
-import io.heapy.kotbusta.jooq.tables.UserComments
 
 import org.jooq.Index
 import org.jooq.impl.DSL
@@ -26,12 +26,14 @@ import org.jooq.impl.Internal
 // -------------------------------------------------------------------------
 
 val IDX_AUTHORS_NAME: Index = Internal.createIndex(DSL.name("IDX_AUTHORS_NAME"), Authors.AUTHORS, arrayOf(Authors.AUTHORS.FULL_NAME), false)
+val IDX_BOOK_AUTHORS_AUTHOR: Index = Internal.createIndex(DSL.name("IDX_BOOK_AUTHORS_AUTHOR"), BookAuthors.BOOK_AUTHORS, arrayOf(BookAuthors.BOOK_AUTHORS.AUTHOR_ID), false)
+val IDX_BOOK_AUTHORS_BOOK: Index = Internal.createIndex(DSL.name("IDX_BOOK_AUTHORS_BOOK"), BookAuthors.BOOK_AUTHORS, arrayOf(BookAuthors.BOOK_AUTHORS.BOOK_ID), false)
+val IDX_BOOK_ENRICHMENT_STATUS: Index = Internal.createIndex(DSL.name("IDX_BOOK_ENRICHMENT_STATUS"), BookEnrichment.BOOK_ENRICHMENT, arrayOf(BookEnrichment.BOOK_ENRICHMENT.STATUS), false)
 val IDX_BOOK_GENRES_BOOK: Index = Internal.createIndex(DSL.name("IDX_BOOK_GENRES_BOOK"), BookGenres.BOOK_GENRES, arrayOf(BookGenres.BOOK_GENRES.BOOK_ID), false)
 val IDX_BOOK_GENRES_GENRE: Index = Internal.createIndex(DSL.name("IDX_BOOK_GENRES_GENRE"), BookGenres.BOOK_GENRES, arrayOf(BookGenres.BOOK_GENRES.GENRE_ID), false)
 val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_LANGUAGE"), Books.BOOKS, arrayOf(Books.BOOKS.LANGUAGE), false)
 val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("IDX_BOOKS_SERIES"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)
 val IDX_BOOKS_TITLE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_TITLE"), Books.BOOKS, arrayOf(Books.BOOKS.TITLE), false)
-val IDX_DOWNLOADS_RECENT: Index = Internal.createIndex(DSL.name("IDX_DOWNLOADS_RECENT"), Downloads.DOWNLOADS, arrayOf(Downloads.DOWNLOADS.CREATED_AT), false)
 val IDX_GENRES_NAME: Index = Internal.createIndex(DSL.name("IDX_GENRES_NAME"), Genres.GENRES, arrayOf(Genres.GENRES.NAME), false)
 val IDX_KINDLE_DEVICES_EMAIL: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_EMAIL"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.EMAIL), false)
 val IDX_KINDLE_DEVICES_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_USER"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID), false)
@@ -42,5 +44,3 @@ val IDX_KINDLE_SEND_QUEUE_DEVICE: Index = Internal.createIndex(DSL.name("IDX_KIN
 val IDX_KINDLE_SEND_QUEUE_NEXT_RUN: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_NEXT_RUN"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.NEXT_RUN_AT), false)
 val IDX_KINDLE_SEND_QUEUE_STATUS: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_STATUS"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.STATUS), false)
 val IDX_KINDLE_SEND_QUEUE_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_USER"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.USER_ID), false)
-val IDX_USER_COMMENTS_BOOK: Index = Internal.createIndex(DSL.name("IDX_USER_COMMENTS_BOOK"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.BOOK_ID), false)
-val IDX_USER_COMMENTS_USER: Index = Internal.createIndex(DSL.name("IDX_USER_COMMENTS_USER"), UserComments.USER_COMMENTS, arrayOf(UserComments.USER_COMMENTS.USER_ID), false)

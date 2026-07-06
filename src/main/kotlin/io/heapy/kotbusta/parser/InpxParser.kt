@@ -5,18 +5,13 @@ import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.database.useTx
-import io.heapy.kotbusta.jooq.tables.references.AUTHORS
-import io.heapy.kotbusta.jooq.tables.references.BOOKS
-import io.heapy.kotbusta.jooq.tables.references.BOOK_AUTHORS
-import io.heapy.kotbusta.jooq.tables.references.BOOK_GENRES
-import io.heapy.kotbusta.jooq.tables.references.GENRES
-import io.heapy.kotbusta.jooq.tables.references.SERIES
 import io.heapy.kotbusta.model.ImportStats
 import io.heapy.kotbusta.service.TimeService
 import org.jooq.DSLContext
 import java.nio.file.Path
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import java.util.zip.ZipFile
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -41,11 +36,28 @@ class InpxParser(
         val dateAdded: Instant,
     )
 
+    private data class StagingTables(
+        val books: String,
+        val authors: String,
+        val series: String,
+        val genres: String,
+        val bookAuthors: String,
+        val bookGenres: String,
+    ) {
+        val allChildrenFirst: List<String> = listOf(
+            bookAuthors,
+            bookGenres,
+            books,
+            authors,
+            series,
+            genres,
+        )
+    }
+
     /**
-     * Streams the INPX file-by-file, persisting each `.inp` entry in its own
-     * transaction with chunked, conflict-safe inserts. Only the (bounded) author/
-     * series/genre id registries are held across the whole import, so peak memory
-     * stays small even for libraries with hundreds of thousands of books.
+     * Loads the INPX into per-run staging tables first, then swaps the live
+     * catalog in one transaction. Until the final swap commits, readers continue
+     * to see the previous live catalog.
      */
     suspend fun parseAndImport(
         booksDataPath: Path,
@@ -55,120 +67,222 @@ class InpxParser(
         val inpxFilePath = booksDataPath.resolve("flibusta_fb2_local.inpx")
         stats.addMessage("Starting INPX parsing from: $inpxFilePath")
 
-        // Reset target tables once, before streaming inserts.
-        transactionProvider.transaction(READ_WRITE) {
-            truncateAll()
-        }
+        val staging = newStagingTables()
+        val authorIds = HashMap<String, Int>()
+        val seriesIds = HashMap<String, Int>()
+        val genreIds = HashMap<String, Int>()
 
-        val authors = IdRegistry()
-        val series = IdRegistry()
-        val genres = IdRegistry()
-
-        ZipFile(inpxFilePath.toString()).use { zipFile ->
-            val entries = zipFile.entries().asSequence()
-                .filter { it.name.endsWith(".inp") }
-                .toList()
-
-            stats.addMessage("Found ${entries.size} .inp files to process")
-
-            entries.forEachIndexed { index, entry ->
-                stats.incInpFiles()
-                val archiveName = entry.name.removeSuffix(".inp")
-
-                val books = zipFile.getInputStream(entry)
-                    .bufferedReader(Charsets.UTF_8)
-                    .useLines { lines ->
-                        lines.mapNotNull { line -> parseBookLine(line, archiveName, stats) }.toList()
-                    }
-
-                if (books.isNotEmpty()) {
-                    transactionProvider.transaction(READ_WRITE) {
-                        persist(books, authors, series, genres, createdAt)
-                    }
-                }
-
-                stats.addMessage("Processed ${entry.name} (${index + 1}/${entries.size}): ${books.size} books")
+        try {
+            transactionProvider.transaction(READ_WRITE) {
+                cleanupStaleStagingTables()
+                createStagingTables(staging)
             }
-        }
 
-        stats.addMessage(
-            "INPX import completed: ${stats.booksAdded.load()} books, " +
-                "${authors.size} authors, ${series.size} series, ${genres.size} genres",
+            ZipFile(inpxFilePath.toString()).use { zipFile ->
+                val entries = zipFile.entries().asSequence()
+                    .filter { it.name.endsWith(".inp") }
+                    .toList()
+
+                stats.addMessage("Found ${entries.size} .inp files to process")
+
+                entries.forEachIndexed { index, entry ->
+                    stats.incInpFiles()
+                    val archiveName = entry.name.removeSuffix(".inp")
+                    val books = zipFile.getInputStream(entry)
+                        .bufferedReader(Charsets.UTF_8)
+                        .useLines { lines ->
+                            lines.mapNotNull { line -> parseBookLine(line, archiveName, stats) }.toList()
+                        }
+
+                    if (books.isNotEmpty()) {
+                        transactionProvider.transaction(READ_WRITE) {
+                            persistToStaging(
+                                staging = staging,
+                                books = books,
+                                authorIds = authorIds,
+                                seriesIds = seriesIds,
+                                genreIds = genreIds,
+                                createdAt = createdAt,
+                            )
+                        }
+                    }
+
+                    stats.addMessage("Processed ${entry.name} (${index + 1}/${entries.size}): ${books.size} books")
+                }
+            }
+
+            transactionProvider.transaction(READ_WRITE) {
+                swapLiveCatalog(staging)
+                dropStagingTables(staging)
+            }
+
+            stats.addMessage(
+                "INPX import completed: ${stats.booksAdded.load()} books, " +
+                    "${stats.booksDeleted.load()} deleted records skipped, ${authorIds.size} authors, " +
+                    "${seriesIds.size} series, ${genreIds.size} genres",
+            )
+        } catch (e: Exception) {
+            bestEffortDrop(staging)
+            throw e
+        }
+    }
+
+    context(_: TransactionContext)
+    private fun createStagingTables(staging: StagingTables) = useTx { dsl ->
+        dsl.execute(
+            """
+            CREATE TABLE ${staging.authors}
+            (
+                ID        INTEGER PRIMARY KEY AUTOINCREMENT,
+                FULL_NAME TEXT NOT NULL
+            )
+            """.trimIndent(),
+        )
+        dsl.execute(
+            """
+            CREATE TABLE ${staging.series}
+            (
+                ID   INTEGER PRIMARY KEY AUTOINCREMENT,
+                NAME TEXT NOT NULL
+            )
+            """.trimIndent(),
+        )
+        dsl.execute(
+            """
+            CREATE TABLE ${staging.genres}
+            (
+                ID   INTEGER PRIMARY KEY AUTOINCREMENT,
+                NAME TEXT UNIQUE NOT NULL
+            )
+            """.trimIndent(),
+        )
+        dsl.execute(
+            """
+            CREATE TABLE ${staging.books}
+            (
+                ID            INTEGER PRIMARY KEY,
+                TITLE         TEXT NOT NULL,
+                LANGUAGE      TEXT NOT NULL,
+                SERIES_ID     INTEGER,
+                SERIES_NUMBER INTEGER,
+                FILE_FORMAT   TEXT NOT NULL,
+                FILE_PATH     TEXT NOT NULL,
+                ARCHIVE_PATH  TEXT NOT NULL,
+                FILE_SIZE     INTEGER,
+                DATE_ADDED    TEXT NOT NULL,
+                CREATED_AT    TEXT NOT NULL
+            )
+            """.trimIndent(),
+        )
+        dsl.execute(
+            """
+            CREATE TABLE ${staging.bookAuthors}
+            (
+                BOOK_ID   INTEGER NOT NULL,
+                AUTHOR_ID INTEGER NOT NULL,
+                PRIMARY KEY (BOOK_ID, AUTHOR_ID)
+            )
+            """.trimIndent(),
+        )
+        dsl.execute(
+            """
+            CREATE TABLE ${staging.bookGenres}
+            (
+                BOOK_ID  INTEGER NOT NULL,
+                GENRE_ID INTEGER NOT NULL,
+                PRIMARY KEY (BOOK_ID, GENRE_ID)
+            )
+            """.trimIndent(),
         )
     }
 
     context(_: TransactionContext)
-    private fun truncateAll() = useTx { dsl ->
-        dsl.truncateTable(BOOK_GENRES).execute()
-        dsl.truncateTable(BOOK_AUTHORS).execute()
-        dsl.truncateTable(BOOKS).execute()
-        dsl.truncateTable(GENRES).execute()
-        dsl.truncateTable(AUTHORS).execute()
-        dsl.truncateTable(SERIES).execute()
-    }
-
-    context(_: TransactionContext)
-    private fun persist(
+    private fun persistToStaging(
+        staging: StagingTables,
         books: List<ParsedBook>,
-        authors: IdRegistry,
-        series: IdRegistry,
-        genres: IdRegistry,
+        authorIds: MutableMap<String, Int>,
+        seriesIds: MutableMap<String, Int>,
+        genreIds: MutableMap<String, Int>,
         createdAt: Instant,
     ) = useTx { dsl ->
-        // Resolve ids first; newly seen names are queued for insertion.
-        books.forEach { book ->
-            book.authors.forEach(authors::resolve)
-            book.series?.let(series::resolve)
-            book.genres.forEach(genres::resolve)
-        }
+        resolveNames(
+            dsl = dsl,
+            table = staging.authors,
+            nameColumn = "FULL_NAME",
+            names = books.flatMapTo(HashSet(), ParsedBook::authors),
+            cache = authorIds,
+        )
+        resolveNames(
+            dsl = dsl,
+            table = staging.series,
+            nameColumn = "NAME",
+            names = books.mapNotNullTo(HashSet(), ParsedBook::series),
+            cache = seriesIds,
+        )
+        resolveNames(
+            dsl = dsl,
+            table = staging.genres,
+            nameColumn = "NAME",
+            names = books.flatMapTo(HashSet(), ParsedBook::genres),
+            cache = genreIds,
+        )
 
-        insertAuthors(dsl, authors.drainPending())
-        insertSeries(dsl, series.drainPending())
-        insertGenres(dsl, genres.drainPending())
-
-        insertBooks(dsl, books, series.ids, createdAt)
-        insertBookAuthors(dsl, books, authors.ids)
-        insertBookGenres(dsl, books, genres.ids)
+        insertBooks(dsl, staging, books, seriesIds, createdAt)
+        insertBookAuthors(dsl, staging, books, authorIds)
+        insertBookGenres(dsl, staging, books, genreIds)
     }
 
-    private fun insertAuthors(dsl: DSLContext, entries: List<Pair<String, Int>>) {
-        entries.chunked(CHUNK_SIZE).forEach { chunk ->
+    private fun resolveNames(
+        dsl: DSLContext,
+        table: String,
+        nameColumn: String,
+        names: Set<String>,
+        cache: MutableMap<String, Int>,
+    ) {
+        val missing = names.filter { it !in cache }
+        if (missing.isEmpty()) return
+
+        missing.chunked(CHUNK_SIZE).forEach { chunk ->
+            cache.putAll(selectNameIds(dsl, table, nameColumn, chunk))
+        }
+
+        val toInsert = missing.filter { it !in cache }
+        if (toInsert.isEmpty()) return
+
+        toInsert.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
-                chunk.map { (name, id) ->
-                    dsl.insertInto(AUTHORS)
-                        .set(AUTHORS.ID, id)
-                        .set(AUTHORS.FULL_NAME, name)
+                chunk.map { name ->
+                    dsl.query("INSERT INTO $table (${quoteIdentifier(nameColumn)}) VALUES (?)", name)
                 },
             ).execute()
         }
-    }
-
-    private fun insertSeries(dsl: DSLContext, entries: List<Pair<String, Int>>) {
-        entries.chunked(CHUNK_SIZE).forEach { chunk ->
-            dsl.batch(
-                chunk.map { (name, id) ->
-                    dsl.insertInto(SERIES)
-                        .set(SERIES.ID, id)
-                        .set(SERIES.NAME, name)
-                },
-            ).execute()
+        toInsert.chunked(CHUNK_SIZE).forEach { chunk ->
+            cache.putAll(selectNameIds(dsl, table, nameColumn, chunk))
         }
     }
 
-    private fun insertGenres(dsl: DSLContext, entries: List<Pair<String, Int>>) {
-        entries.chunked(CHUNK_SIZE).forEach { chunk ->
-            dsl.batch(
-                chunk.map { (name, id) ->
-                    dsl.insertInto(GENRES)
-                        .set(GENRES.ID, id)
-                        .set(GENRES.NAME, name)
-                },
-            ).execute()
-        }
+    private fun selectNameIds(
+        dsl: DSLContext,
+        table: String,
+        nameColumn: String,
+        names: List<String>,
+    ): Map<String, Int> {
+        if (names.isEmpty()) return emptyMap()
+        val placeholders = names.joinToString(", ") { "?" }
+        return dsl
+            .resultQuery(
+                "SELECT ID, ${quoteIdentifier(nameColumn)} FROM $table WHERE ${quoteIdentifier(nameColumn)} IN ($placeholders)",
+                *names.toTypedArray(),
+            )
+            .fetch()
+            .associate { record ->
+                record.get(nameColumn, String::class.java) to record.get("ID", Int::class.java)
+            }
     }
 
     private fun insertBooks(
         dsl: DSLContext,
+        staging: StagingTables,
         books: List<ParsedBook>,
         seriesIds: Map<String, Int>,
         createdAt: Instant,
@@ -176,19 +290,26 @@ class InpxParser(
         books.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
                 chunk.map { book ->
-                    dsl.insertInto(BOOKS)
-                        .set(BOOKS.ID, book.bookId)
-                        .set(BOOKS.TITLE, book.title)
-                        .set(BOOKS.LANGUAGE, book.language)
-                        .set(BOOKS.SERIES_ID, book.series?.let(seriesIds::getValue))
-                        .set(BOOKS.SERIES_NUMBER, book.seriesNumber)
-                        .set(BOOKS.FILE_FORMAT, book.fileFormat)
-                        .set(BOOKS.FILE_PATH, book.filePath)
-                        .set(BOOKS.ARCHIVE_PATH, book.archivePath)
-                        .set(BOOKS.FILE_SIZE, book.fileSize)
-                        .set(BOOKS.DATE_ADDED, book.dateAdded)
-                        .set(BOOKS.CREATED_AT, createdAt)
-                        .onConflictDoNothing()
+                    val seriesId = book.series?.let(seriesIds::getValue)
+                    dsl.query(
+                        """
+                        INSERT INTO ${staging.books}
+                            (ID, TITLE, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT,
+                             FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, CREATED_AT)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """.trimIndent(),
+                        book.bookId,
+                        book.title,
+                        book.language,
+                        seriesId,
+                        book.seriesNumber,
+                        book.fileFormat,
+                        book.filePath,
+                        book.archivePath,
+                        book.fileSize,
+                        book.dateAdded.toString(),
+                        createdAt.toString(),
+                    )
                 },
             ).execute()
         }
@@ -196,6 +317,7 @@ class InpxParser(
 
     private fun insertBookAuthors(
         dsl: DSLContext,
+        staging: StagingTables,
         books: List<ParsedBook>,
         authorIds: Map<String, Int>,
     ) {
@@ -205,10 +327,11 @@ class InpxParser(
         pairs.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
                 chunk.map { (bookId, authorId) ->
-                    dsl.insertInto(BOOK_AUTHORS)
-                        .set(BOOK_AUTHORS.BOOK_ID, bookId)
-                        .set(BOOK_AUTHORS.AUTHOR_ID, authorId)
-                        .onConflictDoNothing()
+                    dsl.query(
+                        "INSERT INTO ${staging.bookAuthors} (BOOK_ID, AUTHOR_ID) VALUES (?, ?)",
+                        bookId,
+                        authorId,
+                    )
                 },
             ).execute()
         }
@@ -216,6 +339,7 @@ class InpxParser(
 
     private fun insertBookGenres(
         dsl: DSLContext,
+        staging: StagingTables,
         books: List<ParsedBook>,
         genreIds: Map<String, Int>,
     ) {
@@ -225,14 +349,86 @@ class InpxParser(
         pairs.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
                 chunk.map { (bookId, genreId) ->
-                    dsl.insertInto(BOOK_GENRES)
-                        .set(BOOK_GENRES.BOOK_ID, bookId)
-                        .set(BOOK_GENRES.GENRE_ID, genreId)
-                        .onConflictDoNothing()
+                    dsl.query(
+                        "INSERT INTO ${staging.bookGenres} (BOOK_ID, GENRE_ID) VALUES (?, ?)",
+                        bookId,
+                        genreId,
+                    )
                 },
             ).execute()
         }
     }
+
+    context(_: TransactionContext)
+    private fun swapLiveCatalog(staging: StagingTables) = useTx { dsl ->
+        dsl.execute("DELETE FROM BOOK_AUTHORS")
+        dsl.execute("DELETE FROM BOOK_GENRES")
+        dsl.execute("DELETE FROM BOOKS")
+        dsl.execute("DELETE FROM AUTHORS")
+        dsl.execute("DELETE FROM SERIES")
+        dsl.execute("DELETE FROM GENRES")
+
+        dsl.execute("INSERT INTO AUTHORS (ID, FULL_NAME) SELECT ID, FULL_NAME FROM ${staging.authors}")
+        dsl.execute("INSERT INTO SERIES (ID, NAME) SELECT ID, NAME FROM ${staging.series}")
+        dsl.execute("INSERT INTO GENRES (ID, NAME) SELECT ID, NAME FROM ${staging.genres}")
+        dsl.execute(
+            """
+            INSERT INTO BOOKS
+                (ID, TITLE, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT,
+                 FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, CREATED_AT)
+            SELECT ID, TITLE, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT,
+                   FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, CREATED_AT
+            FROM ${staging.books}
+            """.trimIndent(),
+        )
+        dsl.execute("INSERT INTO BOOK_AUTHORS (BOOK_ID, AUTHOR_ID) SELECT BOOK_ID, AUTHOR_ID FROM ${staging.bookAuthors}")
+        dsl.execute("INSERT INTO BOOK_GENRES (BOOK_ID, GENRE_ID) SELECT BOOK_ID, GENRE_ID FROM ${staging.bookGenres}")
+    }
+
+    context(_: TransactionContext)
+    private fun cleanupStaleStagingTables() = useTx { dsl ->
+        val staleTables = dsl
+            .resultQuery("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'IMPORT_%'")
+            .fetch("name", String::class.java)
+            .filterNotNull()
+
+        staleTables.forEach { table ->
+            dsl.execute("DROP TABLE IF EXISTS ${quoteIdentifier(table)}")
+        }
+    }
+
+    context(_: TransactionContext)
+    private fun dropStagingTables(staging: StagingTables) = useTx { dsl ->
+        staging.allChildrenFirst.forEach { table ->
+            dsl.execute("DROP TABLE IF EXISTS $table")
+        }
+    }
+
+    private suspend fun bestEffortDrop(staging: StagingTables) {
+        try {
+            transactionProvider.transaction(READ_WRITE) {
+                dropStagingTables(staging)
+            }
+        } catch (dropError: Exception) {
+            log.warn("Failed to clean up staging tables after import failure", dropError)
+        }
+    }
+
+    private fun newStagingTables(): StagingTables {
+        val runId = UUID.randomUUID().toString().replace("-", "_").uppercase()
+        fun name(suffix: String) = quoteIdentifier("IMPORT_${runId}_$suffix")
+        return StagingTables(
+            books = name("BOOKS"),
+            authors = name("AUTHORS"),
+            series = name("SERIES"),
+            genres = name("GENRES"),
+            bookAuthors = name("BOOK_AUTHORS"),
+            bookGenres = name("BOOK_GENRES"),
+        )
+    }
+
+    private fun quoteIdentifier(identifier: String): String =
+        "\"${identifier.replace("\"", "\"\"")}\""
 
     private fun parseBookLine(
         line: String,
@@ -254,12 +450,10 @@ class InpxParser(
             val seriesNumber = parts[4].toIntOrNull()
             val bookId = parts[5].toIntOrNull()
             val fileSize = parts[6].toIntOrNull()
-            parts[7] // seems that it's the same as bookId
             val deleted = parts.getOrNull(8)
             val fileFormat = parts.getOrNull(9)
             val dateAdded = parts.getOrNull(10)
             val language = parts.getOrNull(11) ?: "ru"
-            parts.getOrNull(12) // too many empty, so not useful for anything
 
             val warnings = buildList {
                 if (bookId == null) add("Invalid bookId: $bookId")
@@ -274,12 +468,11 @@ class InpxParser(
             }
 
             if (deleted == "1") {
-                log.debug("Book $bookId deleted")
+                log.debug("Book $bookId deleted upstream")
                 stats.incDeletedBooks()
                 return null
             }
 
-            // Parse authors
             val authors = parseAuthors(authorPart)
             if (authors.isEmpty()) {
                 log.warn("No authors for book $bookId")
@@ -287,10 +480,7 @@ class InpxParser(
                 return null
             }
 
-            // Parse series
             val series = if (seriesPart.isNotBlank()) seriesPart.trim() else null
-
-            // Parse genres (split by ':' and filter out empty ones)
             val genres = if (genre.isNotBlank()) {
                 genre.split(':')
                     .map { it.trim() }
@@ -299,12 +489,10 @@ class InpxParser(
                 emptyList()
             }
 
-            // Determine file paths
-            val filePath = "${bookId}.${fileFormat}"
+            val filePath = "$bookId.$fileFormat"
 
             stats.incAddedBooks()
 
-            // Return parsed book data
             ParsedBook(
                 bookId = bookId!!,
                 title = title.trim(),
@@ -352,31 +540,6 @@ class InpxParser(
         } catch (e: Exception) {
             log.error("Error parsing date: $dateStr", e)
             timeService.now()
-        }
-    }
-
-    /**
-     * Assigns stable, sequential ids to distinct names and remembers which names
-     * still need to be inserted into the database.
-     */
-    private class IdRegistry {
-        val ids = HashMap<String, Int>()
-        private val pending = ArrayList<Pair<String, Int>>()
-        private var next = 1
-
-        val size: Int get() = ids.size
-
-        fun resolve(name: String): Int =
-            ids[name] ?: (next++).also { id ->
-                ids[name] = id
-                pending += name to id
-            }
-
-        fun drainPending(): List<Pair<String, Int>> {
-            if (pending.isEmpty()) return emptyList()
-            val out = ArrayList(pending)
-            pending.clear()
-            return out
         }
     }
 

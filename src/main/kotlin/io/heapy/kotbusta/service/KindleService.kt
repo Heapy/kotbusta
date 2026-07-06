@@ -26,10 +26,14 @@ import io.heapy.kotbusta.worker.QueuedEventDetails
 import kotlinx.serialization.json.Json
 import org.jooq.exception.DataAccessException
 import java.sql.SQLException
-import kotlin.time.Clock
+import java.time.ZoneId
+import kotlin.time.Instant
+import kotlin.time.toKotlinInstant
 
 class KindleService(
     private val dailyQuotaLimit: Int,
+    private val timeService: TimeService,
+    private val quotaZoneId: ZoneId = ZoneId.systemDefault(),
 ) {
     // Device CRUD operations
     context(_: TransactionContext, userSession: UserSession)
@@ -146,10 +150,7 @@ class KindleService(
         val book = getBookById(bookId)
             ?: throw NoSuchElementException("Book not found")
 
-        // Check daily quota
-        val startOfDay = Clock.System.now().minus(
-            kotlin.time.Duration.parse("PT${Clock.System.now().toEpochMilliseconds() % (24 * 60 * 60 * 1000)}ms")
-        )
+        val startOfDay = startOfToday()
         val todayCount = countTodayQueueItemsByUserId(userSession.userId, startOfDay)
         if (todayCount >= dailyQuotaLimit) {
             throw QuotaExceededException("Daily send limit of $dailyQuotaLimit reached")
@@ -160,6 +161,7 @@ class KindleService(
             userId = userSession.userId,
             deviceId = request.deviceId,
             bookId = bookId,
+            bookTitle = book.title,
             format = request.format,
         )
 
@@ -170,6 +172,7 @@ class KindleService(
             details = Json.encodeToString(
                 QueuedEventDetails(
                     bookId = bookId,
+                    bookTitle = book.title,
                     deviceId = request.deviceId,
                     format = request.format.name,
                 ),
@@ -203,14 +206,13 @@ class KindleService(
         )
     }
 
-    context(_: TransactionContext)
-    fun checkDailyQuota(userId: Int): Boolean {
-        val startOfDay = Clock.System.now().minus(
-            kotlin.time.Duration.parse("PT${Clock.System.now().toEpochMilliseconds() % (24 * 60 * 60 * 1000)}ms")
-        )
-        val todayCount = countTodayQueueItemsByUserId(userId, startOfDay)
-        return todayCount < dailyQuotaLimit
-    }
+    private fun startOfToday(): Instant =
+        java.time.Instant.ofEpochMilli(timeService.now().toEpochMilliseconds())
+            .atZone(quotaZoneId)
+            .toLocalDate()
+            .atStartOfDay(quotaZoneId)
+            .toInstant()
+            .toKotlinInstant()
 
     private companion object : Logger()
 }

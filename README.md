@@ -7,11 +7,12 @@ A modern web application for browsing, searching, and downloading books that usi
 ## Features
 
 - 📚 **Browse Books**: View books with covers, metadata, and descriptions
-- 🔍 **Advanced Search**: Search by title, author, genre, and language
-- ⭐ **Favorites**: Star books and create personal collections
-- 📝 **Notes & Comments**: Add private notes and public comments
+- 🔍 **Advanced Search**: Search by title, author, genre, language, and enriched annotations
+- 🧠 **Semantic Search**: Optional local ONNX embeddings for KNN search and similar-book recommendations
 - 📥 **Format Conversion**: Download books as the original FB2 or convert to EPUB (via Pandoc)
+- 📤 **Send to Kindle**: Queue EPUB deliveries to registered Kindle devices
 - 🔐 **Google OAuth**: Secure authentication with Google accounts
+- 📈 **Operations**: Health and Prometheus metrics endpoints
 - 📱 **Responsive Design**: Works on desktop and mobile devices
 
 ## Technology Stack
@@ -20,6 +21,8 @@ A modern web application for browsing, searching, and downloading books that usi
 - Kotlin + Ktor
 - SQLite database with jOOQ
 - Embedded Lucene search index
+- Optional DJL/ONNX semantic embedding worker
+- Micrometer/Prometheus metrics
 - Google OAuth authentication
 - RESTful API design
 
@@ -59,8 +62,8 @@ A modern web application for browsing, searching, and downloading books that usi
    - `KOTBUSTA_GOOGLE_CLIENT_ID` - Your Google OAuth client ID
    - `KOTBUSTA_GOOGLE_CLIENT_SECRET` - Your Google OAuth client secret
    - `KOTBUSTA_GOOGLE_REDIRECT_URI` - OAuth redirect URI (e.g., `https://yourdomain.com/callback`)
-   - `KOTBUSTA_SESSION_SIGN_KEY` - Session signing key (will be auto-generated if not provided)
-   - `KOTBUSTA_SESSION_ENCRYPT_KEY` - Session encryption key (will be auto-generated if not provided)
+   - `KOTBUSTA_SESSION_SIGN_KEY` - Session signing key. Auto-generated if not provided, but for production set it explicitly: with auto-generated keys every restart invalidates existing sessions (all users are logged out).
+   - `KOTBUSTA_SESSION_ENCRYPT_KEY` - Session encryption key (same caveat as the sign key — set it explicitly for production)
    - `KOTBUSTA_ADMIN_EMAIL` - Your admin email address
    - `KOTBUSTA_DB_PATH` - Path to SQLite database file (required; e.g. `/data/db/kotbusta.db`)
    - `KOTBUSTA_LUCENE_INDEX_PATH` - Path to the Lucene search index (required; must be writable. In the prod compose it is set to `/data/db/lucene`)
@@ -100,7 +103,7 @@ A modern web application for browsing, searching, and downloading books that usi
 7. **Verify installation**
    - Check that books appear in the catalog
    - Test search functionality
-   - Try downloading a book in different formats
+   - Try downloading a book as FB2 and EPUB
 
 ### Development Setup
 
@@ -149,25 +152,23 @@ A modern web application for browsing, searching, and downloading books that usi
 - `GET /oauth/google` - Redirect to Google OAuth login page
 - `GET /callback` - Google OAuth callback
 - `GET /logout` - Logout clearing session data
+- `GET /health` - Service health and search-index state
+- `GET /metrics` - Prometheus metrics, optionally protected by `KOTBUSTA_METRICS_TOKEN`
 
 ### Authenticated Endpoints
-- `GET /api/user/info` - Get current user information
+- `GET /api/me` - Get current user information
 - `GET /api/books` - List books with pagination
 - `GET /api/search/books` - Search books
 - `GET /api/books/{id}` - Get book details
 - `GET /api/books/{id}/cover` - Get book cover image
 - `GET /api/books/{id}/similar` - Get similar books
-- `GET /api/books/{id}/download/{format}` - Download book
-- `POST /api/books/{id}/star` - Star a book
-- `DELETE /api/books/{id}/star` - Unstar a book
-- `GET /api/books/starred` - Get starred books
-- `GET /api/books/{id}/comments` - Get book comments
-- `POST /api/books/{id}/comments` - Add comment
-- `PUT /api/comments/{id}` - Update comment
-- `DELETE /api/comments/{id}` - Delete comment
-- `POST /api/books/{id}/notes` - Add/update note
-- `DELETE /api/books/{id}/notes` - Delete note
-- `GET /api/activity` - Get recent activity
+- `GET /api/books/{id}/download/{format}` - Download book as `fb2` or `epub`
+- `GET /api/kindle/devices` - List Kindle devices
+- `POST /api/kindle/devices` - Add a Kindle device
+- `PUT /api/kindle/devices/{id}` - Update a Kindle device
+- `DELETE /api/kindle/devices/{id}` - Delete a Kindle device
+- `POST /api/books/{id}/send-to-kindle` - Queue an EPUB delivery
+- `GET /api/kindle/sends` - List Kindle send history
 
 ### Admin Endpoints
 - `GET /api/admin/status` - Check admin rights status
@@ -196,13 +197,13 @@ The application uses SQLite with the following main tables:
 - `authors` - Author information
 - `series` - Book series
 - `genres` - Genre information
-- `languages` - Language information
+- `book_authors` - Book/author links
+- `book_genres` - Book/genre links
+- `book_enrichment` - Extracted annotations, embeddings, and enrichment status
 - `users` - User accounts (from Google OAuth)
-- `user_stars` - User's starred books
-- `user_comments` - Public comments
-- `user_notes` - Private notes
-- `downloads` - Download history
-- `import_jobs` - Background import job tracking
+- `kindle_devices` - User Kindle addresses
+- `kindle_send_queue` - Pending and historical Kindle deliveries
+- `kindle_send_events` - Delivery event history
 
 ### File Structure
 

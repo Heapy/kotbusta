@@ -5,6 +5,7 @@ import io.heapy.kotbusta.database.TransactionType.READ_WRITE
 import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.ktor.UserSession
+import io.heapy.kotbusta.model.BookSummary
 import io.heapy.kotbusta.model.SearchQuery
 import io.heapy.kotbusta.model.SearchResult
 import io.heapy.kotbusta.module
@@ -21,7 +22,6 @@ import io.ktor.server.sessions.SessionTransportTransformerEncrypt
 import io.ktor.server.sessions.defaultSessionSerializer
 import io.ktor.server.testing.ApplicationTestBuilder
 import io.ktor.server.testing.testApplication
-import io.ktor.util.hex
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -155,20 +155,6 @@ class SearchBooksRouteTest {
     }
 
     @Test
-    fun `is_starred reflects the caller's stars`() = searchRouteTest {
-        val userOneView = search("q=Harry", userId = 1)
-        val userTwoView = search("q=Harry", userId = 2)
-
-        val userOneStarForBookOne = userOneView.books.first { it.id == 1 }.isStarred
-        val userTwoStarForBookOne = userTwoView.books.first { it.id == 1 }.isStarred
-        val userOneStarForBookTwo = userOneView.books.first { it.id == 2 }.isStarred
-
-        assertTrue(userOneStarForBookOne)
-        assertTrue(userTwoStarForBookOne)
-        assertFalse(userOneStarForBookTwo)
-    }
-
-    @Test
     fun `rebuild picks up newly inserted books`() = searchRouteTest {
         val before = search("q=Discworld")
         assertEquals(0L, before.total)
@@ -204,10 +190,10 @@ class SearchBooksRouteTest {
     }
 
     @Test
-    fun `legacy books search route is gone`() = searchRouteTest {
+    fun `legacy books search route is not available`() = searchRouteTest {
         val response = rawGet("/api/books/search?q=foundation")
 
-        assertEquals(HttpStatusCode.NotFound, response.status)
+        assertEquals(HttpStatusCode.BadRequest, response.status)
     }
 
     private fun searchRouteTest(block: suspend SearchTestContext.() -> Unit) = testApplication {
@@ -272,10 +258,10 @@ class SearchBooksRouteTest {
                     dslContext.execute(
                         """
                         INSERT INTO BOOKS (
-                            ID, TITLE, ANNOTATION, LANGUAGE, SERIES_ID, SERIES_NUMBER,
+                            ID, TITLE, LANGUAGE, SERIES_ID, SERIES_NUMBER,
                             FILE_FORMAT, FILE_PATH, ARCHIVE_PATH, FILE_SIZE,
                             DATE_ADDED, COVER_IMAGE, CREATED_AT
-                        ) VALUES (?, ?, NULL, ?, NULL, NULL, 'fb2', ?, ?, 1024, ?, NULL, ?)
+                        ) VALUES (?, ?, ?, NULL, NULL, 'fb2', ?, ?, 1024, ?, NULL, ?)
                         """.trimIndent(),
                         id,
                         title,
@@ -313,9 +299,12 @@ class SearchBooksRouteTest {
 
         override suspend fun rebuildNow() = Unit
 
-        override suspend fun search(query: SearchQuery, userId: Int): SearchResult {
+        override suspend fun search(query: SearchQuery): SearchResult {
             throw SearchIndexNotReadyException()
         }
+
+        override suspend fun findSimilar(bookId: Int, limit: Int): List<BookSummary> =
+            throw SearchIndexNotReadyException()
     }
 
     private companion object {
@@ -331,8 +320,8 @@ class SearchBooksRouteTest {
         ): String {
             val serializer = defaultSessionSerializer<UserSession>()
             val transformer = SessionTransportTransformerEncrypt(
-                encryptionKey = hex(sessionConfig.secretEncryptKey),
-                signKey = hex(sessionConfig.secretEncryptKey),
+                encryptionKey = sessionConfig.secretEncryptKey.hexToByteArray(),
+                signKey = sessionConfig.secretSignKey.hexToByteArray(),
             )
             val user = userFixtures.getValue(userId)
             return transformer.transformWrite(serializer.serialize(user))

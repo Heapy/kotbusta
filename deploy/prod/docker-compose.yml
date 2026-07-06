@@ -15,14 +15,34 @@ services:
       KOTBUSTA_SESSION_SIGN_KEY: "${KOTBUSTA_SESSION_SIGN_KEY}"
       KOTBUSTA_SESSION_ENCRYPT_KEY: "${KOTBUSTA_SESSION_ENCRYPT_KEY}"
       KOTBUSTA_DB_PATH: "${KOTBUSTA_DB_PATH}"
-      KOTBUSTA_LUCENE_INDEX_PATH: "/data/db/lucene"
+      KOTBUSTA_LUCENE_INDEX_PATH: "${KOTBUSTA_LUCENE_INDEX_PATH:-/data/db/lucene}"
       KOTBUSTA_ADMIN_EMAIL: "${KOTBUSTA_ADMIN_EMAIL}"
       KOTBUSTA_BOOKS_DATA_PATH: "/data/books"
+      KOTBUSTA_EMBEDDING_MODEL_PATH: "${KOTBUSTA_EMBEDDING_MODEL_PATH}"
+      KOTBUSTA_ENRICH_BATCH_SIZE: "${KOTBUSTA_ENRICH_BATCH_SIZE:-32}"
+      KOTBUSTA_ENRICH_PARALLELISM: "${KOTBUSTA_ENRICH_PARALLELISM:-4}"
+      KOTBUSTA_ENRICH_INTERVAL_MS: "${KOTBUSTA_ENRICH_INTERVAL_MS:-60000}"
+      KOTBUSTA_ENRICH_REBUILD_EVERY: "${KOTBUSTA_ENRICH_REBUILD_EVERY:-5000}"
+      KOTBUSTA_METRICS_TOKEN: "${KOTBUSTA_METRICS_TOKEN}"
+      # Send-to-Kindle (optional): the worker only starts when a sender is set.
+      # AWS_* are consumed by the AWS SDK to build the SES client.
+      KOTBUSTA_SES_SENDER_EMAIL: "${KOTBUSTA_SES_SENDER_EMAIL}"
+      AWS_REGION: "${AWS_REGION}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
     volumes:
       - "dbdata:/data/db"
       - "books:/data/books"
+      # Uncomment when KOTBUSTA_EMBEDDING_MODEL_PATH is set to a container path.
+      # - "${KOTBUSTA_EMBEDDING_MODEL_PATH_LOCAL}:${KOTBUSTA_EMBEDDING_MODEL_PATH}:ro"
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: "30s"
+      timeout: "5s"
+      retries: 3
+      start_period: "30s"
 volumes:
   dbdata:
     driver: local

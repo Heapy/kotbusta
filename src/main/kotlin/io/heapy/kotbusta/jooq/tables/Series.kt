@@ -24,10 +24,10 @@ import org.jooq.QueryPart
 import org.jooq.Record
 import org.jooq.SQL
 import org.jooq.Schema
-import org.jooq.Select
 import org.jooq.Stringly
 import org.jooq.Table
 import org.jooq.TableField
+import org.jooq.TableLike
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
@@ -76,7 +76,7 @@ open class Series(
     /**
      * The column <code>SERIES.ID</code>.
      */
-    val ID: TableField<SeriesRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
+    val ID: TableField<SeriesRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.generatedByDefaultAsIdentity(), this, "")
 
     /**
      * The column <code>SERIES.NAME</code>.
@@ -154,7 +154,7 @@ open class Series(
     /**
      * Create an inline derived table from this table
      */
-    override fun where(condition: Condition?): Series = Series(qualifiedName, if (aliased()) this else null, condition)
+    override fun where(condition: Condition?): Series = Series(qualifiedName, if (aliased()) this else null, Internal.condition(this, condition))
 
     /**
      * Create an inline derived table from this table
@@ -194,10 +194,10 @@ open class Series(
     /**
      * Create an inline derived table from this table
      */
-    override fun whereExists(select: Select<*>): Series = where(DSL.exists(select))
+    override fun whereExists(select: TableLike<*>): Series = where(DSL.exists(select))
 
     /**
      * Create an inline derived table from this table
      */
-    override fun whereNotExists(select: Select<*>): Series = where(DSL.notExists(select))
+    override fun whereNotExists(select: TableLike<*>): Series = where(DSL.notExists(select))
 }

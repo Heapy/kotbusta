@@ -22,11 +22,4 @@ data class ConversionResult(
 
 enum class ConversionFormat(val extension: String, val mimeType: String) {
     EPUB("epub", "application/epub+zip"),
-    PDF("pdf", "application/pdf"),
-    HTML("html", "text/html"),
-    TXT("txt", "text/plain"),
-    DOCX("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-    RTF("rtf", "application/rtf"),
-    MOBI("mobi", "application/x-mobipocket-ebook"),
-    AZW3("azw3", "application/vnd.amazon.ebook")
 }

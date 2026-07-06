@@ -35,6 +35,11 @@ dependencies {
     implementation(libs.lucene.core)
     implementation(libs.lucene.analysis.common)
     implementation(libs.lucene.queryparser)
+    implementation(libs.djl.api)
+    implementation(libs.djl.huggingface.tokenizers)
+    runtimeOnly(libs.djl.onnxruntime.engine)
+    implementation(libs.micrometer.registry.prometheus)
+    implementation(ktorLibs.server.metrics.micrometer)
 
     testImplementation(ktorLibs.server.testHost)
 }
@@ -42,7 +47,11 @@ dependencies {
 application {
     applicationName = "kotbusta"
     mainClass.set("io.heapy.kotbusta.Application")
-    applicationDefaultJvmArgs = listOf("--add-modules=jdk.incubator.vector")
+    applicationDefaultJvmArgs = listOf(
+        "--add-modules=jdk.incubator.vector",
+        "-Dai.djl.offline=true",
+        "-DENGINE_CACHE_DIR=.djl/engine-cache",
+    )
 }
 
 tasks.distTar {

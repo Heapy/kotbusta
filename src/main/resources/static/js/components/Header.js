@@ -28,28 +28,6 @@ export function Header({ user, onNavigate, currentView, isAdmin }) {
         }
       }, 'Books'),
       h('button', {
-        onClick: () => onNavigate('starred'),
-        style: {
-          background: currentView === 'starred' ? '#34495e' : 'transparent',
-          border: 'none',
-          color: 'white',
-          padding: '0.5rem 1rem',
-          cursor: 'pointer',
-          borderRadius: '4px'
-        }
-      }, '⭐ Starred'),
-      h('button', {
-        onClick: () => onNavigate('activity'),
-        style: {
-          background: currentView === 'activity' ? '#34495e' : 'transparent',
-          border: 'none',
-          color: 'white',
-          padding: '0.5rem 1rem',
-          cursor: 'pointer',
-          borderRadius: '4px'
-        }
-      }, 'Activity'),
-      h('button', {
         onClick: () => onNavigate('kindle'),
         style: {
           background: currentView === 'kindle' ? '#34495e' : 'transparent',

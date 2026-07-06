@@ -13,16 +13,20 @@ import io.heapy.kotbusta.ktor.SessionConfig
 import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.AdminService
+import io.heapy.kotbusta.service.AnnotationService
 import io.heapy.kotbusta.service.BookSearchService
 import io.heapy.kotbusta.service.CoverService
 import io.heapy.kotbusta.service.DefaultTimeService
-import io.heapy.kotbusta.service.EmailService
+import io.heapy.kotbusta.service.DjlEmbeddingService
+import io.heapy.kotbusta.service.EmbeddingService
+import io.heapy.kotbusta.service.SesEmailService
 import io.heapy.kotbusta.service.ImportJobService
 import io.heapy.kotbusta.service.KindleService
 import io.heapy.kotbusta.service.LuceneBookSearchService
 import io.heapy.kotbusta.service.PandocConversionService
 import io.heapy.kotbusta.service.TimeService
-import io.heapy.kotbusta.service.UserService
+import io.heapy.kotbusta.service.ZipBookFileService
+import io.heapy.kotbusta.worker.BookEnrichmentWorker
 import io.heapy.kotbusta.worker.KindleSendWorker
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -33,11 +37,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.serialization.json.Json
+import io.micrometer.prometheusmetrics.PrometheusConfig
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.sqlite.SQLiteDataSource
 import runMigrations
-import java.io.File
 import java.security.SecureRandom
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
@@ -105,6 +110,20 @@ class ApplicationModule {
             ?: error("KOTBUSTA_LUCENE_INDEX_PATH not found")
     }
 
+    val prometheusRegistry by bean {
+        PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+    }
+
+    val metricsToken by bean {
+        env["KOTBUSTA_METRICS_TOKEN"]?.takeIf(String::isNotBlank)
+    }
+
+    val embeddingModelPath by bean {
+        env["KOTBUSTA_EMBEDDING_MODEL_PATH"]
+            ?.takeIf(String::isNotBlank)
+            ?.let(::Path)
+    }
+
     val sessionConfig by bean {
         val random by lazy {
             SecureRandom.getInstanceStrong()
@@ -118,11 +137,11 @@ class ApplicationModule {
 
         val sessionSignKey = env["KOTBUSTA_SESSION_SIGN_KEY"]
             ?: generateRandomKey(32).also {
-                log.info("Generated KOTBUSTA_SESSION_SIGN_KEY=$it, add to env to persist")
+                log.info("Generated KOTBUSTA_SESSION_SIGN_KEY; set it explicitly to keep sessions across restarts")
             }
         val sessionEncryptKey = env["KOTBUSTA_SESSION_ENCRYPT_KEY"]
             ?: generateRandomKey(16).also {
-                log.info("Generated KOTBUSTA_SESSION_ENCRYPT_KEY=$it, add to env to persist")
+                log.info("Generated KOTBUSTA_SESSION_ENCRYPT_KEY; set it explicitly to keep sessions across restarts")
             }
 
         SessionConfig(
@@ -143,16 +162,23 @@ class ApplicationModule {
         }
     }
 
-    val userService by bean {
-        UserService()
-    }
-
     val coverService by bean {
         CoverService()
     }
 
+    val annotationService by bean {
+        AnnotationService()
+    }
+
     val conversionService by bean {
         PandocConversionService()
+    }
+
+    val bookFileService by bean {
+        ZipBookFileService(
+            booksDataPath = booksDataPath.value,
+            conversionService = conversionService.value,
+        )
     }
 
     val inpxParser by bean {
@@ -180,7 +206,13 @@ class ApplicationModule {
         LuceneBookSearchService(
             transactionProvider = transactionProvider.value,
             indexPath = luceneIndexPath.value,
+            embeddingService = embeddingService.value,
+            meterRegistry = prometheusRegistry.value,
         )
+    }
+
+    val embeddingService: MutableBean<EmbeddingService?> by bean {
+        embeddingModelPath.value?.let(::DjlEmbeddingService)
     }
 
     // Kindle Configuration
@@ -209,8 +241,24 @@ class ApplicationModule {
         env["KOTBUSTA_KINDLE_WORKER_INTERVAL_MS"]?.toLongOrNull() ?: 30_000L
     }
 
+    val enrichBatchSize by bean {
+        env["KOTBUSTA_ENRICH_BATCH_SIZE"]?.toIntOrNull() ?: 32
+    }
+
+    val enrichParallelism by bean {
+        env["KOTBUSTA_ENRICH_PARALLELISM"]?.toIntOrNull() ?: 4
+    }
+
+    val enrichIntervalMs by bean {
+        env["KOTBUSTA_ENRICH_INTERVAL_MS"]?.toLongOrNull() ?: 60_000L
+    }
+
+    val enrichRebuildEvery by bean {
+        env["KOTBUSTA_ENRICH_REBUILD_EVERY"]?.toIntOrNull() ?: 5_000
+    }
+
     val emailService by bean {
-        EmailService(
+        SesEmailService(
             sesClient = sesClient.value,
             senderEmail = sesSenderEmail.value,
         )
@@ -219,6 +267,7 @@ class ApplicationModule {
     val kindleService by bean {
         KindleService(
             dailyQuotaLimit = kindleDailyQuota.value,
+            timeService = timeService.value,
         )
     }
 
@@ -226,12 +275,25 @@ class ApplicationModule {
         KindleSendWorker(
             emailService = emailService.value,
             transactionProvider = transactionProvider.value,
+            bookFileService = bookFileService.value,
             batchSize = kindleWorkerBatchSize.value,
             maxRetries = kindleWorkerMaxRetries.value,
-            getBookFile = { bookId, format ->
-                // TODO: Implement proper book file resolution
-                File(booksDataPath.value.toFile(), "$bookId.$format")
-            },
+            meterRegistry = prometheusRegistry.value,
+        )
+    }
+
+    val bookEnrichmentWorker by bean {
+        BookEnrichmentWorker(
+            transactionProvider = transactionProvider.value,
+            booksDataPath = booksDataPath.value,
+            annotationService = annotationService.value,
+            embeddingService = embeddingService.value
+                ?: error("Book enrichment worker requires KOTBUSTA_EMBEDDING_MODEL_PATH"),
+            bookSearchService = bookSearchService.value,
+            batchSize = enrichBatchSize.value,
+            parallelism = enrichParallelism.value,
+            rebuildEvery = enrichRebuildEvery.value,
+            meterRegistry = prometheusRegistry.value,
         )
     }
 
@@ -268,6 +330,7 @@ class ApplicationModule {
         PragmaDataSource(
             base,
             listOf(
+                "PRAGMA foreign_keys=ON",
                 "PRAGMA busy_timeout=5000",
                 "PRAGMA synchronous=NORMAL",
                 "PRAGMA query_only=ON"
@@ -283,6 +346,7 @@ class ApplicationModule {
         PragmaDataSource(
             base,
             listOf(
+                "PRAGMA foreign_keys=ON",
                 "PRAGMA busy_timeout=5000",
                 "PRAGMA synchronous=NORMAL",
                 "PRAGMA journal_mode=WAL",
@@ -314,14 +378,36 @@ class ApplicationModule {
         }
     }
 
+    fun initializeBookEnrichmentWorker() {
+        when {
+            enrichIntervalMs.value <= 0L ->
+                log.info("Book enrichment worker disabled because interval is ${enrichIntervalMs.value}ms")
+
+            embeddingModelPath.value == null ->
+                log.info("Book enrichment worker disabled because KOTBUSTA_EMBEDDING_MODEL_PATH is not configured")
+
+            else ->
+                bookEnrichmentWorker.value.start(
+                    scope = workerScope,
+                    intervalMillis = enrichIntervalMs.value,
+                )
+        }
+    }
+
     fun initializeSearchService() {
         bookSearchService.value.initialize(workerScope)
     }
 
-    fun stopKindleSendWorker() {
+    fun stopBackgroundWorkers() {
+        if (bookEnrichmentWorker.isInitialized) {
+            bookEnrichmentWorker.value.stop()
+        }
         if (kindleSendWorker.isInitialized) {
             kindleSendWorker.value.stop()
         }
+    }
+
+    fun cancelBackgroundScope() {
         workerScope.cancel()
     }
 
@@ -337,10 +423,19 @@ class ApplicationModule {
         }
     }
 
+    fun stopEmbeddingService() {
+        val service = if (embeddingService.isInitialized) embeddingService.value else null
+        if (service is AutoCloseable) {
+            service.close()
+        }
+    }
+
     fun close() {
+        stopBackgroundWorkers()
         stopSearchService()
-        stopKindleSendWorker()
+        stopEmbeddingService()
         stopHttpClient()
+        cancelBackgroundScope()
     }
 
     fun initializeShutdownHook() {
@@ -355,6 +450,7 @@ class ApplicationModule {
         initializeDatabase()
         initializeSearchService()
         initializeKindleSendWorker()
+        initializeBookEnrichmentWorker()
         initializeShutdownHook()
     }
 

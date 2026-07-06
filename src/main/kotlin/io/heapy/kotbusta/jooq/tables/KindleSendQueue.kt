@@ -12,11 +12,9 @@ import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_QUEUE_NEXT_RUN
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_QUEUE_STATUS
 import io.heapy.kotbusta.jooq.indexes.IDX_KINDLE_SEND_QUEUE_USER
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_EVENTS__FK_KINDLE_SEND_EVENTS_PK_KINDLE_SEND_QUEUE
-import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_KINDLE_DEVICES
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__PK_KINDLE_SEND_QUEUE
-import io.heapy.kotbusta.jooq.tables.Books.BooksPath
 import io.heapy.kotbusta.jooq.tables.KindleDevices.KindleDevicesPath
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents.KindleSendEventsPath
 import io.heapy.kotbusta.jooq.tables.Users.UsersPath
@@ -39,10 +37,10 @@ import org.jooq.QueryPart
 import org.jooq.Record
 import org.jooq.SQL
 import org.jooq.Schema
-import org.jooq.Select
 import org.jooq.Stringly
 import org.jooq.Table
 import org.jooq.TableField
+import org.jooq.TableLike
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
@@ -91,7 +89,7 @@ open class KindleSendQueue(
     /**
      * The column <code>KINDLE_SEND_QUEUE.ID</code>.
      */
-    val ID: TableField<KindleSendQueueRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
+    val ID: TableField<KindleSendQueueRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.generatedByDefaultAsIdentity(), this, "")
 
     /**
      * The column <code>KINDLE_SEND_QUEUE.USER_ID</code>.
@@ -107,6 +105,11 @@ open class KindleSendQueue(
      * The column <code>KINDLE_SEND_QUEUE.BOOK_ID</code>.
      */
     val BOOK_ID: TableField<KindleSendQueueRecord, Int?> = createField(DSL.name("BOOK_ID"), SQLDataType.INTEGER.nullable(false), this, "")
+
+    /**
+     * The column <code>KINDLE_SEND_QUEUE.BOOK_TITLE</code>.
+     */
+    val BOOK_TITLE: TableField<KindleSendQueueRecord, String?> = createField(DSL.name("BOOK_TITLE"), SQLDataType.CLOB.nullable(false), this, "")
 
     /**
      * The column <code>KINDLE_SEND_QUEUE.FORMAT</code>.
@@ -178,13 +181,7 @@ open class KindleSendQueue(
     override fun getIndexes(): List<Index> = listOf(IDX_KINDLE_SEND_QUEUE_BOOK, IDX_KINDLE_SEND_QUEUE_DEVICE, IDX_KINDLE_SEND_QUEUE_NEXT_RUN, IDX_KINDLE_SEND_QUEUE_STATUS, IDX_KINDLE_SEND_QUEUE_USER)
     override fun getIdentity(): Identity<KindleSendQueueRecord, Int?> = super.getIdentity() as Identity<KindleSendQueueRecord, Int?>
     override fun getPrimaryKey(): UniqueKey<KindleSendQueueRecord> = KINDLE_SEND_QUEUE__PK_KINDLE_SEND_QUEUE
-    override fun getReferences(): List<ForeignKey<KindleSendQueueRecord, *>> = listOf(KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS, KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_KINDLE_DEVICES, KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS)
-
-    /**
-     * Get the implicit join path to the <code>BOOKS</code> table.
-     */
-    fun books(): BooksPath = books
-    val books: BooksPath by lazy { BooksPath(this, KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS, null) }
+    override fun getReferences(): List<ForeignKey<KindleSendQueueRecord, *>> = listOf(KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_KINDLE_DEVICES, KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS)
 
     /**
      * Get the implicit join path to the <code>KINDLE_DEVICES</code> table.
@@ -235,7 +232,7 @@ open class KindleSendQueue(
     /**
      * Create an inline derived table from this table
      */
-    override fun where(condition: Condition?): KindleSendQueue = KindleSendQueue(qualifiedName, if (aliased()) this else null, condition)
+    override fun where(condition: Condition?): KindleSendQueue = KindleSendQueue(qualifiedName, if (aliased()) this else null, Internal.condition(this, condition))
 
     /**
      * Create an inline derived table from this table
@@ -275,10 +272,10 @@ open class KindleSendQueue(
     /**
      * Create an inline derived table from this table
      */
-    override fun whereExists(select: Select<*>): KindleSendQueue = where(DSL.exists(select))
+    override fun whereExists(select: TableLike<*>): KindleSendQueue = where(DSL.exists(select))
 
     /**
      * Create an inline derived table from this table
      */
-    override fun whereNotExists(select: Select<*>): KindleSendQueue = where(DSL.notExists(select))
+    override fun whereNotExists(select: TableLike<*>): KindleSendQueue = where(DSL.notExists(select))
 }

@@ -6,21 +6,12 @@ package io.heapy.kotbusta.jooq.tables
 
 import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.KotlinInstantConverter
-import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_USERS
 import io.heapy.kotbusta.jooq.keys.KINDLE_DEVICES__FK_KINDLE_DEVICES_PK_USERS
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS
 import io.heapy.kotbusta.jooq.keys.USERS__PK_USERS
 import io.heapy.kotbusta.jooq.keys.USERS__UK_USERS_1_34197334
-import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_USERS
-import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_PK_USERS
-import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_PK_USERS
-import io.heapy.kotbusta.jooq.tables.Books.BooksPath
-import io.heapy.kotbusta.jooq.tables.Downloads.DownloadsPath
 import io.heapy.kotbusta.jooq.tables.KindleDevices.KindleDevicesPath
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
-import io.heapy.kotbusta.jooq.tables.UserComments.UserCommentsPath
-import io.heapy.kotbusta.jooq.tables.UserNotes.UserNotesPath
-import io.heapy.kotbusta.jooq.tables.UserStars.UserStarsPath
 import io.heapy.kotbusta.jooq.tables.records.UsersRecord
 
 import kotlin.collections.Collection
@@ -40,10 +31,10 @@ import org.jooq.QueryPart
 import org.jooq.Record
 import org.jooq.SQL
 import org.jooq.Schema
-import org.jooq.Select
 import org.jooq.Stringly
 import org.jooq.Table
 import org.jooq.TableField
+import org.jooq.TableLike
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
@@ -92,7 +83,7 @@ open class Users(
     /**
      * The column <code>USERS.ID</code>.
      */
-    val ID: TableField<UsersRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
+    val ID: TableField<UsersRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.generatedByDefaultAsIdentity(), this, "")
 
     /**
      * The column <code>USERS.GOOGLE_ID</code>.
@@ -165,21 +156,6 @@ open class Users(
     override fun getPrimaryKey(): UniqueKey<UsersRecord> = USERS__PK_USERS
     override fun getUniqueKeys(): List<UniqueKey<UsersRecord>> = listOf(USERS__UK_USERS_1_34197334)
 
-    private lateinit var _downloads: DownloadsPath
-
-    /**
-     * Get the implicit to-many join path to the <code>DOWNLOADS</code> table
-     */
-    fun downloads(): DownloadsPath {
-        if (!this::_downloads.isInitialized)
-            _downloads = DownloadsPath(this, null, DOWNLOADS__FK_DOWNLOADS_PK_USERS.inverseKey)
-
-        return _downloads;
-    }
-
-    val downloads: DownloadsPath
-        get(): DownloadsPath = downloads()
-
     private lateinit var _kindleDevices: KindleDevicesPath
 
     /**
@@ -211,58 +187,6 @@ open class Users(
 
     val kindleSendQueue: KindleSendQueuePath
         get(): KindleSendQueuePath = kindleSendQueue()
-
-    private lateinit var _userComments: UserCommentsPath
-
-    /**
-     * Get the implicit to-many join path to the <code>USER_COMMENTS</code>
-     * table
-     */
-    fun userComments(): UserCommentsPath {
-        if (!this::_userComments.isInitialized)
-            _userComments = UserCommentsPath(this, null, USER_COMMENTS__FK_USER_COMMENTS_PK_USERS.inverseKey)
-
-        return _userComments;
-    }
-
-    val userComments: UserCommentsPath
-        get(): UserCommentsPath = userComments()
-
-    private lateinit var _userNotes: UserNotesPath
-
-    /**
-     * Get the implicit to-many join path to the <code>USER_NOTES</code> table
-     */
-    fun userNotes(): UserNotesPath {
-        if (!this::_userNotes.isInitialized)
-            _userNotes = UserNotesPath(this, null, USER_NOTES__FK_USER_NOTES_PK_USERS.inverseKey)
-
-        return _userNotes;
-    }
-
-    val userNotes: UserNotesPath
-        get(): UserNotesPath = userNotes()
-
-    private lateinit var _userStars: UserStarsPath
-
-    /**
-     * Get the implicit to-many join path to the <code>USER_STARS</code> table
-     */
-    fun userStars(): UserStarsPath {
-        if (!this::_userStars.isInitialized)
-            _userStars = UserStarsPath(this, null, USER_STARS__FK_USER_STARS_PK_USERS.inverseKey)
-
-        return _userStars;
-    }
-
-    val userStars: UserStarsPath
-        get(): UserStarsPath = userStars()
-
-    /**
-     * Get the implicit many-to-many join path to the <code>BOOKS</code> table
-     */
-    val books: BooksPath
-        get(): BooksPath = userStars().books()
     override fun getChecks(): List<Check<UsersRecord>> = listOf(
         Internal.createCheck(this, DSL.name(""), "STATUS in ('PENDING', 'APPROVED', 'REJECTED', 'DEACTIVATED')", true)
     )
@@ -288,7 +212,7 @@ open class Users(
     /**
      * Create an inline derived table from this table
      */
-    override fun where(condition: Condition?): Users = Users(qualifiedName, if (aliased()) this else null, condition)
+    override fun where(condition: Condition?): Users = Users(qualifiedName, if (aliased()) this else null, Internal.condition(this, condition))
 
     /**
      * Create an inline derived table from this table
@@ -328,10 +252,10 @@ open class Users(
     /**
      * Create an inline derived table from this table
      */
-    override fun whereExists(select: Select<*>): Users = where(DSL.exists(select))
+    override fun whereExists(select: TableLike<*>): Users = where(DSL.exists(select))
 
     /**
      * Create an inline derived table from this table
      */
-    override fun whereNotExists(select: Select<*>): Users = where(DSL.notExists(select))
+    override fun whereNotExists(select: TableLike<*>): Users = where(DSL.notExists(select))
 }

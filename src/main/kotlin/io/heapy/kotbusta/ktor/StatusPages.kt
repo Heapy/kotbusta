@@ -37,10 +37,16 @@ fun Application.configureStatusPages() {
         }
 
         exception<Throwable> { call, cause ->
+            // Log the full cause server-side; never leak exception details
+            // (SQL, file paths, internal messages) to the client.
+            call.application.log.error(
+                "Unhandled exception while processing ${call.request.local.method.value} ${call.request.local.uri}",
+                cause,
+            )
             call.response.status(HttpStatusCode.InternalServerError)
             call.respond(
                 ApiResponse.Error(
-                    message = "500: ${cause.message}",
+                    message = "Internal server error",
                 )
             )
         }

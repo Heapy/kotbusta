@@ -29,10 +29,10 @@ import org.jooq.QueryPart
 import org.jooq.Record
 import org.jooq.SQL
 import org.jooq.Schema
-import org.jooq.Select
 import org.jooq.Stringly
 import org.jooq.Table
 import org.jooq.TableField
+import org.jooq.TableLike
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
@@ -157,7 +157,7 @@ open class BookGenres(
     /**
      * Create an inline derived table from this table
      */
-    override fun where(condition: Condition?): BookGenres = BookGenres(qualifiedName, if (aliased()) this else null, condition)
+    override fun where(condition: Condition?): BookGenres = BookGenres(qualifiedName, if (aliased()) this else null, Internal.condition(this, condition))
 
     /**
      * Create an inline derived table from this table
@@ -197,10 +197,10 @@ open class BookGenres(
     /**
      * Create an inline derived table from this table
      */
-    override fun whereExists(select: Select<*>): BookGenres = where(DSL.exists(select))
+    override fun whereExists(select: TableLike<*>): BookGenres = where(DSL.exists(select))
 
     /**
      * Create an inline derived table from this table
      */
-    override fun whereNotExists(select: Select<*>): BookGenres = where(DSL.notExists(select))
+    override fun whereNotExists(select: TableLike<*>): BookGenres = where(DSL.notExists(select))
 }

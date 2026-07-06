@@ -13,11 +13,6 @@ class PandocConversionService : ConversionService {
         private const val PANDOC_TIMEOUT_SECONDS = 120L
         private val supportedFormats = listOf(
             ConversionFormat.EPUB,
-            ConversionFormat.PDF,
-            ConversionFormat.HTML,
-            ConversionFormat.TXT,
-            ConversionFormat.DOCX,
-            ConversionFormat.RTF
         )
     }
 
@@ -69,8 +64,13 @@ class PandocConversionService : ConversionService {
             val pandocCommand = buildPandocCommand(inputFile, outputFile, outputFormat)
             log.debug("Executing pandoc command: ${pandocCommand.joinToString(" ")}")
 
+            // Redirect (merged) output to a file so a chatty pandoc can't fill the
+            // OS pipe buffer and deadlock against our waitFor.
+            val logFile = File.createTempFile("pandoc-", ".log", inputFile.parentFile)
             val processBuilder = ProcessBuilder(pandocCommand)
             processBuilder.directory(inputFile.parentFile)
+            processBuilder.redirectErrorStream(true)
+            processBuilder.redirectOutput(logFile)
 
             val process = processBuilder.start()
             val completed = process.waitFor(PANDOC_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -78,6 +78,7 @@ class PandocConversionService : ConversionService {
             if (!completed) {
                 log.warn("Conversion timed out after $PANDOC_TIMEOUT_SECONDS seconds")
                 process.destroyForcibly()
+                logFile.delete()
                 return@withContext ConversionResult(
                     success = false,
                     outputFile = null,
@@ -87,7 +88,8 @@ class PandocConversionService : ConversionService {
 
             val exitCode = process.exitValue()
             if (exitCode != 0) {
-                val errorOutput = process.errorStream.bufferedReader().use { it.readText() }
+                val errorOutput = logFile.readText().trim().takeLast(4000)
+                logFile.delete()
                 log.error("Pandoc conversion failed with exit code $exitCode: $errorOutput")
                 return@withContext ConversionResult(
                     success = false,
@@ -95,6 +97,8 @@ class PandocConversionService : ConversionService {
                     errorMessage = "Pandoc conversion failed with exit code $exitCode: $errorOutput"
                 )
             }
+
+            logFile.delete()
 
             if (!outputFile.exists() || outputFile.length() == 0L) {
                 log.error("Conversion completed but output file is empty or missing")
@@ -159,15 +163,6 @@ class PandocConversionService : ConversionService {
             "-o", outputFile.absolutePath,
             "--extract-media=." // Extract media to current directory
         )
-
-        when (outputFormat.lowercase()) {
-            "pdf" -> {
-                command.addAll(listOf("--pdf-engine=xelatex"))
-            }
-            "html" -> {
-                command.addAll(listOf("--standalone", "--self-contained"))
-            }
-        }
 
         return command
     }

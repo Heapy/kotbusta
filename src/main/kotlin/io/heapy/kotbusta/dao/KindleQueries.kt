@@ -5,7 +5,6 @@ import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.records.KindleDevicesRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleSendEventsRecord
 import io.heapy.kotbusta.jooq.tables.records.KindleSendQueueRecord
-import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.jooq.tables.references.KINDLE_DEVICES
 import io.heapy.kotbusta.jooq.tables.references.KINDLE_SEND_EVENTS
 import io.heapy.kotbusta.jooq.tables.references.KINDLE_SEND_QUEUE
@@ -131,6 +130,7 @@ fun createQueueItem(
     userId: Int,
     deviceId: Int,
     bookId: Int,
+    bookTitle: String,
     format: KindleFormat,
     createdAt: Instant = Clock.System.now(),
     updatedAt: Instant = Clock.System.now(),
@@ -140,6 +140,7 @@ fun createQueueItem(
         .set(KINDLE_SEND_QUEUE.USER_ID, userId)
         .set(KINDLE_SEND_QUEUE.DEVICE_ID, deviceId)
         .set(KINDLE_SEND_QUEUE.BOOK_ID, bookId)
+        .set(KINDLE_SEND_QUEUE.BOOK_TITLE, bookTitle)
         .set(KINDLE_SEND_QUEUE.FORMAT, format mapUsing KindleFormatMapper)
         .set(KINDLE_SEND_QUEUE.STATUS, PENDING mapUsing KindleSendStatusMapper)
         .set(KINDLE_SEND_QUEUE.ATTEMPTS, 0)
@@ -169,7 +170,7 @@ fun findQueueItemsByUserId(
         .select(
             KINDLE_SEND_QUEUE.ID,
             KINDLE_DEVICES.NAME,
-            BOOKS.TITLE,
+            KINDLE_SEND_QUEUE.BOOK_TITLE,
             KINDLE_SEND_QUEUE.FORMAT,
             KINDLE_SEND_QUEUE.STATUS,
             KINDLE_SEND_QUEUE.CREATED_AT,
@@ -178,7 +179,6 @@ fun findQueueItemsByUserId(
         .from(KINDLE_SEND_QUEUE)
         .join(KINDLE_DEVICES)
         .on(KINDLE_SEND_QUEUE.DEVICE_ID.eq(KINDLE_DEVICES.ID))
-        .join(BOOKS).on(KINDLE_SEND_QUEUE.BOOK_ID.eq(BOOKS.ID))
         .where(KINDLE_SEND_QUEUE.USER_ID.eq(userId))
         .orderBy(KINDLE_SEND_QUEUE.CREATED_AT.desc())
         .limit(limit)
@@ -187,7 +187,7 @@ fun findQueueItemsByUserId(
             SendHistoryResponse(
                 id = record.get(KINDLE_SEND_QUEUE.ID)!!,
                 deviceName = record.get(KINDLE_DEVICES.NAME)!!,
-                bookTitle = record.get(BOOKS.TITLE)!!,
+                bookTitle = record.get(KINDLE_SEND_QUEUE.BOOK_TITLE)!!,
                 format = record.get(KINDLE_SEND_QUEUE.FORMAT)!! mapUsing KindleFormatMapper,
                 status = record.get(KINDLE_SEND_QUEUE.STATUS)!! mapUsing KindleSendStatusMapper,
                 createdAt = record.get(KINDLE_SEND_QUEUE.CREATED_AT)!!,
@@ -227,6 +227,29 @@ fun markQueueItemAsProcessing(id: Int): Boolean = useTx { dslContext ->
         )
         .execute()
     updatedRows > 0
+}
+
+/**
+ * Returns items stranded in PROCESSING back to PENDING so a later tick retries
+ * them. Used to recover from a crash mid-send: an item is claimed (PROCESSING) in
+ * one transaction and its outcome written in another, so a crash in between would
+ * otherwise leave it PROCESSING forever (never re-selected by [findPendingQueueItems]).
+ */
+context(_: TransactionContext)
+fun resetStuckProcessingItems(
+    olderThan: Instant,
+    now: Instant = Clock.System.now(),
+): Int = useTx { dslContext ->
+    dslContext
+        .update(KINDLE_SEND_QUEUE)
+        .set(KINDLE_SEND_QUEUE.STATUS, PENDING mapUsing KindleSendStatusMapper)
+        .set(KINDLE_SEND_QUEUE.NEXT_RUN_AT, now)
+        .set(KINDLE_SEND_QUEUE.UPDATED_AT, now)
+        .where(
+            KINDLE_SEND_QUEUE.STATUS.eq(PROCESSING mapUsing KindleSendStatusMapper)
+                .and(KINDLE_SEND_QUEUE.UPDATED_AT.lt(olderThan)),
+        )
+        .execute()
 }
 
 context(_: TransactionContext)

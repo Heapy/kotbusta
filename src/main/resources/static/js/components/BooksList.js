@@ -4,24 +4,33 @@ import { api } from '../utils/api.js';
 import { SearchBar } from './SearchBar.js';
 import { BookCard } from './BookCard.js';
 
-export function BooksList({ starred = false, onSelectBook, initialOffset = 0, onPageChange }) {
+export function BooksList({ onSelectBook, initialOffset = 0, onPageChange }) {
   const [books, setBooks] = useState([]);
+  const [semanticWindow, setSemanticWindow] = useState(null);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [offset, setOffset] = useState(initialOffset);
   const [searchParams, setSearchParams] = useState(null);
   const limit = 20;
 
-  // Update offset when initialOffset changes (browser back/forward)
   useEffect(() => {
     setOffset(initialOffset);
   }, [initialOffset]);
 
   useEffect(() => {
     loadBooks();
-  }, [offset, searchParams, starred]);
+  }, [offset, searchParams, semanticWindow]);
+
+  const hasTextQuery = () => !!(searchParams && searchParams.q && searchParams.q.trim());
 
   const loadBooks = async () => {
+    if (semanticWindow && hasTextQuery()) {
+      setBooks(semanticWindow.slice(offset, offset + limit));
+      setTotal(semanticWindow.length);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
       let url;
@@ -32,15 +41,22 @@ export function BooksList({ starred = false, onSelectBook, initialOffset = 0, on
           offset
         });
         url = `/api/search/books?${params}`;
-      } else if (starred) {
-        url = `/api/books/starred?limit=${limit}&offset=${offset}`;
       } else {
         url = `/api/books?limit=${limit}&offset=${offset}`;
       }
 
       const res = await api.get(url);
-      setBooks(res.data.books || []);
-      setTotal(res.data.total || 0);
+      const resultBooks = res.data.books || [];
+
+      if (hasTextQuery() && !res.data.hasMore && res.data.total === resultBooks.length) {
+        setSemanticWindow(resultBooks);
+        setBooks(resultBooks.slice(offset, offset + limit));
+        setTotal(resultBooks.length);
+      } else {
+        setSemanticWindow(null);
+        setBooks(resultBooks);
+        setTotal(res.data.total || 0);
+      }
     } catch (err) {
       console.error('Failed to load books:', err);
     } finally {
@@ -49,21 +65,9 @@ export function BooksList({ starred = false, onSelectBook, initialOffset = 0, on
   };
 
   const handleSearch = (params) => {
+    setSemanticWindow(null);
     setSearchParams(params);
     setOffset(0);
-  };
-
-  const toggleStar = async (bookId, isStarred) => {
-    try {
-      if (isStarred) {
-        await api.delete(`/api/books/${bookId}/star`);
-      } else {
-        await api.post(`/api/books/${bookId}/star`);
-      }
-      await loadBooks();
-    } catch (err) {
-      alert('Failed to toggle star: ' + err.message);
-    }
   };
 
   const hasMore = offset + limit < total;
@@ -71,25 +75,23 @@ export function BooksList({ starred = false, onSelectBook, initialOffset = 0, on
   const handlePreviousPage = () => {
     const newOffset = Math.max(0, offset - limit);
     setOffset(newOffset);
-    if (onPageChange) {
-      onPageChange(newOffset);
-    }
+    if (onPageChange) onPageChange(newOffset);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNextPage = () => {
     const newOffset = offset + limit;
     setOffset(newOffset);
-    if (onPageChange) {
-      onPageChange(newOffset);
-    }
+    if (onPageChange) onPageChange(newOffset);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  return h('div', { style: { padding: '2rem' } },
-    h('h2', null, starred ? 'Starred Books' : 'All Books'),
+  const rangeStart = total === 0 ? 0 : offset + 1;
+  const rangeEnd = Math.min(offset + limit, total);
 
-    !starred && h(SearchBar, { onSearch: handleSearch }),
+  return h('div', { style: { padding: '2rem' } },
+    h('h2', null, 'Books'),
+    h(SearchBar, { onSearch: handleSearch }),
 
     loading
       ? h('div', { style: { textAlign: 'center', padding: '2rem' } }, 'Loading...')
@@ -105,8 +107,7 @@ export function BooksList({ starred = false, onSelectBook, initialOffset = 0, on
           h(BookCard, {
             key: book.id,
             book: book,
-            onSelect: onSelectBook,
-            onToggleStar: toggleStar
+            onSelect: onSelectBook
           })
         )
       ),
@@ -129,7 +130,7 @@ export function BooksList({ starred = false, onSelectBook, initialOffset = 0, on
         }
       }, 'Previous'),
       h('span', { style: { padding: '0.75rem', color: '#7f8c8d' } },
-        `${offset + 1}-${Math.min(offset + limit, total)} of ${total}`
+        `${rangeStart}-${rangeEnd} of ${total}`
       ),
       h('button', {
         onClick: handleNextPage,

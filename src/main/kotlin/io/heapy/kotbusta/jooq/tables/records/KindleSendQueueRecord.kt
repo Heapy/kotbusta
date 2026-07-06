@@ -34,33 +34,37 @@ open class KindleSendQueueRecord private constructor() : UpdatableRecordImpl<Kin
         set(value): Unit = set(3, value)
         get(): Int = get(3) as Int
 
-    open var format: String
+    open var bookTitle: String
         set(value): Unit = set(4, value)
         get(): String = get(4) as String
 
-    open var status: String
+    open var format: String
         set(value): Unit = set(5, value)
         get(): String = get(5) as String
 
-    open var attempts: Int
+    open var status: String
         set(value): Unit = set(6, value)
-        get(): Int = get(6) as Int
+        get(): String = get(6) as String
+
+    open var attempts: Int
+        set(value): Unit = set(7, value)
+        get(): Int = get(7) as Int
 
     open var nextRunAt: Instant
-        set(value): Unit = set(7, value)
-        get(): Instant = get(7) as Instant
+        set(value): Unit = set(8, value)
+        get(): Instant = get(8) as Instant
 
     open var lastError: String?
-        set(value): Unit = set(8, value)
-        get(): String? = get(8) as String?
+        set(value): Unit = set(9, value)
+        get(): String? = get(9) as String?
 
     open var createdAt: Instant
-        set(value): Unit = set(9, value)
-        get(): Instant = get(9) as Instant
-
-    open var updatedAt: Instant
         set(value): Unit = set(10, value)
         get(): Instant = get(10) as Instant
+
+    open var updatedAt: Instant
+        set(value): Unit = set(11, value)
+        get(): Instant = get(11) as Instant
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -71,11 +75,12 @@ open class KindleSendQueueRecord private constructor() : UpdatableRecordImpl<Kin
     /**
      * Create a detached, initialised KindleSendQueueRecord
      */
-    constructor(id: Int? = null, userId: Int, deviceId: Int, bookId: Int, format: String, status: String, attempts: Int, nextRunAt: Instant, lastError: String? = null, createdAt: Instant, updatedAt: Instant): this() {
+    constructor(id: Int? = null, userId: Int, deviceId: Int, bookId: Int, bookTitle: String, format: String, status: String, attempts: Int, nextRunAt: Instant, lastError: String? = null, createdAt: Instant, updatedAt: Instant): this() {
         this.id = id
         this.userId = userId
         this.deviceId = deviceId
         this.bookId = bookId
+        this.bookTitle = bookTitle
         this.format = format
         this.status = status
         this.attempts = attempts

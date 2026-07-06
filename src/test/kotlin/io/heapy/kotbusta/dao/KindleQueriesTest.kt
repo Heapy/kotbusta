@@ -3,6 +3,7 @@ package io.heapy.kotbusta.dao
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.transaction
 import io.heapy.kotbusta.database.useTx
+import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.jooq.tables.references.KINDLE_SEND_EVENTS
 import io.heapy.kotbusta.model.KindleFormat
 import io.heapy.kotbusta.model.KindleSendStatus
@@ -197,6 +198,7 @@ class KindleQueriesTest {
             userId = 1,
             deviceId = 1,
             bookId = 5,
+            bookTitle = "Test Book",
             format = KindleFormat.EPUB,
         )
 
@@ -205,6 +207,7 @@ class KindleQueriesTest {
         assertEquals(1, queueItem.userId)
         assertEquals(1, queueItem.deviceId)
         assertEquals(5, queueItem.bookId)
+        assertEquals("Test Book", queueItem.bookTitle)
         assertEquals("EPUB", queueItem.format)
         assertEquals("PENDING", queueItem.status)
         assertEquals(0, queueItem.attempts)
@@ -260,6 +263,26 @@ class KindleQueriesTest {
         assertNotNull(firstItem.format)
         assertNotNull(firstItem.status)
         assertNotNull(firstItem.createdAt)
+    }
+
+    @Test
+    context(_: TransactionProvider)
+    fun `findQueueItemsByUserId should keep queued title after book is removed`() = transaction {
+        useTx { dslContext ->
+            dslContext
+                .deleteFrom(BOOKS)
+                .where(BOOKS.ID.eq(1))
+                .execute()
+        }
+
+        val history = findQueueItemsByUserId(
+            userId = 1,
+            limit = 10,
+            offset = 0,
+        )
+
+        val deletedBookHistory = history.single { it.id == 1 }
+        assertEquals("Harry Potter and the Philosopher's Stone", deletedBookHistory.bookTitle)
     }
 
     @Test

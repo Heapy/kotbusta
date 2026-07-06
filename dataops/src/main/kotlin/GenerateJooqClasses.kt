@@ -51,9 +51,9 @@ fun jooq() {
                     ForcedType().apply {
                         userType = "kotlin.time.Instant"
                         converter = "io.heapy.kotbusta.jooq.KotlinInstantConverter"
-                        includeExpression = ".*\\.(CREATED_AT|UPDATED_AT|STARTED_AT|COMPLETED_AT|DATE_ADDED|NEXT_RUN_AT)"
+                        includeExpression = ".*\\.(CREATED_AT|UPDATED_AT|STARTED_AT|COMPLETED_AT|DATE_ADDED|NEXT_RUN_AT|ENRICHED_AT)"
                         includeTypes = ".*"
-                    }
+                    },
                 )
             }
 

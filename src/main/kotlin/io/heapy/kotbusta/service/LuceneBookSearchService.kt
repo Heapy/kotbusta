@@ -1,10 +1,13 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.dao.getBookEmbedding
 import io.heapy.kotbusta.dao.getBookSummariesByIds
 import io.heapy.kotbusta.dao.getSearchIndexBooksPage
+import io.heapy.kotbusta.dao.getSimilarBooks
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
+import io.heapy.kotbusta.model.BookSummary
 import io.heapy.kotbusta.model.SearchIndexBook
 import io.heapy.kotbusta.model.SearchQuery
 import io.heapy.kotbusta.model.SearchResult
@@ -15,23 +18,28 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Timer
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.document.Document
 import org.apache.lucene.document.Field.Store.NO
 import org.apache.lucene.document.Field.Store.YES
+import org.apache.lucene.document.KnnFloatVectorField
 import org.apache.lucene.document.StringField
 import org.apache.lucene.document.TextField
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
+import org.apache.lucene.index.VectorSimilarityFunction
 import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.BoostQuery
 import org.apache.lucene.search.FuzzyQuery
 import org.apache.lucene.search.IndexSearcher
+import org.apache.lucene.search.KnnFloatVectorQuery
 import org.apache.lucene.search.MatchAllDocsQuery
 import org.apache.lucene.search.PrefixQuery
 import org.apache.lucene.search.Query
@@ -56,6 +64,8 @@ import kotlin.time.Clock
 class LuceneBookSearchService(
     private val transactionProvider: TransactionProvider,
     private val indexPath: Path,
+    private val embeddingService: EmbeddingService? = null,
+    private val meterRegistry: MeterRegistry? = null,
 ) : BookSearchService {
     private val analyzer: Analyzer = StandardAnalyzer()
     private val rebuildMutex = Mutex()
@@ -114,13 +124,43 @@ class LuceneBookSearchService(
         }
     }
 
-    override suspend fun search(query: SearchQuery, userId: Int): SearchResult {
-        val sanitizedLimit = query.limit.coerceAtLeast(0)
-        val sanitizedOffset = query.offset.coerceAtLeast(0)
+    override suspend fun search(query: SearchQuery): SearchResult {
+        val semanticEnabled = query.query.isNotBlank() && embeddingService != null
+        val searchMode = when {
+            query.query.isBlank() -> "browse"
+            semanticEnabled -> "hybrid"
+            else -> "full_text"
+        }
+        val registry = meterRegistry
+        val sample = registry?.let { Timer.start(it) }
+
+        try {
+            return searchMeasured(query, semanticEnabled)
+        } finally {
+            if (registry != null && sample != null) {
+                sample.stop(registry.timer("kotbusta_search_duration", "mode", searchMode))
+            }
+        }
+    }
+
+    private suspend fun searchMeasured(
+        query: SearchQuery,
+        semanticEnabled: Boolean,
+    ): SearchResult {
+        // Cap both bounds so a huge ?limit/?offset can't force the collector to
+        // gather an enormous number of hits (requestedHits = offset + limit).
+        val sanitizedLimit = query.limit.coerceIn(0, MAX_SEARCH_LIMIT)
+        val sanitizedOffset = query.offset.coerceIn(0, MAX_SEARCH_OFFSET)
         val normalizedQuery = query.copy(
             limit = sanitizedLimit,
             offset = sanitizedOffset,
         )
+
+        if (semanticEnabled) {
+            val embeddingService = embeddingService
+                ?: error("Semantic search was selected without an embedding service")
+            return semanticSearch(normalizedQuery, embeddingService)
+        }
 
         val luceneQuery = buildLuceneQuery(normalizedQuery)
         val searchSnapshot = activeIndexLock.read {
@@ -157,7 +197,6 @@ class LuceneBookSearchService(
             transactionProvider.transaction(READ_ONLY) {
                 getBookSummariesByIds(
                     bookIds = searchSnapshot.ids,
-                    userId = userId,
                 )
             }
         }
@@ -167,6 +206,41 @@ class LuceneBookSearchService(
             total = searchSnapshot.total,
             hasMore = sanitizedOffset + sanitizedLimit < searchSnapshot.total,
         )
+    }
+
+    override suspend fun findSimilar(bookId: Int, limit: Int): List<BookSummary> {
+        val fallback = suspend {
+            transactionProvider.transaction(READ_ONLY) {
+                getSimilarBooks(bookId, limit)
+            }
+        }
+
+        if (embeddingService == null) {
+            return fallback()
+        }
+
+        val targetEmbedding = transactionProvider.transaction(READ_ONLY) {
+            getBookEmbedding(bookId)
+        } ?: return fallback()
+
+        val ids = activeIndexLock.read {
+            val searcher = activeIndex?.searcher ?: return@read null
+            val topDocs = searcher.search(
+                KnnFloatVectorQuery(FIELD_EMBEDDING, targetEmbedding, limit + 1),
+                limit + 1,
+            )
+            val storedFields = searcher.storedFields()
+            topDocs.scoreDocs
+                .map { scoreDoc ->
+                    storedFields.document(scoreDoc.doc).get(FIELD_BOOK_ID).toInt()
+                }
+                .filter { it != bookId }
+                .take(limit)
+        } ?: return fallback()
+
+        return transactionProvider.transaction(READ_ONLY) {
+            getBookSummariesByIds(ids)
+        }
     }
 
     override fun close() {
@@ -185,7 +259,7 @@ class LuceneBookSearchService(
         }
     }
 
-    fun state(): SearchIndexState = state.get()
+    override fun state(): SearchIndexState = state.get()
 
     private suspend fun drainRebuildQueue() {
         do {
@@ -324,8 +398,121 @@ class LuceneBookSearchService(
         return if (hasClause) {
             root.build()
         } else {
-            MatchAllDocsQuery.INSTANCE
+            MatchAllDocsQuery()
         }
+    }
+
+    private suspend fun semanticSearch(
+        query: SearchQuery,
+        embeddingService: EmbeddingService,
+    ): SearchResult {
+        val queryEmbedding = embeddingService.embedQuery(query.query)
+        val filter = buildFilterQuery(query)
+        val knnQuery = if (filter == null) {
+            KnnFloatVectorQuery(FIELD_EMBEDDING, queryEmbedding, KNN_RESULT_LIMIT)
+        } else {
+            KnnFloatVectorQuery(FIELD_EMBEDDING, queryEmbedding, KNN_RESULT_LIMIT, filter)
+        }
+        val textQuery = buildLuceneQuery(query)
+
+        val ids = activeIndexLock.read {
+            val searcher = activeIndex?.searcher
+                ?: throw SearchIndexNotReadyException()
+
+            fuseHybridResults(
+                vectorIds = collectBookIds(searcher, knnQuery, KNN_RESULT_LIMIT),
+                textIds = collectBookIds(searcher, textQuery, KNN_RESULT_LIMIT),
+            )
+        }
+
+        val books = if (ids.isEmpty()) {
+            emptyList()
+        } else {
+            transactionProvider.transaction(READ_ONLY) {
+                getBookSummariesByIds(ids)
+            }
+        }
+
+        return SearchResult(
+            books = books,
+            total = books.size.toLong(),
+            hasMore = false,
+        )
+    }
+
+    private fun collectBookIds(
+        searcher: IndexSearcher,
+        query: Query,
+        limit: Int,
+    ): List<Int> {
+        val storedFields = searcher.storedFields()
+        return searcher.search(query, limit).scoreDocs.map { scoreDoc ->
+            storedFields.document(scoreDoc.doc).get(FIELD_BOOK_ID).toInt()
+        }
+    }
+
+    private fun fuseHybridResults(
+        vectorIds: List<Int>,
+        textIds: List<Int>,
+    ): List<Int> {
+        val scores = LinkedHashMap<Int, HybridScore>()
+
+        fun add(ids: List<Int>, weight: Double) {
+            ids.forEachIndexed { index, bookId ->
+                val rank = index + 1
+                val score = scores.getOrPut(bookId) { HybridScore() }
+                score.value += weight / (RRF_RANK_CONSTANT + rank)
+                score.bestRank = minOf(score.bestRank, rank)
+            }
+        }
+
+        add(vectorIds, VECTOR_RRF_WEIGHT)
+        add(textIds, TEXT_RRF_WEIGHT)
+
+        return scores
+            .asSequence()
+            .sortedWith(
+                compareByDescending<Map.Entry<Int, HybridScore>> { it.value.value }
+                    .thenBy { it.value.bestRank }
+                    .thenBy { it.key },
+            )
+            .take(KNN_RESULT_LIMIT)
+            .map { it.key }
+            .toList()
+    }
+
+    private fun buildFilterQuery(query: SearchQuery): Query? {
+        val root = BooleanQuery.Builder()
+        var hasClause = false
+
+        buildAuthorFilter(query.author)?.let {
+            root.add(it, BooleanClause.Occur.FILTER)
+            hasClause = true
+        }
+
+        query.genre
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let { genre ->
+                root.add(
+                    TermQuery(Term(FIELD_GENRE, normalizeKeyword(genre))),
+                    BooleanClause.Occur.FILTER,
+                )
+                hasClause = true
+            }
+
+        query.language
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let { language ->
+                root.add(
+                    TermQuery(Term(FIELD_LANGUAGE, normalizeKeyword(language))),
+                    BooleanClause.Occur.FILTER,
+                )
+                hasClause = true
+            }
+
+        return if (hasClause) root.build() else null
     }
 
     private fun buildTextQuery(input: String): Query? {
@@ -364,6 +551,7 @@ class LuceneBookSearchService(
             add(buildFieldTokenQuery(FIELD_TITLE, token, TITLE_EXACT_BOOST, TITLE_PREFIX_BOOST, includeFuzzy = true), BooleanClause.Occur.SHOULD)
             add(buildFieldTokenQuery(FIELD_AUTHORS, token, AUTHORS_EXACT_BOOST, AUTHORS_PREFIX_BOOST, includeFuzzy = true), BooleanClause.Occur.SHOULD)
             add(buildFieldTokenQuery(FIELD_SERIES, token, SERIES_EXACT_BOOST, SERIES_PREFIX_BOOST, includeFuzzy = true), BooleanClause.Occur.SHOULD)
+            add(buildFieldTokenQuery(FIELD_ANNOTATION, token, ANNOTATION_EXACT_BOOST, ANNOTATION_PREFIX_BOOST, includeFuzzy = true), BooleanClause.Occur.SHOULD)
             setMinimumNumberShouldMatch(1)
         }.build()
     }
@@ -386,6 +574,7 @@ class LuceneBookSearchService(
                         when (field) {
                             FIELD_TITLE -> TITLE_FUZZY_BOOST
                             FIELD_AUTHORS -> AUTHORS_FUZZY_BOOST
+                            FIELD_ANNOTATION -> ANNOTATION_FUZZY_BOOST
                             else -> SERIES_FUZZY_BOOST
                         },
                     ),
@@ -486,6 +675,12 @@ class LuceneBookSearchService(
             series?.takeIf(String::isNotBlank)?.let { seriesName ->
                 add(TextField(FIELD_SERIES, seriesName, NO))
             }
+            annotation?.takeIf(String::isNotBlank)?.let { annotation ->
+                add(TextField(FIELD_ANNOTATION, annotation, NO))
+            }
+            embedding?.let { vector ->
+                add(KnnFloatVectorField(FIELD_EMBEDDING, vector, VectorSimilarityFunction.DOT_PRODUCT))
+            }
 
             add(StringField(FIELD_LANGUAGE, normalizeKeyword(language), NO))
             genres.forEach { genre ->
@@ -501,6 +696,11 @@ class LuceneBookSearchService(
         val total: Long,
     )
 
+    private data class HybridScore(
+        var value: Double = 0.0,
+        var bestRank: Int = Int.MAX_VALUE,
+    )
+
     private data class ActiveIndex(
         val directory: Directory,
         val reader: DirectoryReader,
@@ -513,7 +713,7 @@ class LuceneBookSearchService(
     }
 
     private companion object : Logger() {
-        private const val SCHEMA_VERSION = "1"
+        private const val SCHEMA_VERSION = "2"
         private const val COMMIT_SCHEMA_VERSION_KEY = "schema_version"
         private const val COMMIT_BUILT_AT_KEY = "built_at"
 
@@ -521,10 +721,19 @@ class LuceneBookSearchService(
         private const val FIELD_TITLE = "title"
         private const val FIELD_AUTHORS = "authors"
         private const val FIELD_SERIES = "series"
+        private const val FIELD_ANNOTATION = "annotation"
+        private const val FIELD_EMBEDDING = "embedding"
         private const val FIELD_LANGUAGE = "language"
         private const val FIELD_GENRE = "genre"
 
         private const val INDEX_PAGE_SIZE = 5000
+        private const val KNN_RESULT_LIMIT = 1000
+        private const val RRF_RANK_CONSTANT = 60
+        private const val VECTOR_RRF_WEIGHT = 1.0
+        private const val TEXT_RRF_WEIGHT = 1.25
+
+        private const val MAX_SEARCH_LIMIT = 100
+        private const val MAX_SEARCH_OFFSET = 100_000
 
         private const val FUZZY_MIN_LENGTH = 5
         private const val FUZZY_MAX_EDITS = 1
@@ -539,6 +748,9 @@ class LuceneBookSearchService(
         private const val SERIES_EXACT_BOOST = 3f
         private const val SERIES_PREFIX_BOOST = 2f
         private const val SERIES_FUZZY_BOOST = 1f
+        private const val ANNOTATION_EXACT_BOOST = 2f
+        private const val ANNOTATION_PREFIX_BOOST = 1f
+        private const val ANNOTATION_FUZZY_BOOST = 0.5f
         private const val AUTHOR_EXACT_BOOST = 3f
         private const val AUTHOR_PREFIX_BOOST = 1.5f
     }

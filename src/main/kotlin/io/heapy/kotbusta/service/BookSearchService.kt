@@ -2,6 +2,7 @@ package io.heapy.kotbusta.service
 
 import io.heapy.kotbusta.model.SearchQuery
 import io.heapy.kotbusta.model.SearchResult
+import io.heapy.kotbusta.model.BookSummary
 import kotlinx.coroutines.CoroutineScope
 
 interface BookSearchService {
@@ -11,7 +12,11 @@ interface BookSearchService {
 
     suspend fun rebuildNow()
 
-    suspend fun search(query: SearchQuery, userId: Int): SearchResult
+    suspend fun search(query: SearchQuery): SearchResult
+
+    suspend fun findSimilar(bookId: Int, limit: Int): List<BookSummary>
+
+    fun state(): SearchIndexState = SearchIndexState.READY
 
     fun close() {}
 }

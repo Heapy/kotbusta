@@ -20,9 +20,10 @@
 ## Importer
 
 1. Import should be idempotent, re-importing the same archive should not change anything
-2. Import should be parallel to speed up the process
-3. Importing new updated library should not delete physically existing books in a database, gracefully mark as deleted
-4. User's personal library should not be touched: likes, notes, uploaded books should be preserved. If a book is deleted from an archive, mark it as deleted in the database, never break ~~userland~~ user data!
+2. Import should stream INPX files into isolated staging tables and keep write transactions short while loading each input file
+3. Import should swap the live catalog only after staging succeeds; a failed import must leave the previous live catalog unchanged
+4. Importing a new library snapshot should remove books that are absent from that snapshot while preserving independent data such as `BOOK_ENRICHMENT` and Kindle send history
+5. Stale staging tables from interrupted imports should be cleaned before a new import starts
 
 # Book Management Features
 
@@ -34,58 +35,49 @@
      - Language filtering
      - Author filtering
      - Pagination support
+     - Optional semantic/KNN search when local embeddings are configured
 2. View book details – Full information including:
     - Title, authors, genre, language
     - Series information and number
     - File size and date added
-    - Annotation/description
+    - Annotation/description from enrichment
     - Cover image
-    - User's starred status and personal notes
     - Get book cover images - Separate endpoint for cover images
-    - Find similar books - Recommendations based on genre and authors
+    - Find similar books - Recommendations based on embeddings when available, otherwise genre and authors
 3. Book Interactions
-   - Star/Unstar books - Personal favorites/bookmarks system
-   - View starred books - List of user's favorite books
-   - Download books - Multiple format support:
+   - Download books - Limited format support:
        - Native FB2 format
-       - Converted formats via Pandoc (EPUB)
-       - Download tracking for statistics
-   - Send to Kindle - Send books to Kindle device, select from list of available devices
-4. Comments System
-   - Add comments - Public comments on books
-   - View comments - List all comments for a book
-   - Update comments - Edit your own comments
-   - Delete comments - Remove your own comments
-5. Personal Notes
-   - Add/Update notes - Private notes for books
-   - Delete notes - Remove personal notes
-6. Authentication & Profile
+       - EPUB converted via Pandoc
+   - Send to Kindle - Queue EPUB delivery to a selected Kindle device
+4. Enrichment
+   - Extract annotation text from FB2 files
+   - Store annotations and embeddings in `BOOK_ENRICHMENT`
+   - Retry abandoned `PROCESSING` claims on worker startup
+   - Rebuild the Lucene index after enrichment batches complete
+5. Authentication & Profile
    - Login/Logout - Session-based authentication
    - Google OAuth - Social login integration
    - User info - Current user session details
    - Admin approves new users - Admin should approve new users, before they can access the system
-7. Activity Tracking
-   - View activity - Service star and download activity with user details
-8. Kindle Setup
+6. Kindle Setup
    - Add/Update Kindle devices - Manage your Kindle devices (email + name)
    - Instructions to add kotbusta@heapyhop.com to allowed Kindle Emails
-9. Administrative Functions
+7. Administrative Functions
    - Import books - Bulk import from INPX archives and Cover Extract
    - View import jobs - Monitor background import tasks, see history of imports and stats
    - System status - Health check and statistics
+8. Operations
+   - `/health` reports service and search-index status
+   - `/metrics` exposes Prometheus metrics, optionally protected by bearer token
 
 ##  Key Frontend Capabilities
 
 1. Responsive Search - Real-time search with multiple filters
 2. Infinite Scroll - Pagination for smooth browsing
-3. Format Flexibility - Download in user's preferred format
-4. Personal Library - Star system for building personal collections
-5. Community Engagement - Comments for book discussions
-6. Private Notes - Personal annotations and thoughts
-7. Visual Experience - Book covers for better browsing
-8. Social Login - Login with Google
-9. Send to Kindle - Send books to Kindle devices. Support multiple devices. Use Amazon's SES for sending emails, use AWS library, not javax.mail.
-10. Upload Books - Upload own books to the system, and store them
-11. Read fb2 books right in Kotbusta, without downloading them.
+3. Format Clarity - Download FB2 or EPUB only
+4. Visual Experience - Book covers and enriched annotations for better browsing
+5. Social Login - Login with Google
+6. Send to Kindle - Send books to Kindle devices. Support multiple devices. Use Amazon's SES for sending emails, use AWS library, not javax.mail.
+7. Read fb2 books right in Kotbusta, without downloading them.
     - Save the current position in the book.
     - Select text to "highlight" it, add annotations
