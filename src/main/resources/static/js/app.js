@@ -143,18 +143,8 @@ function App() {
   };
 
   if (loading) {
-    return h('div', {
-      style: {
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: '#ecf0f1'
-      }
-    },
-      h('div', { style: { textAlign: 'center' } },
-        h('h2', null, 'Loading...')
-      )
+    return h('div', { className: 'auth-page' },
+      h('div', { className: 'loading-state' }, 'Loading...')
     );
   }
 
@@ -168,7 +158,7 @@ function App() {
     return h(LoginPage);
   }
 
-  return h('div', { style: { minHeight: '100vh', background: '#ecf0f1' } },
+  return h('div', { className: 'app-shell' },
     h(Header, {
       user: user,
       onNavigate: handleNavigate,

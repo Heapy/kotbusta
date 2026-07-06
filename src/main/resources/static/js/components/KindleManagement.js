@@ -2,6 +2,13 @@ import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { api } from '../utils/api.js';
 
+function statusClass(status) {
+  if (status === 'COMPLETED') return 'status-badge success';
+  if (status === 'FAILED') return 'status-badge danger';
+  if (status === 'PROCESSING') return 'status-badge warning';
+  return 'status-badge';
+}
+
 export function KindleManagement() {
   const [devices, setDevices] = useState([]);
   const [sendHistory, setSendHistory] = useState([]);
@@ -28,8 +35,8 @@ export function KindleManagement() {
     }
   };
 
-  const addDevice = async (e) => {
-    e.preventDefault();
+  const addDevice = async (event) => {
+    event.preventDefault();
     try {
       await api.post('/api/kindle/devices', newDevice);
       setNewDevice({ email: '', name: '' });
@@ -51,179 +58,104 @@ export function KindleManagement() {
   };
 
   if (loading) {
-    return h('div', { style: { padding: '2rem', textAlign: 'center' } }, 'Loading...');
+    return h('main', { className: 'page' },
+      h('div', { className: 'loading-state' }, 'Loading...')
+    );
   }
 
-  return h('div', { style: { padding: '2rem' } },
-    h('h2', null, 'Kindle Management'),
+  return h('main', { className: 'page' },
+    h('div', { className: 'page-header' },
+      h('h2', { className: 'page-title' }, 'Kindle'),
+      h('button', {
+        className: 'button primary',
+        onClick: () => setShowAddDevice(!showAddDevice)
+      }, showAddDevice ? 'Close' : 'Add Device')
+    ),
 
-    h('div', { style: { marginBottom: '2rem' } },
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' } },
-        h('h3', null, 'My Devices'),
-        h('button', {
-          onClick: () => setShowAddDevice(!showAddDevice),
-          style: {
-            padding: '0.5rem 1rem',
-            background: '#27ae60',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }
-        }, '+ Add Device')
+    h('section', { className: 'section' },
+      h('div', { className: 'section-header' },
+        h('h3', { className: 'section-title' }, 'My Devices')
       ),
 
       showAddDevice && h('form', {
-        onSubmit: addDevice,
-        style: {
-          background: '#ecf0f1',
-          padding: '1rem',
-          borderRadius: '8px',
-          marginBottom: '1rem'
-        }
+        className: 'form-panel',
+        onSubmit: addDevice
       },
         h('input', {
+          className: 'input',
           type: 'email',
           value: newDevice.email,
-          onInput: (e) => setNewDevice({ ...newDevice, email: e.target.value }),
-          placeholder: 'Kindle Email (e.g., user@kindle.com)',
-          required: true,
-          style: {
-            width: '100%',
-            padding: '0.75rem',
-            border: '1px solid #bdc3c7',
-            borderRadius: '4px',
-            marginBottom: '0.5rem',
-            boxSizing: 'border-box'
-          }
+          onInput: (event) => setNewDevice({ ...newDevice, email: event.target.value }),
+          placeholder: 'Kindle email, for example user@kindle.com',
+          required: true
         }),
         h('input', {
+          className: 'input',
           type: 'text',
           value: newDevice.name,
-          onInput: (e) => setNewDevice({ ...newDevice, name: e.target.value }),
-          placeholder: 'Device Name (e.g., My Kindle)',
-          required: true,
-          style: {
-            width: '100%',
-            padding: '0.75rem',
-            border: '1px solid #bdc3c7',
-            borderRadius: '4px',
-            marginBottom: '0.5rem',
-            boxSizing: 'border-box'
-          }
+          onInput: (event) => setNewDevice({ ...newDevice, name: event.target.value }),
+          placeholder: 'Device name',
+          required: true
         }),
-        h('div', { style: { display: 'flex', gap: '0.5rem' } },
+        h('div', { className: 'form-actions' },
+          h('button', { className: 'button success', type: 'submit' }, 'Add'),
           h('button', {
-            type: 'submit',
-            style: {
-              padding: '0.5rem 1rem',
-              background: '#27ae60',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }
-          }, 'Add'),
-          h('button', {
+            className: 'button',
             type: 'button',
-            onClick: () => setShowAddDevice(false),
-            style: {
-              padding: '0.5rem 1rem',
-              background: '#95a5a6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }
+            onClick: () => setShowAddDevice(false)
           }, 'Cancel')
         )
       ),
 
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.75rem' } },
+      h('div', { className: 'list-stack' },
         devices.map(device =>
-          h('div', {
-            key: device.id,
-            style: {
-              padding: '1rem',
-              border: '1px solid #e1e8ed',
-              borderRadius: '8px',
-              background: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }
-          },
+          h('div', { key: device.id, className: 'list-item' },
             h('div', null,
-              h('div', { style: { fontWeight: 'bold' } }, device.name),
-              h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } }, device.email)
+              h('div', { className: 'item-title' }, device.name),
+              h('div', { className: 'item-subtitle' }, device.email)
             ),
             h('button', {
-              onClick: () => deleteDevice(device.id),
-              style: {
-                padding: '0.5rem 1rem',
-                background: '#e74c3c',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }
+              className: 'button danger compact',
+              onClick: () => deleteDevice(device.id)
             }, 'Delete')
           )
         )
       ),
 
       devices.length === 0 && h('div', {
-        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
-      }, 'No devices yet. Add your first Kindle device to get started!')
+        className: 'empty-state'
+      }, 'No devices yet.')
     ),
 
-    h('div', null,
-      h('h3', null, 'Send History'),
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.5rem' } },
+    h('section', { className: 'section' },
+      h('div', { className: 'section-header' },
+        h('h3', { className: 'section-title' }, 'Send History')
+      ),
+      h('div', { className: 'list-stack' },
         sendHistory.map(item =>
-          h('div', {
-            key: item.id,
-            style: {
-              padding: '0.75rem',
-              border: '1px solid #e1e8ed',
-              borderRadius: '4px',
-              background: 'white'
-            }
-          },
-            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'start' } },
+          h('div', { key: item.id, className: 'list-item history-row' },
+            h('div', { className: 'history-topline' },
               h('div', null,
-                h('div', { style: { fontWeight: 'bold' } }, item.bookTitle),
-                h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } },
-                  `to ${item.deviceName} · ${item.format}`
+                h('div', { className: 'item-title' }, item.bookTitle),
+                h('div', { className: 'item-subtitle' },
+                  `to ${item.deviceName} - ${item.format}`
                 ),
-                h('div', { style: { color: '#95a5a6', fontSize: '0.75rem' } },
+                h('div', { className: 'item-note' },
                   new Date(item.createdAt).toLocaleString()
                 )
               ),
-              h('span', {
-                style: {
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '4px',
-                  fontSize: '0.75rem',
-                  background: item.status === 'COMPLETED' ? '#d5f4e6' :
-                             item.status === 'FAILED' ? '#fadbd8' :
-                             item.status === 'PROCESSING' ? '#fff3cd' : '#e8f4f8',
-                  color: item.status === 'COMPLETED' ? '#27ae60' :
-                         item.status === 'FAILED' ? '#e74c3c' :
-                         item.status === 'PROCESSING' ? '#f39c12' : '#3498db'
-                }
-              }, item.status)
+              h('span', { className: statusClass(item.status) }, item.status)
             ),
             item.lastError && h('div', {
-              style: { color: '#e74c3c', fontSize: '0.75rem', marginTop: '0.5rem' }
+              className: 'error-text'
             }, `Error: ${item.lastError}`)
           )
         )
       ),
 
       sendHistory.length === 0 && h('div', {
-        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
-      }, 'No send history yet')
+        className: 'empty-state'
+      }, 'No send history yet.')
     )
   );
 }

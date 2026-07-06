@@ -2,6 +2,13 @@ import { h } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import { api } from '../utils/api.js';
 
+function statusClass(status) {
+  if (status === 'COMPLETED') return 'status-badge success';
+  if (status === 'FAILED') return 'status-badge danger';
+  if (status === 'RUNNING') return 'status-badge warning';
+  return 'status-badge';
+}
+
 export function AdminPanel() {
   const [jobStatus, setJobStatus] = useState(null);
   const [pendingUsers, setPendingUsers] = useState([]);
@@ -10,7 +17,7 @@ export function AdminPanel() {
   useEffect(() => {
     loadData();
 
-    // Always poll for job status every 2 seconds while on this page
+    // Always poll for job status every 2 seconds while on this page.
     const interval = setInterval(() => {
       loadJobStatus();
     }, 2000);
@@ -72,202 +79,115 @@ export function AdminPanel() {
   };
 
   if (loading) {
-    return h('div', { style: { padding: '2rem', textAlign: 'center' } }, 'Loading...');
+    return h('main', { className: 'page' },
+      h('div', { className: 'loading-state' }, 'Loading...')
+    );
   }
 
-  return h('div', { style: { padding: '2rem' } },
-    h('h2', { style: { color: '#e74c3c' } }, 'Admin Panel'),
+  const isRunning = jobStatus?.status === 'RUNNING';
+  const messages = Object.entries(jobStatus?.messages || {})
+    .sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
-    h('div', { style: { marginBottom: '2rem' } },
-      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' } },
-        h('h3', null,
-          'Import Job ',
-          jobStatus?.status === 'RUNNING' && h('span', { style: { color: '#f39c12', fontSize: '0.875rem' } }, '(🔴 Live)')
-        ),
-        h('button', {
-          onClick: startImport,
-          disabled: jobStatus?.status === 'RUNNING',
-          style: {
-            padding: '0.5rem 1rem',
-            background: jobStatus?.status === 'RUNNING' ? '#95a5a6' : '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: jobStatus?.status === 'RUNNING' ? 'not-allowed' : 'pointer',
-            fontWeight: 'bold',
-            opacity: jobStatus?.status === 'RUNNING' ? 0.6 : 1
-          }
-        }, jobStatus?.status === 'RUNNING' ? 'Import Running...' : 'Start Import')
+  return h('main', { className: 'page' },
+    h('div', { className: 'page-header' },
+      h('h2', { className: 'page-title' }, 'Admin'),
+      h('button', {
+        className: 'button primary',
+        onClick: startImport,
+        disabled: isRunning
+      }, isRunning ? 'Import Running...' : 'Start Import')
+    ),
+
+    h('section', { className: 'section' },
+      h('div', { className: 'section-header' },
+        h('h3', { className: 'section-title' }, 'Import Job'),
+        isRunning && h('span', { className: 'status-badge warning' }, 'Live')
       ),
 
       jobStatus && h('div', {
-        style: {
-          padding: '1rem',
-          border: jobStatus.status === 'RUNNING' ? '2px solid #3498db' : '1px solid #e1e8ed',
-          borderRadius: '8px',
-          background: 'white'
-        }
+        className: `panel ${isRunning ? 'running' : ''}`
       },
-        h('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' } },
+        h('div', { className: 'section-header' },
           h('div', null,
-            h('span', { style: { fontWeight: 'bold' } }, 'Import Job'),
-            h('span', {
-              style: {
-                marginLeft: '0.5rem',
-                padding: '0.25rem 0.75rem',
-                borderRadius: '4px',
-                fontSize: '0.75rem',
-                background: jobStatus.status === 'COMPLETED' ? '#d5f4e6' :
-                           jobStatus.status === 'FAILED' ? '#fadbd8' :
-                           jobStatus.status === 'RUNNING' ? '#fff3cd' : '#e1e8ed',
-                color: jobStatus.status === 'COMPLETED' ? '#27ae60' :
-                       jobStatus.status === 'FAILED' ? '#e74c3c' :
-                       jobStatus.status === 'RUNNING' ? '#f39c12' : '#7f8c8d'
-              }
-            }, jobStatus.status)
+            h('div', { className: 'item-title' }, 'Import Job'),
+            h('div', { className: 'item-subtitle' },
+              'Started: ', new Date(jobStatus.startedAt).toLocaleString()
+            )
           ),
-          h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } },
-            'Started: ', new Date(jobStatus.startedAt).toLocaleString()
-          )
+          h('span', { className: statusClass(jobStatus.status) }, jobStatus.status)
         ),
 
-        Object.keys(jobStatus.messages).length > 0 && h('div', {
-          style: {
-            marginTop: '1rem',
-            marginBottom: '1rem',
-            border: '1px solid #e1e8ed',
-            borderRadius: '4px',
-            background: '#f8f9fa',
-            maxHeight: '300px',
-            overflowY: 'auto'
-          }
-        },
-          h('div', {
-            style: {
-              padding: '0.5rem 1rem',
-              borderBottom: '1px solid #e1e8ed',
-              fontWeight: 'bold',
-              fontSize: '0.875rem',
-              background: '#ecf0f1',
-              position: 'sticky',
-              top: 0,
-              zIndex: 1
-            }
-          }, 'Import Log'),
-          h('div', {
-            style: {
-              padding: '0.5rem',
-              fontFamily: 'monospace',
-              fontSize: '0.75rem'
-            }
-          },
-            Object.entries(jobStatus.messages)
-              .sort((a, b) => new Date(a[0]) - new Date(b[0]))
-              .map(([timestamp, msg]) =>
-                h('div', {
-                  key: timestamp,
-                  style: {
-                    padding: '0.25rem 0.5rem',
-                    borderBottom: '1px solid #ecf0f1',
-                    display: 'flex',
-                    gap: '0.75rem'
-                  }
-                },
-                  h('span', {
-                    style: {
-                      color: '#7f8c8d',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0
-                    }
-                  }, new Date(timestamp).toLocaleTimeString()),
-                  h('span', {
-                    style: {
-                      color: '#34495e',
-                      wordBreak: 'break-word'
-                    }
-                  }, msg)
-                )
+        messages.length > 0 && h('div', { className: 'job-log' },
+          h('div', { className: 'job-log-title' }, 'Import Log'),
+          h('div', { className: 'job-log-body' },
+            messages.map(([timestamp, message]) =>
+              h('div', { key: timestamp, className: 'job-log-row' },
+                h('span', { className: 'job-log-time' }, new Date(timestamp).toLocaleTimeString()),
+                h('span', { className: 'job-log-message' }, message)
               )
+            )
           )
         ),
 
-        h('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-            gap: '0.5rem',
-            fontSize: '0.875rem',
-            color: '#34495e'
-          }
-        },
-          h('div', null, 'Files: ', jobStatus.inpFilesProcessed),
-          h('div', null, 'Added: ', jobStatus.booksAdded),
-          h('div', null, 'Deleted: ', jobStatus.bookDeleted),
-          h('div', { style: { color: '#e74c3c' } }, 'Book Errors: ', jobStatus.bookErrors)
+        h('div', { className: 'metrics-grid' },
+          h('div', { className: 'metric' },
+            h('div', { className: 'metric-label' }, 'Files'),
+            h('div', { className: 'metric-value' }, jobStatus.inpFilesProcessed)
+          ),
+          h('div', { className: 'metric' },
+            h('div', { className: 'metric-label' }, 'Added'),
+            h('div', { className: 'metric-value' }, jobStatus.booksAdded)
+          ),
+          h('div', { className: 'metric' },
+            h('div', { className: 'metric-label' }, 'Deleted'),
+            h('div', { className: 'metric-value' }, jobStatus.bookDeleted)
+          ),
+          h('div', { className: 'metric' },
+            h('div', { className: 'metric-label' }, 'Book Errors'),
+            h('div', { className: 'metric-value danger-text' }, jobStatus.bookErrors)
+          )
         ),
 
         jobStatus.completedAt && h('div', {
-          style: { color: '#7f8c8d', fontSize: '0.875rem', marginTop: '0.5rem' }
+          className: 'item-note completed-note'
         }, 'Completed: ', new Date(jobStatus.completedAt).toLocaleString())
       ),
 
       !jobStatus && h('div', {
-        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
-      }, 'No job information available')
+        className: 'empty-state'
+      }, 'No job information available.')
     ),
 
-    h('div', null,
-      h('h3', null, 'Pending User Approvals (', pendingUsers.length, ')'),
-      h('div', { style: { display: 'flex', flexDirection: 'column', gap: '0.75rem' } },
+    h('section', { className: 'section' },
+      h('div', { className: 'section-header' },
+        h('h3', { className: 'section-title' }, 'Pending User Approvals'),
+        h('span', { className: 'chip' }, pendingUsers.length)
+      ),
+      h('div', { className: 'list-stack' },
         pendingUsers.map(user =>
-          h('div', {
-            key: user.id,
-            style: {
-              padding: '1rem',
-              border: '1px solid #e1e8ed',
-              borderRadius: '8px',
-              background: 'white',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }
-          },
-            h('div', { style: { display: 'flex', gap: '0.75rem', alignItems: 'center' } },
+          h('div', { key: user.id, className: 'list-item' },
+            h('div', { className: 'list-item-main' },
               user.avatarUrl && h('img', {
+                className: 'avatar',
                 src: user.avatarUrl,
-                alt: user.name,
-                style: { width: '48px', height: '48px', borderRadius: '50%' }
+                alt: user.name
               }),
               h('div', null,
-                h('div', { style: { fontWeight: 'bold' } }, user.name),
-                h('div', { style: { color: '#7f8c8d', fontSize: '0.875rem' } }, user.email),
-                h('div', { style: { color: '#95a5a6', fontSize: '0.75rem' } },
+                h('div', { className: 'item-title' }, user.name),
+                h('div', { className: 'item-subtitle' }, user.email),
+                h('div', { className: 'item-note' },
                   'Requested: ', new Date(user.createdAt).toLocaleString()
                 )
               )
             ),
-            h('div', { style: { display: 'flex', gap: '0.5rem' } },
+            h('div', { className: 'toolbar' },
               h('button', {
-                onClick: () => approveUser(user.id),
-                style: {
-                  padding: '0.5rem 1rem',
-                  background: '#27ae60',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }
+                className: 'button success compact',
+                onClick: () => approveUser(user.id)
               }, 'Approve'),
               h('button', {
-                onClick: () => rejectUser(user.id),
-                style: {
-                  padding: '0.5rem 1rem',
-                  background: '#e74c3c',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }
+                className: 'button danger compact',
+                onClick: () => rejectUser(user.id)
               }, 'Reject')
             )
           )
@@ -275,8 +195,8 @@ export function AdminPanel() {
       ),
 
       pendingUsers.length === 0 && h('div', {
-        style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
-      }, 'No pending user approvals')
+        className: 'empty-state'
+      }, 'No pending user approvals.')
     )
   );
 }

@@ -89,20 +89,16 @@ export function BooksList({ onSelectBook, initialOffset = 0, onPageChange }) {
   const rangeStart = total === 0 ? 0 : offset + 1;
   const rangeEnd = Math.min(offset + limit, total);
 
-  return h('div', { style: { padding: '2rem' } },
-    h('h2', null, 'Books'),
+  return h('main', { className: 'page wide' },
+    h('div', { className: 'page-header' },
+      h('h2', { className: 'page-title' }, 'Books'),
+      h('span', { className: 'muted' }, `${total} total`)
+    ),
     h(SearchBar, { onSearch: handleSearch }),
 
     loading
-      ? h('div', { style: { textAlign: 'center', padding: '2rem' } }, 'Loading...')
-      : h('div', {
-          style: {
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-            gap: '1.5rem',
-            marginBottom: '2rem'
-          }
-        },
+      ? h('div', { className: 'loading-state' }, 'Loading...')
+      : h('div', { className: 'book-grid' },
         books.map(book =>
           h(BookCard, {
             key: book.id,
@@ -113,36 +109,22 @@ export function BooksList({ onSelectBook, initialOffset = 0, onPageChange }) {
       ),
 
     books.length === 0 && !loading && h('div', {
-      style: { textAlign: 'center', padding: '2rem', color: '#95a5a6' }
+      className: 'empty-state'
     }, 'No books found'),
 
-    h('div', { style: { display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' } },
+    h('div', { className: 'pagination' },
       h('button', {
+        className: 'button',
         onClick: handlePreviousPage,
-        disabled: offset === 0,
-        style: {
-          padding: '0.75rem 1.5rem',
-          background: offset === 0 ? '#ecf0f1' : '#3498db',
-          color: offset === 0 ? '#95a5a6' : 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: offset === 0 ? 'not-allowed' : 'pointer'
-        }
+        disabled: offset === 0
       }, 'Previous'),
-      h('span', { style: { padding: '0.75rem', color: '#7f8c8d' } },
+      h('span', { className: 'range-label' },
         `${rangeStart}-${rangeEnd} of ${total}`
       ),
       h('button', {
+        className: 'button',
         onClick: handleNextPage,
-        disabled: !hasMore,
-        style: {
-          padding: '0.75rem 1.5rem',
-          background: !hasMore ? '#ecf0f1' : '#3498db',
-          color: !hasMore ? '#95a5a6' : 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: !hasMore ? 'not-allowed' : 'pointer'
-        }
+        disabled: !hasMore
       }, 'Next')
     )
   );
