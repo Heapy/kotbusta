@@ -72,119 +72,90 @@ export function BookDetail({ bookId, onBack, onSelectBook }) {
   };
 
   if (loading) {
-    return h('div', { style: { padding: '2rem', textAlign: 'center' } }, 'Loading...');
+    return h('main', { className: 'page' },
+      h('div', { className: 'loading-state' }, 'Loading...')
+    );
   }
 
   if (!book) {
-    return h('div', { style: { padding: '2rem' } }, 'Book not found');
+    return h('main', { className: 'page' },
+      h('div', { className: 'empty-state' }, 'Book not found')
+    );
   }
 
-  return h('div', { style: { padding: '2rem' } },
-    h('button', {
-      onClick: onBack,
-      style: {
-        marginBottom: '1rem',
-        padding: '0.5rem 1rem',
-        background: '#95a5a6',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer'
-      }
-    }, 'Back'),
+  return h('main', { className: 'page wide' },
+    h('div', { className: 'page-header' },
+      h('button', {
+        className: 'button ghost',
+        onClick: onBack
+      }, 'Back'),
+      h('span', { className: 'soft' }, book.language)
+    ),
 
-    h('div', { style: { display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem', marginBottom: '2rem' } },
-      h('div', null,
-        book.coverImageUrl && h('img', {
-          src: book.coverImageUrl,
-          alt: book.title,
-          style: { width: '100%', borderRadius: '8px', marginBottom: '1rem' }
-        }),
-
-        h('div', { style: { marginTop: '1rem' } },
-          h('h4', { style: { marginBottom: '0.5rem' } }, 'Download'),
-          h('button', buttonStyle('#3498db', { marginBottom: '0.25rem' }, () => download('fb2')), 'Download FB2'),
-          h('button', buttonStyle('#3498db', {}, () => download('epub')), 'Download EPUB')
+    h('div', { className: 'detail-layout' },
+      h('aside', null,
+        h('div', { className: 'detail-cover' },
+          book.coverImageUrl
+            ? h('img', { src: book.coverImageUrl, alt: book.title })
+            : h('div', { className: 'book-cover-placeholder large' }, 'No cover')
         ),
 
-        h('div', { style: { marginTop: '1rem' } },
-          h('h4', { style: { marginBottom: '0.5rem' } }, 'Send to Kindle'),
-          kindleDevices.length === 0
-            ? h('p', { style: { color: '#95a5a6', fontSize: '0.875rem' } },
-                'No Kindle devices yet. Add one in the Kindle section.')
-            : h('div', null,
-                h('select', {
-                  value: selectedDeviceId,
-                  onChange: (e) => setSelectedDeviceId(e.target.value),
-                  style: {
-                    width: '100%',
-                    padding: '0.5rem',
-                    marginBottom: '0.25rem',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    boxSizing: 'border-box'
-                  }
-                }, kindleDevices.map(d =>
-                  h('option', { key: d.id, value: String(d.id) }, `${d.name} (${d.email})`)
-                )),
-                h('button', {
-                  ...buttonStyle(sendingToKindle ? '#95a5a6' : '#9b59b6', {}, sendToKindle),
-                  disabled: sendingToKindle || !selectedDeviceId
-                }, sendingToKindle ? 'Sending...' : 'Send EPUB to Kindle')
-              )
+        h('div', { className: 'side-actions' },
+          h('section', { className: 'panel' },
+            h('h3', { className: 'section-title' }, 'Download'),
+            h('div', { className: 'action-stack' },
+              h('button', { className: 'button full', onClick: () => download('fb2') }, 'FB2'),
+              h('button', { className: 'button full', onClick: () => download('epub') }, 'EPUB')
+            )
+          ),
+
+          h('section', { className: 'panel' },
+            h('h3', { className: 'section-title' }, 'Send to Kindle'),
+            kindleDevices.length === 0
+              ? h('p', { className: 'book-meta' },
+                  'Add a Kindle device before sending EPUB files.'
+                )
+              : h('div', { className: 'action-stack' },
+                  h('select', {
+                    className: 'select',
+                    value: selectedDeviceId,
+                    onChange: (event) => setSelectedDeviceId(event.target.value)
+                  }, kindleDevices.map(device =>
+                    h('option', { key: device.id, value: String(device.id) }, `${device.name} (${device.email})`)
+                  )),
+                  h('button', {
+                    className: 'button primary full',
+                    onClick: sendToKindle,
+                    disabled: sendingToKindle || !selectedDeviceId
+                  }, sendingToKindle ? 'Sending...' : 'Send EPUB')
+                )
+          )
         )
       ),
 
-      h('div', null,
-        h('h1', { style: { marginTop: 0 } }, book.title),
-        h('p', { style: { fontSize: '1.125rem', color: '#7f8c8d', marginBottom: '1rem' } },
-          book.authors.map(a => a.fullName).join(', ')
+      h('article', null,
+        h('h1', { className: 'detail-title' }, book.title),
+        h('p', { className: 'detail-author' },
+          book.authors.map(author => author.fullName).join(', ')
         ),
-        book.series && h('p', { style: { color: '#95a5a6', marginBottom: '1rem' } },
+        book.series && h('p', { className: 'book-meta' },
           'Series: ', book.series.name, book.seriesNumber ? ` #${book.seriesNumber}` : ''
         ),
-        h('div', { style: { display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' } },
+        h('div', { className: 'chip-row' },
           (book.genres || []).map(genre =>
-            h('span', {
-              key: genre,
-              style: {
-                background: '#ecf0f1',
-                padding: '0.5rem 1rem',
-                borderRadius: '4px',
-                color: '#34495e'
-              }
-            }, genre)
+            h('span', { key: genre, className: 'chip' }, genre)
           ),
-          h('span', {
-            style: {
-              background: '#e8f4f8',
-              padding: '0.5rem 1rem',
-              borderRadius: '4px',
-              color: '#2980b9'
-            }
-          }, book.language)
+          book.language && h('span', { className: 'chip accent' }, book.language)
         ),
-        book.annotation && h('div', {
-          style: {
-            background: '#f8f9fa',
-            padding: '1rem',
-            borderRadius: '8px',
-            marginBottom: '2rem',
-            whiteSpace: 'pre-wrap'
-          }
-        }, book.annotation)
+        book.annotation && h('div', { className: 'annotation' }, book.annotation)
       )
     ),
 
-    similarBooks.length > 0 && h('div', { style: { marginTop: '3rem' } },
-      h('h2', { style: { marginBottom: '1rem' } }, 'Similar Books'),
-      h('div', {
-        style: {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-          gap: '1rem'
-        }
-      },
+    similarBooks.length > 0 && h('section', { className: 'section' },
+      h('div', { className: 'section-header' },
+        h('h2', { className: 'section-title' }, 'Similar Books')
+      ),
+      h('div', { className: 'book-grid' },
         similarBooks.map(book =>
           h(BookCard, {
             key: book.id,
@@ -195,20 +166,4 @@ export function BookDetail({ bookId, onBack, onSelectBook }) {
       )
     )
   );
-}
-
-function buttonStyle(background, extraStyle, onClick) {
-  return {
-    onClick,
-    style: {
-      width: '100%',
-      padding: '0.5rem',
-      background,
-      color: 'white',
-      border: 'none',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      ...extraStyle
-    }
-  };
 }

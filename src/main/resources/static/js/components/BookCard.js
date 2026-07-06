@@ -1,66 +1,36 @@
 import { h } from 'preact';
 
 export function BookCard({ book, onSelect }) {
-  return h('div', {
-    style: {
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      padding: '1rem',
-      background: 'white',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-      cursor: 'pointer',
-      transition: 'transform 0.2s, box-shadow 0.2s'
-    },
+  const authors = (book.authors || []).join(', ');
+
+  return h('article', {
+    className: 'book-card',
     onClick: () => onSelect(book.id),
-    onMouseOver: (e) => {
-      e.currentTarget.style.transform = 'translateY(-2px)';
-      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
-    },
-    onMouseOut: (e) => {
-      e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+    tabIndex: 0,
+    onKeyDown: (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onSelect(book.id);
+      }
     }
   },
-    book.coverImageUrl && h('img', {
-      src: book.coverImageUrl,
-      alt: book.title,
-      style: {
-        width: '100%',
-        height: '200px',
-        objectFit: 'cover',
-        borderRadius: '4px',
-        marginBottom: '0.75rem'
-      }
-    }),
-    h('h3', { style: { margin: '0 0 0.5rem 0', fontSize: '1rem' } }, book.title),
-    h('p', { style: { margin: '0 0 0.25rem 0', color: '#7f8c8d', fontSize: '0.875rem' } },
-      (book.authors || []).join(', ')
+    h('div', { className: 'book-cover' },
+      book.coverImageUrl
+        ? h('img', { src: book.coverImageUrl, alt: book.title })
+        : h('div', { className: 'book-cover-placeholder' }, 'No cover')
     ),
-    book.series && h('p', { style: { margin: '0 0 0.25rem 0', color: '#95a5a6', fontSize: '0.75rem' } },
-      book.series, book.seriesNumber ? ` #${book.seriesNumber}` : ''
-    ),
-    h('div', { style: { display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' } },
-      (book.genres || []).map(genre =>
-        h('span', {
-          key: genre,
-          style: {
-            background: '#ecf0f1',
-            padding: '0.25rem 0.5rem',
-            borderRadius: '4px',
-            fontSize: '0.75rem',
-            color: '#34495e'
-          }
-        }, genre)
+    h('div', { className: 'book-card-body' },
+      h('h3', { className: 'book-title' }, book.title),
+      authors && h('p', { className: 'book-meta' }, authors),
+      book.series && h('p', { className: 'book-series' },
+        book.series, book.seriesNumber ? ` #${book.seriesNumber}` : ''
       ),
-      h('span', {
-        style: {
-          background: '#e8f4f8',
-          padding: '0.25rem 0.5rem',
-          borderRadius: '4px',
-          fontSize: '0.75rem',
-          color: '#2980b9'
-        }
-      }, book.language)
+      h('div', { className: 'chip-row' },
+        (book.genres || []).slice(0, 3).map(genre =>
+          h('span', { key: genre, className: 'chip' }, genre)
+        ),
+        book.language && h('span', { className: 'chip accent' }, book.language)
+      )
     )
   );
 }

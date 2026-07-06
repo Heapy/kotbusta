@@ -1,65 +1,39 @@
 import { h } from 'preact';
 
+function navClass(view, currentView, extra = '') {
+  return `nav-button ${currentView === view ? 'active' : ''} ${extra}`.trim();
+}
+
 export function Header({ user, onNavigate, currentView, isAdmin }) {
-  return h('header', {
-    style: {
-      background: '#2c3e50',
-      color: 'white',
-      padding: '1rem 2rem',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-    }
-  },
-    h('div', null,
-      h('h1', { style: { margin: 0, fontSize: '1.5rem' } }, '📚 Kotbusta')
+  return h('header', { className: 'site-header' },
+    h('div', { className: 'brand' },
+      h('span', { className: 'brand-mark', 'aria-hidden': 'true' }, 'K'),
+      h('h1', { className: 'brand-title' }, 'Kotbusta')
     ),
-    h('nav', { style: { display: 'flex', gap: '1rem', alignItems: 'center' } },
+    h('nav', { className: 'top-nav', 'aria-label': 'Primary navigation' },
       h('button', {
-        onClick: () => onNavigate('books'),
-        style: {
-          background: currentView === 'books' ? '#34495e' : 'transparent',
-          border: 'none',
-          color: 'white',
-          padding: '0.5rem 1rem',
-          cursor: 'pointer',
-          borderRadius: '4px'
-        }
+        className: navClass('books', currentView),
+        onClick: () => onNavigate('books')
       }, 'Books'),
       h('button', {
-        onClick: () => onNavigate('kindle'),
-        style: {
-          background: currentView === 'kindle' ? '#34495e' : 'transparent',
-          border: 'none',
-          color: 'white',
-          padding: '0.5rem 1rem',
-          cursor: 'pointer',
-          borderRadius: '4px'
-        }
+        className: navClass('kindle', currentView),
+        onClick: () => onNavigate('kindle')
       }, 'Kindle'),
       isAdmin && h('button', {
-        onClick: () => onNavigate('admin'),
-        style: {
-          background: currentView === 'admin' ? '#e74c3c' : '#c0392b',
-          border: 'none',
-          color: 'white',
-          padding: '0.5rem 1rem',
-          cursor: 'pointer',
-          borderRadius: '4px'
-        }
+        className: navClass('admin', currentView, 'admin'),
+        onClick: () => onNavigate('admin')
       }, 'Admin')
     ),
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: '1rem' } },
-      user && h('div', { style: { display: 'flex', alignItems: 'center', gap: '0.5rem' } },
+    h('div', { className: 'user-menu' },
+      user && h('div', { className: 'user-identity' },
         user.data.avatarUrl && h('img', {
+          className: 'avatar',
           src: user.data.avatarUrl,
-          alt: user.data.name,
-          style: { width: '32px', height: '32px', borderRadius: '50%' }
+          alt: user.data.name
         }),
         h('span', null, user.data.name)
       ),
-      h('a', { href: '/logout', style: { color: 'white', textDecoration: 'none' } }, 'Logout')
+      h('a', { href: '/logout', className: 'logout-link' }, 'Logout')
     )
   );
 }
