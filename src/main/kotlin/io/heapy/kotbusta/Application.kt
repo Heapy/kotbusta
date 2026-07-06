@@ -3,6 +3,7 @@
 package io.heapy.kotbusta
 
 import io.heapy.kotbusta.ktor.configureAuthentication
+import io.heapy.kotbusta.ktor.configureMetrics
 import io.heapy.kotbusta.ktor.configureRouting
 import io.heapy.kotbusta.ktor.configureSerialization
 import io.heapy.kotbusta.ktor.configureStatusPages
@@ -26,6 +27,7 @@ fun Application.module(applicationModule: ApplicationModule = ApplicationModule(
         contextOf<ApplicationModule>().initialize()
         configureSerialization()
         configureStatusPages()
+        configureMetrics()
         configureAuthentication()
         configureRouting()
     }

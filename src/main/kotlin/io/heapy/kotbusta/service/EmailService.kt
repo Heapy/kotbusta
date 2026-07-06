@@ -13,11 +13,20 @@ sealed interface EmailResult {
     data class PermanentFailure(val error: String) : EmailResult
 }
 
-class EmailService(
+interface EmailService {
+    suspend fun sendBookToKindle(
+        recipientEmail: String,
+        bookFile: File,
+        bookTitle: String,
+        format: String,
+    ): EmailResult
+}
+
+class SesEmailService(
     private val sesClient: SesClient,
     private val senderEmail: String,
-) {
-    suspend fun sendBookToKindle(
+) : EmailService {
+    override suspend fun sendBookToKindle(
         recipientEmail: String,
         bookFile: File,
         bookTitle: String,
@@ -26,7 +35,6 @@ class EmailService(
         return try {
             val mimeType = when (format.uppercase()) {
                 "EPUB" -> "application/epub+zip"
-                "MOBI" -> "application/x-mobipocket-ebook"
                 else -> "application/octet-stream"
             }
 

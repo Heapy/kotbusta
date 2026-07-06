@@ -6,7 +6,6 @@ import { api } from './utils/api.js';
 import { Header } from './components/Header.js';
 import { BookDetail } from './components/BookDetail.js';
 import { BooksList } from './components/BooksList.js';
-import { Activity } from './components/Activity.js';
 import { KindleManagement } from './components/KindleManagement.js';
 import { AdminPanel } from './components/AdminPanel.js';
 import { LoginPage } from './components/LoginPage.js';
@@ -98,7 +97,6 @@ function App() {
     setError(null);
     try {
       const userRes = await api.get('/api/me');
-      console.log('User response:', userRes);
       setUser(userRes);
 
       try {
@@ -110,9 +108,10 @@ function App() {
     } catch (err) {
       console.error('Failed to load user:', err);
 
-      // Check if it's a 500 error (server error) vs 401 (not authenticated)
-      if (err.message && err.message.includes('500')) {
-        setError(err.message);
+      // Distinguish a real server error from "not authenticated" (401/403),
+      // which is expected before login.
+      if (err.status && err.status >= 500) {
+        setError('Something went wrong on the server. Please try again later.');
       } else {
         // Not authenticated, show login page
         setUser(null);
@@ -181,7 +180,6 @@ function App() {
       ? h(BookDetail, {
           bookId: selectedBookId,
           onBack: handleBackFromBook,
-          onRefresh: () => {},
           onSelectBook: handleSelectBook
         })
       : [
@@ -190,13 +188,6 @@ function App() {
             initialOffset: pageOffset,
             onPageChange: handlePageChange
           }),
-          currentView === 'starred' && h(BooksList, {
-            starred: true,
-            onSelectBook: handleSelectBook,
-            initialOffset: pageOffset,
-            onPageChange: handlePageChange
-          }),
-          currentView === 'activity' && h(Activity, { onSelectBook: handleSelectBook }),
           currentView === 'kindle' && h(KindleManagement),
           currentView === 'admin' && isAdmin && h(AdminPanel)
         ]

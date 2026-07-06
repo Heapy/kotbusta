@@ -10,6 +10,8 @@ sqlite = "3.53.2.0"
 junit = "6.1.0"
 aws-sdk = "1.6.106"
 lucene = "10.5.0"
+djl = "0.36.0"
+micrometer = "1.16.5"
 
 [libraries]
 jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
@@ -33,6 +35,10 @@ aws-sdk-ses = { module = "aws.sdk.kotlin:ses", version.ref = "aws-sdk" }
 lucene-core = { module = "org.apache.lucene:lucene-core", version.ref = "lucene" }
 lucene-analysis-common = { module = "org.apache.lucene:lucene-analysis-common", version.ref = "lucene" }
 lucene-queryparser = { module = "org.apache.lucene:lucene-queryparser", version.ref = "lucene" }
+djl-api = { module = "ai.djl:api", version.ref = "djl" }
+djl-huggingface-tokenizers = { module = "ai.djl.huggingface:tokenizers", version.ref = "djl" }
+djl-onnxruntime-engine = { module = "ai.djl.onnxruntime:onnxruntime-engine", version.ref = "djl" }
+micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

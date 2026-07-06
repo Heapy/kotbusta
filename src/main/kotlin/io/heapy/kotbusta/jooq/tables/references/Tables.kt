@@ -7,17 +7,14 @@ package io.heapy.kotbusta.jooq.tables.references
 
 import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
+import io.heapy.kotbusta.jooq.tables.BookEnrichment
 import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
-import io.heapy.kotbusta.jooq.tables.Downloads
 import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
 import io.heapy.kotbusta.jooq.tables.Series
-import io.heapy.kotbusta.jooq.tables.UserComments
-import io.heapy.kotbusta.jooq.tables.UserNotes
-import io.heapy.kotbusta.jooq.tables.UserStars
 import io.heapy.kotbusta.jooq.tables.Users
 
 
@@ -33,6 +30,11 @@ val AUTHORS: Authors = Authors.AUTHORS
 val BOOK_AUTHORS: BookAuthors = BookAuthors.BOOK_AUTHORS
 
 /**
+ * The table <code>BOOK_ENRICHMENT</code>.
+ */
+val BOOK_ENRICHMENT: BookEnrichment = BookEnrichment.BOOK_ENRICHMENT
+
+/**
  * The table <code>BOOK_GENRES</code>.
  */
 val BOOK_GENRES: BookGenres = BookGenres.BOOK_GENRES
@@ -41,11 +43,6 @@ val BOOK_GENRES: BookGenres = BookGenres.BOOK_GENRES
  * The table <code>BOOKS</code>.
  */
 val BOOKS: Books = Books.BOOKS
-
-/**
- * The table <code>DOWNLOADS</code>.
- */
-val DOWNLOADS: Downloads = Downloads.DOWNLOADS
 
 /**
  * The table <code>GENRES</code>.
@@ -71,21 +68,6 @@ val KINDLE_SEND_QUEUE: KindleSendQueue = KindleSendQueue.KINDLE_SEND_QUEUE
  * The table <code>SERIES</code>.
  */
 val SERIES: Series = Series.SERIES
-
-/**
- * The table <code>USER_COMMENTS</code>.
- */
-val USER_COMMENTS: UserComments = UserComments.USER_COMMENTS
-
-/**
- * The table <code>USER_NOTES</code>.
- */
-val USER_NOTES: UserNotes = UserNotes.USER_NOTES
-
-/**
- * The table <code>USER_STARS</code>.
- */
-val USER_STARS: UserStars = UserStars.USER_STARS
 
 /**
  * The table <code>USERS</code>.

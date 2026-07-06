@@ -13,22 +13,11 @@ import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_PK_SERIES
 import io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.BOOK_GENRES__FK_BOOK_GENRES_PK_BOOKS
-import io.heapy.kotbusta.jooq.keys.DOWNLOADS__FK_DOWNLOADS_PK_BOOKS
-import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS
-import io.heapy.kotbusta.jooq.keys.USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS
-import io.heapy.kotbusta.jooq.keys.USER_NOTES__FK_USER_NOTES_PK_BOOKS
-import io.heapy.kotbusta.jooq.keys.USER_STARS__FK_USER_STARS_PK_BOOKS
 import io.heapy.kotbusta.jooq.tables.Authors.AuthorsPath
 import io.heapy.kotbusta.jooq.tables.BookAuthors.BookAuthorsPath
 import io.heapy.kotbusta.jooq.tables.BookGenres.BookGenresPath
-import io.heapy.kotbusta.jooq.tables.Downloads.DownloadsPath
 import io.heapy.kotbusta.jooq.tables.Genres.GenresPath
-import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
 import io.heapy.kotbusta.jooq.tables.Series.SeriesPath
-import io.heapy.kotbusta.jooq.tables.UserComments.UserCommentsPath
-import io.heapy.kotbusta.jooq.tables.UserNotes.UserNotesPath
-import io.heapy.kotbusta.jooq.tables.UserStars.UserStarsPath
-import io.heapy.kotbusta.jooq.tables.Users.UsersPath
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
 
 import kotlin.collections.Collection
@@ -47,10 +36,10 @@ import org.jooq.QueryPart
 import org.jooq.Record
 import org.jooq.SQL
 import org.jooq.Schema
-import org.jooq.Select
 import org.jooq.Stringly
 import org.jooq.Table
 import org.jooq.TableField
+import org.jooq.TableLike
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
@@ -105,11 +94,6 @@ open class Books(
      * The column <code>BOOKS.TITLE</code>.
      */
     val TITLE: TableField<BooksRecord, String?> = createField(DSL.name("TITLE"), SQLDataType.CLOB.nullable(false), this, "")
-
-    /**
-     * The column <code>BOOKS.ANNOTATION</code>.
-     */
-    val ANNOTATION: TableField<BooksRecord, String?> = createField(DSL.name("ANNOTATION"), SQLDataType.CLOB, this, "")
 
     /**
      * The column <code>BOOKS.LANGUAGE</code>.
@@ -233,83 +217,6 @@ open class Books(
     val bookGenres: BookGenresPath
         get(): BookGenresPath = bookGenres()
 
-    private lateinit var _downloads: DownloadsPath
-
-    /**
-     * Get the implicit to-many join path to the <code>DOWNLOADS</code> table
-     */
-    fun downloads(): DownloadsPath {
-        if (!this::_downloads.isInitialized)
-            _downloads = DownloadsPath(this, null, DOWNLOADS__FK_DOWNLOADS_PK_BOOKS.inverseKey)
-
-        return _downloads;
-    }
-
-    val downloads: DownloadsPath
-        get(): DownloadsPath = downloads()
-
-    private lateinit var _kindleSendQueue: KindleSendQueuePath
-
-    /**
-     * Get the implicit to-many join path to the <code>KINDLE_SEND_QUEUE</code>
-     * table
-     */
-    fun kindleSendQueue(): KindleSendQueuePath {
-        if (!this::_kindleSendQueue.isInitialized)
-            _kindleSendQueue = KindleSendQueuePath(this, null, KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_BOOKS.inverseKey)
-
-        return _kindleSendQueue;
-    }
-
-    val kindleSendQueue: KindleSendQueuePath
-        get(): KindleSendQueuePath = kindleSendQueue()
-
-    private lateinit var _userComments: UserCommentsPath
-
-    /**
-     * Get the implicit to-many join path to the <code>USER_COMMENTS</code>
-     * table
-     */
-    fun userComments(): UserCommentsPath {
-        if (!this::_userComments.isInitialized)
-            _userComments = UserCommentsPath(this, null, USER_COMMENTS__FK_USER_COMMENTS_PK_BOOKS.inverseKey)
-
-        return _userComments;
-    }
-
-    val userComments: UserCommentsPath
-        get(): UserCommentsPath = userComments()
-
-    private lateinit var _userNotes: UserNotesPath
-
-    /**
-     * Get the implicit to-many join path to the <code>USER_NOTES</code> table
-     */
-    fun userNotes(): UserNotesPath {
-        if (!this::_userNotes.isInitialized)
-            _userNotes = UserNotesPath(this, null, USER_NOTES__FK_USER_NOTES_PK_BOOKS.inverseKey)
-
-        return _userNotes;
-    }
-
-    val userNotes: UserNotesPath
-        get(): UserNotesPath = userNotes()
-
-    private lateinit var _userStars: UserStarsPath
-
-    /**
-     * Get the implicit to-many join path to the <code>USER_STARS</code> table
-     */
-    fun userStars(): UserStarsPath {
-        if (!this::_userStars.isInitialized)
-            _userStars = UserStarsPath(this, null, USER_STARS__FK_USER_STARS_PK_BOOKS.inverseKey)
-
-        return _userStars;
-    }
-
-    val userStars: UserStarsPath
-        get(): UserStarsPath = userStars()
-
     /**
      * Get the implicit many-to-many join path to the <code>AUTHORS</code> table
      */
@@ -321,12 +228,6 @@ open class Books(
      */
     val genres: GenresPath
         get(): GenresPath = bookGenres().genres()
-
-    /**
-     * Get the implicit many-to-many join path to the <code>USERS</code> table
-     */
-    val users: UsersPath
-        get(): UsersPath = userStars().users()
     override fun `as`(alias: String): Books = Books(DSL.name(alias), this)
     override fun `as`(alias: Name): Books = Books(alias, this)
     override fun `as`(alias: Table<*>): Books = Books(alias.qualifiedName, this)
@@ -349,7 +250,7 @@ open class Books(
     /**
      * Create an inline derived table from this table
      */
-    override fun where(condition: Condition?): Books = Books(qualifiedName, if (aliased()) this else null, condition)
+    override fun where(condition: Condition?): Books = Books(qualifiedName, if (aliased()) this else null, Internal.condition(this, condition))
 
     /**
      * Create an inline derived table from this table
@@ -389,10 +290,10 @@ open class Books(
     /**
      * Create an inline derived table from this table
      */
-    override fun whereExists(select: Select<*>): Books = where(DSL.exists(select))
+    override fun whereExists(select: TableLike<*>): Books = where(DSL.exists(select))
 
     /**
      * Create an inline derived table from this table
      */
-    override fun whereNotExists(select: Select<*>): Books = where(DSL.notExists(select))
+    override fun whereNotExists(select: TableLike<*>): Books = where(DSL.notExists(select))
 }

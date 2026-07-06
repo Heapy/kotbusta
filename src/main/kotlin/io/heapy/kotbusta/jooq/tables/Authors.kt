@@ -28,10 +28,10 @@ import org.jooq.QueryPart
 import org.jooq.Record
 import org.jooq.SQL
 import org.jooq.Schema
-import org.jooq.Select
 import org.jooq.Stringly
 import org.jooq.Table
 import org.jooq.TableField
+import org.jooq.TableLike
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
@@ -80,7 +80,7 @@ open class Authors(
     /**
      * The column <code>AUTHORS.ID</code>.
      */
-    val ID: TableField<AuthorsRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.identity(true), this, "")
+    val ID: TableField<AuthorsRecord, Int?> = createField(DSL.name("ID"), SQLDataType.INTEGER.generatedByDefaultAsIdentity(), this, "")
 
     /**
      * The column <code>AUTHORS.FULL_NAME</code>.
@@ -165,7 +165,7 @@ open class Authors(
     /**
      * Create an inline derived table from this table
      */
-    override fun where(condition: Condition?): Authors = Authors(qualifiedName, if (aliased()) this else null, condition)
+    override fun where(condition: Condition?): Authors = Authors(qualifiedName, if (aliased()) this else null, Internal.condition(this, condition))
 
     /**
      * Create an inline derived table from this table
@@ -205,10 +205,10 @@ open class Authors(
     /**
      * Create an inline derived table from this table
      */
-    override fun whereExists(select: Select<*>): Authors = where(DSL.exists(select))
+    override fun whereExists(select: TableLike<*>): Authors = where(DSL.exists(select))
 
     /**
      * Create an inline derived table from this table
      */
-    override fun whereNotExists(select: Select<*>): Authors = where(DSL.notExists(select))
+    override fun whereNotExists(select: TableLike<*>): Authors = where(DSL.notExists(select))
 }

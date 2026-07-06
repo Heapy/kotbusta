@@ -5,6 +5,8 @@ package io.heapy.kotbusta.jooq.tables
 
 
 import io.heapy.kotbusta.jooq.DefaultSchema
+import io.heapy.kotbusta.jooq.indexes.IDX_BOOK_AUTHORS_AUTHOR
+import io.heapy.kotbusta.jooq.indexes.IDX_BOOK_AUTHORS_BOOK
 import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS
 import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__PK_BOOK_AUTHORS
@@ -18,6 +20,7 @@ import kotlin.collections.List
 import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.ForeignKey
+import org.jooq.Index
 import org.jooq.InverseForeignKey
 import org.jooq.Name
 import org.jooq.Path
@@ -26,10 +29,10 @@ import org.jooq.QueryPart
 import org.jooq.Record
 import org.jooq.SQL
 import org.jooq.Schema
-import org.jooq.Select
 import org.jooq.Stringly
 import org.jooq.Table
 import org.jooq.TableField
+import org.jooq.TableLike
 import org.jooq.TableOptions
 import org.jooq.UniqueKey
 import org.jooq.impl.DSL
@@ -117,6 +120,7 @@ open class BookAuthors(
         override fun `as`(alias: Table<*>): BookAuthorsPath = BookAuthorsPath(alias.qualifiedName, this)
     }
     override fun getSchema(): Schema? = if (aliased()) null else DefaultSchema.DEFAULT_SCHEMA
+    override fun getIndexes(): List<Index> = listOf(IDX_BOOK_AUTHORS_AUTHOR, IDX_BOOK_AUTHORS_BOOK)
     override fun getPrimaryKey(): UniqueKey<BookAuthorsRecord> = BOOK_AUTHORS__PK_BOOK_AUTHORS
     override fun getReferences(): List<ForeignKey<BookAuthorsRecord, *>> = listOf(BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_AUTHORS, BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS)
 
@@ -153,7 +157,7 @@ open class BookAuthors(
     /**
      * Create an inline derived table from this table
      */
-    override fun where(condition: Condition?): BookAuthors = BookAuthors(qualifiedName, if (aliased()) this else null, condition)
+    override fun where(condition: Condition?): BookAuthors = BookAuthors(qualifiedName, if (aliased()) this else null, Internal.condition(this, condition))
 
     /**
      * Create an inline derived table from this table
@@ -193,10 +197,10 @@ open class BookAuthors(
     /**
      * Create an inline derived table from this table
      */
-    override fun whereExists(select: Select<*>): BookAuthors = where(DSL.exists(select))
+    override fun whereExists(select: TableLike<*>): BookAuthors = where(DSL.exists(select))
 
     /**
      * Create an inline derived table from this table
      */
-    override fun whereNotExists(select: Select<*>): BookAuthors = where(DSL.notExists(select))
+    override fun whereNotExists(select: TableLike<*>): BookAuthors = where(DSL.notExists(select))
 }

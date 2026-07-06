@@ -7,4 +7,6 @@ data class SearchIndexBook(
     val series: String?,
     val language: String,
     val genres: List<String>,
+    val annotation: String?,
+    val embedding: FloatArray?,
 )

@@ -43,29 +43,6 @@ class PandocConversionServiceTest {
     }
 
     @Test
-    fun `should convert FB2 to HTML`() = runBlocking {
-        // Given: Real FB2 file from test data
-        val fb2File = File("$sampleDataPath/302859.fb2")
-        assertTrue(fb2File.exists(), "Sample FB2 file should exist")
-
-        // When: Converting to HTML
-        val outputFile = tempDir.resolve("302859.html").toFile()
-        val result = conversionService.convertFb2(
-            inputFile = fb2File,
-            outputFormat = "html",
-            outputFile = outputFile
-        )
-
-        // Then: Conversion should succeed
-        assertTrue(result.success, "Conversion should succeed: ${result.errorMessage}")
-        assertNotNull(result.outputFile, "Output file should be set")
-        assertTrue(outputFile.exists(), "HTML file should be created")
-        assertTrue(outputFile.length() > 0, "HTML file should not be empty")
-
-        log.info("✓ Successfully converted to HTML: ${outputFile.length()} bytes")
-    }
-
-    @Test
     fun `should fail for non-existent input file`() = runBlocking {
         // Given: Non-existent input file
         val nonExistentFile = File("/non/existent/file.fb2")
@@ -112,12 +89,8 @@ class PandocConversionServiceTest {
         // When: Getting supported formats
         val formats = conversionService.getSupportedFormats()
 
-        // Then: Should include common formats
-        assertTrue(formats.contains("epub"), "Should support EPUB")
-        assertTrue(formats.contains("pdf"), "Should support PDF")
-        assertTrue(formats.contains("html"), "Should support HTML")
-        assertTrue(formats.contains("txt"), "Should support TXT")
-        assertTrue(formats.contains("docx"), "Should support DOCX")
+        // Then: Only EPUB conversion is exposed.
+        assertEquals(listOf("epub"), formats)
 
         log.info("✓ Supported formats: ${formats.joinToString(", ")}")
     }

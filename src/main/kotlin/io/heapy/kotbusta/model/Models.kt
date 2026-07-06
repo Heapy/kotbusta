@@ -42,8 +42,6 @@ data class Book(
     val fileSize: Int?,
     val dateAdded: Instant,
     val coverImageUrl: String?,
-    val isStarred: Boolean = false,
-    val userNote: String? = null,
 )
 
 @Serializable
@@ -56,40 +54,6 @@ data class BookSummary(
     val series: String?,
     val seriesNumber: Int?,
     val coverImageUrl: String?,
-    val isStarred: Boolean = false,
-)
-
-@Serializable
-data class UserComment(
-    val id: Int,
-    val userId: Int,
-    val userName: String,
-    val userAvatarUrl: String?,
-    val bookId: Int,
-    val bookTitle: String,
-    val comment: String,
-    val createdAt: Instant,
-    val updatedAt: Instant,
-)
-
-@Serializable
-data class UserNote(
-    val id: Int,
-    val bookId: Int,
-    val note: String,
-    val createdAt: Instant,
-    val updatedAt: Instant,
-)
-
-@Serializable
-data class Download(
-    val id: Int,
-    val userId: Int,
-    val userName: String,
-    val bookId: Int,
-    val bookTitle: String,
-    val format: String,
-    val createdAt: Instant,
 )
 
 @Serializable
@@ -125,12 +89,6 @@ sealed interface ApiResponse {
 }
 
 @Serializable
-data class RecentActivity(
-    val comments: List<UserComment>,
-    val downloads: List<Download>,
-)
-
-@Serializable
 data class UserInfo(
     val userId: Int,
     val email: String,
@@ -156,8 +114,8 @@ enum class UserStatus {
 
 @Serializable
 enum class KindleFormat {
+    // Only EPUB: modern "Send to Kindle" accepts EPUB directly.
     EPUB,
-    MOBI;
 }
 
 @Serializable

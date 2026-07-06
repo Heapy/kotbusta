@@ -8,6 +8,7 @@ sealed interface SendEventDetails
 @Serializable
 data class QueuedEventDetails(
     val bookId: Int,
+    val bookTitle: String,
     val deviceId: Int,
     val format: String,
 ) : SendEventDetails

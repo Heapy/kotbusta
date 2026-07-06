@@ -18,7 +18,6 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.sessions.*
-import io.ktor.util.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.time.Duration.Companion.days
@@ -58,8 +57,8 @@ fun Application.configureAuthentication() {
             cookie.secure = googleOauthConfig.redirectUri.startsWith("https")
             transform(
                 SessionTransportTransformerEncrypt(
-                    encryptionKey = hex(sessionConfig.secretEncryptKey),
-                    signKey = hex(sessionConfig.secretEncryptKey),
+                    encryptionKey = sessionConfig.secretEncryptKey.hexToByteArray(),
+                    signKey = sessionConfig.secretSignKey.hexToByteArray(),
                 ),
             )
         }

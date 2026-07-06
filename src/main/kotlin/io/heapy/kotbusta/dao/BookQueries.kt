@@ -2,27 +2,31 @@ package io.heapy.kotbusta.dao
 
 import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.useTx
-import io.heapy.kotbusta.jooq.tables.references.*
-import io.heapy.kotbusta.ktor.UserSession
+import io.heapy.kotbusta.jooq.tables.references.AUTHORS
+import io.heapy.kotbusta.jooq.tables.references.BOOKS
+import io.heapy.kotbusta.jooq.tables.references.BOOK_AUTHORS
+import io.heapy.kotbusta.jooq.tables.references.BOOK_ENRICHMENT
+import io.heapy.kotbusta.jooq.tables.references.BOOK_GENRES
+import io.heapy.kotbusta.jooq.tables.references.GENRES
+import io.heapy.kotbusta.jooq.tables.references.SERIES
 import io.heapy.kotbusta.model.Author
 import io.heapy.kotbusta.model.Book
 import io.heapy.kotbusta.model.BookSummary
 import io.heapy.kotbusta.model.SearchIndexBook
 import io.heapy.kotbusta.model.SearchResult
 import io.heapy.kotbusta.model.Series
+import io.heapy.kotbusta.service.EmbeddingCodec
+import org.jooq.Condition
 import org.jooq.Record
 import org.jooq.Result
 import org.jooq.impl.DSL
-import kotlin.time.Clock
-import kotlin.time.Instant
 
 context(_: TransactionContext)
 fun getBooks(
     limit: Int,
     offset: Int,
-    userId: Int?,
 ): SearchResult = useTx { dslContext ->
-    var query = dslContext
+    val results = dslContext
         .select(
             BOOKS.ID,
             BOOKS.TITLE,
@@ -31,34 +35,12 @@ fun getBooks(
             BOOKS.SERIES_NUMBER,
             SERIES.NAME.`as`("series_name"),
         )
-        .select(
-            if (userId != null) {
-                DSL.case_()
-                    .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
-                    .otherwise(DSL.inline(false))
-                    .`as`("is_starred")
-            } else {
-                DSL.inline(false).`as`("is_starred")
-            },
-        )
         .from(BOOKS)
         .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
-
-    if (userId != null) {
-        query = query.leftJoin(USER_STARS)
-            .on(
-                BOOKS.ID.eq(USER_STARS.BOOK_ID)
-                    .and(USER_STARS.USER_ID.eq(userId)),
-            )
-    }
-
-    val results = query
         .orderBy(BOOKS.ID.desc())
         .limit(limit)
         .offset(offset)
         .fetch()
-
-    val books = buildBookSummaryList(results)
 
     val total = dslContext
         .selectCount()
@@ -67,13 +49,13 @@ fun getBooks(
         ?: 0L
 
     SearchResult(
-        books = books,
+        books = buildBookSummaryList(results),
         total = total,
         hasMore = offset + limit < total,
     )
 }
 
-context(_: TransactionContext, userSession: UserSession)
+context(_: TransactionContext)
 fun getBookById(
     bookId: Int,
 ): Book? = useTx { dslContext ->
@@ -81,7 +63,7 @@ fun getBookById(
         .select(
             BOOKS.ID,
             BOOKS.TITLE,
-            BOOKS.ANNOTATION,
+            BOOK_ENRICHMENT.ANNOTATION,
             BOOKS.LANGUAGE,
             BOOKS.FILE_PATH,
             BOOKS.ARCHIVE_PATH,
@@ -90,24 +72,10 @@ fun getBookById(
             BOOKS.SERIES_NUMBER,
             BOOKS.SERIES_ID,
             SERIES.NAME.`as`("series_name"),
-            DSL.case_()
-                .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
-                .otherwise(DSL.inline(false))
-                .`as`("is_starred"),
-            USER_NOTES.NOTE.`as`("user_note"),
         )
         .from(BOOKS)
         .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
-        .leftJoin(USER_STARS)
-        .on(
-            BOOKS.ID.eq(USER_STARS.BOOK_ID)
-                .and(USER_STARS.USER_ID.eq(userSession.userId)),
-        )
-        .leftJoin(USER_NOTES)
-        .on(
-            BOOKS.ID.eq(USER_NOTES.BOOK_ID)
-                .and(USER_NOTES.USER_ID.eq(userSession.userId)),
-        )
+        .leftJoin(BOOK_ENRICHMENT).on(BOOKS.ID.eq(BOOK_ENRICHMENT.BOOK_ID))
         .where(BOOKS.ID.eq(bookId))
         .fetchOne() ?: return@useTx null
 
@@ -124,7 +92,7 @@ fun getBookById(
     Book(
         id = record.get(BOOKS.ID)!!,
         title = record.get(BOOKS.TITLE)!!,
-        annotation = record.get(BOOKS.ANNOTATION),
+        annotation = record.get(BOOK_ENRICHMENT.ANNOTATION),
         genres = genres,
         language = record.get(BOOKS.LANGUAGE)!!,
         authors = authors,
@@ -134,84 +102,9 @@ fun getBookById(
         archivePath = record.get(BOOKS.ARCHIVE_PATH)!!,
         fileSize = record.get(BOOKS.FILE_SIZE)?.takeIf { it != 0 },
         dateAdded = record.get(BOOKS.DATE_ADDED)!!,
-        coverImageUrl = "/api/books/${bookId}/cover",
-        isStarred = record.get("is_starred", Boolean::class.java) ?: false,
-        userNote = record.get("user_note", String::class.java),
+        coverImageUrl = "/api/books/$bookId/cover",
     )
 }
-
-context(_: TransactionContext)
-fun getBookCover(bookId: Int): ByteArray? = useTx { dslContext ->
-    dslContext
-        .select(BOOKS.COVER_IMAGE)
-        .from(BOOKS)
-        .where(BOOKS.ID.eq(bookId))
-        .fetchOne(BOOKS.COVER_IMAGE)
-}
-
-context(_: TransactionContext, userSession: UserSession)
-fun starBook(
-    bookId: Int,
-    createdAt: Instant = Clock.System.now(),
-): Boolean = useTx { dslContext ->
-    val inserted = dslContext
-        .insertInto(USER_STARS)
-        .set(USER_STARS.USER_ID, userSession.userId)
-        .set(USER_STARS.BOOK_ID, bookId)
-        .set(USER_STARS.CREATED_AT, createdAt)
-        .onConflictDoNothing()
-        .execute()
-
-    inserted > 0
-}
-
-context(_: TransactionContext, userSession: UserSession)
-fun unstarBook(bookId: Int): Boolean = useTx { dslContext ->
-    val deleted = dslContext
-        .deleteFrom(USER_STARS)
-        .where(USER_STARS.USER_ID.eq(userSession.userId))
-        .and(USER_STARS.BOOK_ID.eq(bookId))
-        .execute()
-
-    deleted > 0
-}
-
-context(_: TransactionContext, userSession: UserSession)
-fun getStarredBooks(limit: Int, offset: Int): SearchResult =
-    useTx { dslContext ->
-        val results = dslContext
-            .select(
-                BOOKS.ID,
-                BOOKS.TITLE,
-                BOOKS.LANGUAGE,
-                BOOKS.SERIES_ID,
-                BOOKS.SERIES_NUMBER,
-                SERIES.NAME.`as`("series_name"),
-                DSL.inline(true).`as`("is_starred"),
-            )
-            .from(BOOKS)
-            .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
-            .innerJoin(USER_STARS).on(BOOKS.ID.eq(USER_STARS.BOOK_ID))
-            .where(USER_STARS.USER_ID.eq(userSession.userId))
-            .orderBy(USER_STARS.CREATED_AT.desc())
-            .limit(limit)
-            .offset(offset)
-            .fetch()
-
-        val books = buildBookSummaryList(results)
-
-        val total = dslContext
-            .selectCount()
-            .from(USER_STARS)
-            .where(USER_STARS.USER_ID.eq(userSession.userId))
-            .fetchOne(0, Long::class.java) ?: 0L
-
-        SearchResult(
-            books = books,
-            total = total,
-            hasMore = offset + limit < total,
-        )
-    }
 
 context(_: TransactionContext)
 fun getSimilarBooks(
@@ -223,30 +116,53 @@ fun getSimilarBooks(
         .from(BOOK_GENRES)
         .where(BOOK_GENRES.BOOK_ID.eq(bookId))
         .fetch(BOOK_GENRES.GENRE_ID)
+        .filterNotNull()
 
     val authorIds = dslContext
         .select(BOOK_AUTHORS.AUTHOR_ID)
         .from(BOOK_AUTHORS)
         .where(BOOK_AUTHORS.BOOK_ID.eq(bookId))
         .fetch(BOOK_AUTHORS.AUTHOR_ID)
+        .filterNotNull()
+
+    if (genreIds.isEmpty() && authorIds.isEmpty()) {
+        return@useTx emptyList()
+    }
+
+    val relatedCondition = mutableListOf<Condition>().apply {
+        if (genreIds.isNotEmpty()) {
+            add(
+                BOOKS.ID.`in`(
+                    DSL.select(BOOK_GENRES.BOOK_ID)
+                        .from(BOOK_GENRES)
+                        .where(BOOK_GENRES.GENRE_ID.`in`(genreIds)),
+                ),
+            )
+        }
+        if (authorIds.isNotEmpty()) {
+            add(
+                BOOKS.ID.`in`(
+                    DSL.select(BOOK_AUTHORS.BOOK_ID)
+                        .from(BOOK_AUTHORS)
+                        .where(BOOK_AUTHORS.AUTHOR_ID.`in`(authorIds)),
+                ),
+            )
+        }
+    }.reduce(Condition::or)
 
     val results = dslContext
-        .selectDistinct(
+        .select(
             BOOKS.ID,
             BOOKS.TITLE,
             BOOKS.LANGUAGE,
             BOOKS.SERIES_ID,
             BOOKS.SERIES_NUMBER,
             SERIES.NAME.`as`("series_name"),
-            DSL.inline(false).`as`("is_starred"),
         )
         .from(BOOKS)
         .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
-        .leftJoin(BOOK_AUTHORS).on(BOOKS.ID.eq(BOOK_AUTHORS.BOOK_ID))
-        .leftJoin(AUTHORS).on(BOOK_AUTHORS.AUTHOR_ID.eq(AUTHORS.ID))
-        .leftJoin(BOOK_GENRES).on(BOOKS.ID.eq(BOOK_GENRES.BOOK_ID))
         .where(BOOKS.ID.ne(bookId))
-        .and(BOOK_GENRES.GENRE_ID.`in`(genreIds).or(BOOK_AUTHORS.AUTHOR_ID.`in`(authorIds)))
+        .and(relatedCondition)
         .orderBy(BOOKS.ID.desc())
         .limit(limit)
         .fetch()
@@ -269,10 +185,13 @@ fun getSearchIndexBooksPage(
             BOOKS.ID,
             BOOKS.TITLE,
             BOOKS.LANGUAGE,
+            BOOK_ENRICHMENT.ANNOTATION,
+            BOOK_ENRICHMENT.EMBEDDING,
             SERIES.NAME.`as`("series_name"),
         )
         .from(BOOKS)
         .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
+        .leftJoin(BOOK_ENRICHMENT).on(BOOKS.ID.eq(BOOK_ENRICHMENT.BOOK_ID))
         .where(BOOKS.ID.gt(afterId))
         .orderBy(BOOKS.ID.asc())
         .limit(limit)
@@ -295,6 +214,8 @@ fun getSearchIndexBooksPage(
             series = record.get("series_name", String::class.java),
             language = record.get(BOOKS.LANGUAGE)!!,
             genres = genresByBookId[bookId] ?: emptyList(),
+            annotation = record.get(BOOK_ENRICHMENT.ANNOTATION),
+            embedding = EmbeddingCodec.decode(record.get(BOOK_ENRICHMENT.EMBEDDING)),
         )
     }
 }
@@ -302,7 +223,6 @@ fun getSearchIndexBooksPage(
 context(_: TransactionContext)
 fun getBookSummariesByIds(
     bookIds: List<Int>,
-    userId: Int,
 ): List<BookSummary> = useTx { dslContext ->
     if (bookIds.isEmpty()) {
         return@useTx emptyList()
@@ -316,18 +236,9 @@ fun getBookSummariesByIds(
             BOOKS.SERIES_ID,
             BOOKS.SERIES_NUMBER,
             SERIES.NAME.`as`("series_name"),
-            DSL.case_()
-                .`when`(USER_STARS.BOOK_ID.isNotNull, DSL.inline(true))
-                .otherwise(DSL.inline(false))
-                .`as`("is_starred"),
         )
         .from(BOOKS)
         .leftJoin(SERIES).on(BOOKS.SERIES_ID.eq(SERIES.ID))
-        .leftJoin(USER_STARS)
-        .on(
-            BOOKS.ID.eq(USER_STARS.BOOK_ID)
-                .and(USER_STARS.USER_ID.eq(userId)),
-        )
         .where(BOOKS.ID.`in`(bookIds))
         .fetch()
 
@@ -335,7 +246,15 @@ fun getBookSummariesByIds(
     bookIds.mapNotNull(booksById::get)
 }
 
-// Helper functions
+context(_: TransactionContext)
+fun getBookEmbedding(bookId: Int): FloatArray? = useTx { dslContext ->
+    dslContext
+        .select(BOOK_ENRICHMENT.EMBEDDING)
+        .from(BOOK_ENRICHMENT)
+        .where(BOOK_ENRICHMENT.BOOK_ID.eq(bookId))
+        .fetchOne(BOOK_ENRICHMENT.EMBEDDING)
+        ?.let(EmbeddingCodec::decode)
+}
 
 private context(_: TransactionContext)
 fun getBookAuthors(
@@ -374,7 +293,7 @@ private context(_: TransactionContext)
 fun buildBookSummaryList(
     results: Result<out Record>,
 ): List<BookSummary> =
-    useTx { dslContext ->
+    useTx {
         val books = mutableListOf<BookSummary>()
         val bookIds = mutableSetOf<Int>()
 
@@ -391,9 +310,7 @@ fun buildBookSummaryList(
                     series = record.get("series_name", String::class.java),
                     seriesNumber = record.get(BOOKS.SERIES_NUMBER)
                         ?.takeIf { it != 0 },
-                    coverImageUrl = "/api/books/${bookId}/cover",
-                    isStarred = record.get("is_starred", Boolean::class.java)
-                        ?: false,
+                    coverImageUrl = "/api/books/$bookId/cover",
                 ),
             )
         }
@@ -404,7 +321,7 @@ fun buildBookSummaryList(
         books.map { book ->
             book.copy(
                 authors = bookAuthors[book.id] ?: emptyList(),
-                genres = bookGenres[book.id] ?: emptyList()
+                genres = bookGenres[book.id] ?: emptyList(),
             )
         }
     }
@@ -467,16 +384,4 @@ fun getBookGenresMap(bookIds: Collection<Int>): Map<Int, List<String>> = useTx {
     bookGenres
 }
 
-private const val SQLITE_ID_LOOKUP_BATCH_SIZE = 500
-
-context(_: TransactionContext)
-fun updateBookCover(
-    bookId: Int,
-    coverImage: ByteArray,
-) = useTx { dslContext ->
-    dslContext
-        .update(BOOKS)
-        .set(BOOKS.COVER_IMAGE, coverImage)
-        .where(BOOKS.ID.eq(bookId))
-        .execute()
-}
+private const val SQLITE_ID_LOOKUP_BATCH_SIZE = 900

@@ -46,17 +46,32 @@ INSERT INTO GENRES (ID, NAME) VALUES
 -- ============================================================================
 -- BOOKS
 -- ============================================================================
-INSERT INTO BOOKS (ID, TITLE, ANNOTATION, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT, FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, COVER_IMAGE, CREATED_AT) VALUES
-(1, 'Harry Potter and the Philosopher''s Stone', 'The first book in the Harry Potter series.', 'en', 1, 1, 'fb2','/books/1.epub', '/archive/1.zip', 524288, '2024-01-01T00:00:00Z', NULL, '2024-01-01T00:00:00Z'),
-(2, 'Harry Potter and the Chamber of Secrets', 'The second book in the Harry Potter series.', 'en', 1, 2, 'fb2','/books/2.epub', '/archive/2.zip', 587776, '2024-01-02T00:00:00Z', NULL, '2024-01-02T00:00:00Z'),
-(3, 'A Game of Thrones', 'The first book in A Song of Ice and Fire.', 'en', 2, 1, 'fb2','/books/3.epub', '/archive/3.zip', 1048576, '2024-01-03T00:00:00Z', NULL, '2024-01-03T00:00:00Z'),
-(4, 'The Way of Kings', 'First book of The Stormlight Archive.', 'en', 3, 1, 'fb2','/books/4.epub', '/archive/4.zip', 2097152, '2024-01-04T00:00:00Z', NULL, '2024-01-04T00:00:00Z'),
-(5, 'The Shining', 'A horror novel about the Overlook Hotel.', 'en', NULL, NULL, 'fb2','/books/5.epub', '/archive/5.zip', 458752, '2024-01-05T00:00:00Z', NULL, '2024-01-05T00:00:00Z'),
-(6, 'Murder on the Orient Express', 'A classic Hercule Poirot mystery.', 'en', NULL, NULL, 'fb2','/books/6.epub', '/archive/6.zip', 327680, '2024-01-06T00:00:00Z', NULL, '2024-01-06T00:00:00Z'),
-(7, 'War and Peace', 'Epic historical novel set during Napoleon''s invasion of Russia.', 'en', NULL, NULL, 'fb2','/books/7.epub', '/archive/7.zip', 1572864, '2024-01-07T00:00:00Z', NULL, '2024-01-07T00:00:00Z'),
-(8, 'Foundation', 'The first book in the Foundation series.', 'en', 4, 1, 'fb2','/books/8.epub', '/archive/8.zip', 393216, '2024-01-08T00:00:00Z', NULL, '2024-01-08T00:00:00Z'),
-(9, 'Foundation and Empire', 'The second book in the Foundation series.', 'en', 4, 2, 'fb2','/books/9.epub', '/archive/9.zip', 409600, '2024-01-09T00:00:00Z', NULL, '2024-01-09T00:00:00Z'),
-(10, 'Mistborn: The Final Empire', 'First book in the Mistborn trilogy.', 'en', NULL, NULL, 'fb2','/books/10.epub', '/archive/10.zip', 655360, '2024-01-10T00:00:00Z', NULL, '2024-01-10T00:00:00Z');
+INSERT INTO BOOKS (ID, TITLE, LANGUAGE, SERIES_ID, SERIES_NUMBER, FILE_FORMAT, FILE_PATH, ARCHIVE_PATH, FILE_SIZE, DATE_ADDED, COVER_IMAGE, CREATED_AT) VALUES
+(1, 'Harry Potter and the Philosopher''s Stone', 'en', 1, 1, 'fb2','/books/1.epub', '/archive/1.zip', 524288, '2024-01-01T00:00:00Z', NULL, '2024-01-01T00:00:00Z'),
+(2, 'Harry Potter and the Chamber of Secrets', 'en', 1, 2, 'fb2','/books/2.epub', '/archive/2.zip', 587776, '2024-01-02T00:00:00Z', NULL, '2024-01-02T00:00:00Z'),
+(3, 'A Game of Thrones', 'en', 2, 1, 'fb2','/books/3.epub', '/archive/3.zip', 1048576, '2024-01-03T00:00:00Z', NULL, '2024-01-03T00:00:00Z'),
+(4, 'The Way of Kings', 'en', 3, 1, 'fb2','/books/4.epub', '/archive/4.zip', 2097152, '2024-01-04T00:00:00Z', NULL, '2024-01-04T00:00:00Z'),
+(5, 'The Shining', 'en', NULL, NULL, 'fb2','/books/5.epub', '/archive/5.zip', 458752, '2024-01-05T00:00:00Z', NULL, '2024-01-05T00:00:00Z'),
+(6, 'Murder on the Orient Express', 'en', NULL, NULL, 'fb2','/books/6.epub', '/archive/6.zip', 327680, '2024-01-06T00:00:00Z', NULL, '2024-01-06T00:00:00Z'),
+(7, 'War and Peace', 'en', NULL, NULL, 'fb2','/books/7.epub', '/archive/7.zip', 1572864, '2024-01-07T00:00:00Z', NULL, '2024-01-07T00:00:00Z'),
+(8, 'Foundation', 'en', 4, 1, 'fb2','/books/8.epub', '/archive/8.zip', 393216, '2024-01-08T00:00:00Z', NULL, '2024-01-08T00:00:00Z'),
+(9, 'Foundation and Empire', 'en', 4, 2, 'fb2','/books/9.epub', '/archive/9.zip', 409600, '2024-01-09T00:00:00Z', NULL, '2024-01-09T00:00:00Z'),
+(10, 'Mistborn: The Final Empire', 'en', NULL, NULL, 'fb2','/books/10.epub', '/archive/10.zip', 655360, '2024-01-10T00:00:00Z', NULL, '2024-01-10T00:00:00Z');
+
+-- ============================================================================
+-- BOOK_ENRICHMENT
+-- ============================================================================
+INSERT INTO BOOK_ENRICHMENT (BOOK_ID, ANNOTATION, EMBEDDING, STATUS, ENRICHED_AT) VALUES
+(1, 'The first book in the Harry Potter series.', NULL, 'DONE', '2024-01-01T00:00:00Z'),
+(2, 'The second book in the Harry Potter series.', NULL, 'DONE', '2024-01-02T00:00:00Z'),
+(3, 'The first book in A Song of Ice and Fire.', NULL, 'DONE', '2024-01-03T00:00:00Z'),
+(4, 'First book of The Stormlight Archive.', NULL, 'DONE', '2024-01-04T00:00:00Z'),
+(5, 'A horror novel about the Overlook Hotel.', NULL, 'DONE', '2024-01-05T00:00:00Z'),
+(6, 'A classic Hercule Poirot mystery.', NULL, 'DONE', '2024-01-06T00:00:00Z'),
+(7, 'Epic historical novel set during Napoleon''s invasion of Russia.', NULL, 'DONE', '2024-01-07T00:00:00Z'),
+(8, 'The first book in the Foundation series.', NULL, 'DONE', '2024-01-08T00:00:00Z'),
+(9, 'The second book in the Foundation series.', NULL, 'DONE', '2024-01-09T00:00:00Z'),
+(10, 'First book in the Mistborn trilogy.', NULL, 'DONE', '2024-01-10T00:00:00Z');
 
 -- ============================================================================
 -- BOOK_GENRES (Many-to-Many Relationship)
@@ -89,44 +104,6 @@ INSERT INTO BOOK_AUTHORS (BOOK_ID, AUTHOR_ID) VALUES
 (10, 3); -- Mistborn -> Brandon Sanderson
 
 -- ============================================================================
--- USER_STARS (User Favorites)
--- ============================================================================
-INSERT INTO USER_STARS (USER_ID, BOOK_ID, CREATED_AT) VALUES
-(1, 1, '2024-01-10T10:00:00Z'),  -- John starred Harry Potter 1
-(1, 3, '2024-01-11T10:00:00Z'),  -- John starred Game of Thrones
-(1, 4, '2024-01-12T10:00:00Z'),  -- John starred The Way of Kings
-(2, 1, '2024-01-10T11:00:00Z'),  -- Jane starred Harry Potter 1
-(2, 6, '2024-01-13T11:00:00Z'),  -- Jane starred Murder on the Orient Express
-(2, 8, '2024-01-14T11:00:00Z');  -- Jane starred Foundation
-
--- ============================================================================
--- USER_COMMENTS
--- ============================================================================
-INSERT INTO USER_COMMENTS (ID, USER_ID, BOOK_ID, COMMENT, CREATED_AT, UPDATED_AT) VALUES
-(1, 1, 1, 'Amazing start to the series!', '2024-01-15T10:00:00Z', '2024-01-15T10:00:00Z'),
-(2, 1, 3, 'Epic fantasy at its finest.', '2024-01-16T10:00:00Z', '2024-01-16T10:00:00Z'),
-(3, 2, 1, 'A classic that never gets old.', '2024-01-15T11:00:00Z', '2024-01-15T11:00:00Z'),
-(4, 2, 6, 'Brilliant detective work by Poirot!', '2024-01-17T11:00:00Z', '2024-01-17T11:00:00Z');
-
--- ============================================================================
--- USER_NOTES
--- ============================================================================
-INSERT INTO USER_NOTES (ID, USER_ID, BOOK_ID, NOTE, CREATED_AT, UPDATED_AT) VALUES
-(1, 1, 1, 'Remember to recommend this to my nephew.', '2024-01-18T10:00:00Z', '2024-01-18T10:00:00Z'),
-(2, 1, 4, 'Start reading book 2 when it arrives.', '2024-01-19T10:00:00Z', '2024-01-19T10:00:00Z'),
-(3, 2, 8, 'Check out the sequels in the series.', '2024-01-18T11:00:00Z', '2024-01-18T11:00:00Z');
-
--- ============================================================================
--- DOWNLOADS
--- ============================================================================
-INSERT INTO DOWNLOADS (ID, USER_ID, BOOK_ID, FORMAT, CREATED_AT) VALUES
-(1, 1, 1, 'EPUB', '2024-01-20T10:00:00Z'),
-(2, 1, 3, 'EPUB', '2024-01-20T10:30:00Z'),
-(3, 2, 1, 'MOBI', '2024-01-20T11:00:00Z'),
-(4, 2, 6, 'EPUB', '2024-01-20T11:30:00Z'),
-(5, 1, 4, 'EPUB', '2024-01-21T10:00:00Z');
-
--- ============================================================================
 -- KINDLE_DEVICES
 -- ============================================================================
 INSERT INTO KINDLE_DEVICES (ID, USER_ID, EMAIL, NAME, CREATED_AT, UPDATED_AT) VALUES
@@ -137,12 +114,12 @@ INSERT INTO KINDLE_DEVICES (ID, USER_ID, EMAIL, NAME, CREATED_AT, UPDATED_AT) VA
 -- ============================================================================
 -- KINDLE_SEND_QUEUE
 -- ============================================================================
-INSERT INTO KINDLE_SEND_QUEUE (ID, USER_ID, DEVICE_ID, BOOK_ID, FORMAT, STATUS, ATTEMPTS, NEXT_RUN_AT, LAST_ERROR, CREATED_AT, UPDATED_AT) VALUES
-(1, 1, 1, 1, 'EPUB', 'COMPLETED', 1, '2024-01-22T10:00:00Z', NULL, '2024-01-22T10:00:00Z', '2024-01-22T10:05:00Z'),
-(2, 1, 1, 3, 'EPUB', 'PENDING', 0, '2024-01-23T10:00:00Z', NULL, '2024-01-23T09:00:00Z', '2024-01-23T09:00:00Z'),
-(3, 1, 2, 4, 'EPUB', 'PROCESSING', 1, '2024-01-23T10:30:00Z', NULL, '2024-01-23T10:00:00Z', '2024-01-23T10:00:00Z'),
-(4, 2, 3, 6, 'MOBI', 'FAILED', 3, '2024-01-24T11:00:00Z', 'Email delivery failed: Invalid recipient', '2024-01-23T11:00:00Z', '2024-01-23T11:15:00Z'),
-(5, 2, 3, 8, 'EPUB', 'COMPLETED', 1, '2024-01-24T11:30:00Z', NULL, '2024-01-24T11:00:00Z', '2024-01-24T11:05:00Z');
+INSERT INTO KINDLE_SEND_QUEUE (ID, USER_ID, DEVICE_ID, BOOK_ID, BOOK_TITLE, FORMAT, STATUS, ATTEMPTS, NEXT_RUN_AT, LAST_ERROR, CREATED_AT, UPDATED_AT) VALUES
+(1, 1, 1, 1, 'Harry Potter and the Philosopher''s Stone', 'EPUB', 'COMPLETED', 1, '2024-01-22T10:00:00Z', NULL, '2024-01-22T10:00:00Z', '2024-01-22T10:05:00Z'),
+(2, 1, 1, 3, 'A Game of Thrones', 'EPUB', 'PENDING', 0, '2024-01-23T10:00:00Z', NULL, '2024-01-23T09:00:00Z', '2024-01-23T09:00:00Z'),
+(3, 1, 2, 4, 'The Way of Kings', 'EPUB', 'PROCESSING', 1, '2024-01-23T10:30:00Z', NULL, '2024-01-23T10:00:00Z', '2024-01-23T10:00:00Z'),
+(4, 2, 3, 6, 'Murder on the Orient Express', 'EPUB', 'FAILED', 3, '2024-01-24T11:00:00Z', 'Email delivery failed: Invalid recipient', '2024-01-23T11:00:00Z', '2024-01-23T11:15:00Z'),
+(5, 2, 3, 8, 'Foundation', 'EPUB', 'COMPLETED', 1, '2024-01-24T11:30:00Z', NULL, '2024-01-24T11:00:00Z', '2024-01-24T11:05:00Z');
 
 -- ============================================================================
 -- KINDLE_SEND_EVENTS
@@ -158,4 +135,3 @@ INSERT INTO KINDLE_SEND_EVENTS (ID, QUEUE_ID, EVENT_TYPE, DETAILS, CREATED_AT) V
 (8, 4, 'FAILED', 'Failed after 3 attempts', '2024-01-23T11:15:00Z'),
 (9, 5, 'STARTED', 'Started processing send request', '2024-01-24T11:00:00Z'),
 (10, 5, 'COMPLETED', 'Successfully sent to device', '2024-01-24T11:05:00Z');
-

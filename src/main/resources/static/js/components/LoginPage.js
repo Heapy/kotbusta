@@ -49,7 +49,7 @@ export function LoginPage() {
         }
       },
         h('p', { style: { margin: '0 0 1rem 0', color: '#34495e', fontSize: '0.875rem' } },
-          'Access thousands of books, manage your reading list, and sync to your Kindle device.'
+          'Access your book catalog, search the collection, and send books to your Kindle device.'
         ),
         h('ul', {
           style: {
@@ -62,9 +62,9 @@ export function LoginPage() {
           }
         },
           h('li', { style: { padding: '0.5rem 0' } }, '✓ Browse and search book collection'),
-          h('li', { style: { padding: '0.5rem 0' } }, '✓ Download in multiple formats (EPUB, MOBI, FB2)'),
+          h('li', { style: { padding: '0.5rem 0' } }, '✓ Download FB2 and EPUB'),
           h('li', { style: { padding: '0.5rem 0' } }, '✓ Send books directly to Kindle'),
-          h('li', { style: { padding: '0.5rem 0' } }, '✓ Add personal notes and comments')
+          h('li', { style: { padding: '0.5rem 0' } }, '✓ Admin-managed imports')
         )
       ),
 

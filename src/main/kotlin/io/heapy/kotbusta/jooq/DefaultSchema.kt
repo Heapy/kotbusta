@@ -6,17 +6,14 @@ package io.heapy.kotbusta.jooq
 
 import io.heapy.kotbusta.jooq.tables.Authors
 import io.heapy.kotbusta.jooq.tables.BookAuthors
+import io.heapy.kotbusta.jooq.tables.BookEnrichment
 import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
-import io.heapy.kotbusta.jooq.tables.Downloads
 import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
 import io.heapy.kotbusta.jooq.tables.Series
-import io.heapy.kotbusta.jooq.tables.UserComments
-import io.heapy.kotbusta.jooq.tables.UserNotes
-import io.heapy.kotbusta.jooq.tables.UserStars
 import io.heapy.kotbusta.jooq.tables.Users
 
 import kotlin.collections.List
@@ -51,6 +48,11 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     val BOOK_AUTHORS: BookAuthors get() = BookAuthors.BOOK_AUTHORS
 
     /**
+     * The table <code>BOOK_ENRICHMENT</code>.
+     */
+    val BOOK_ENRICHMENT: BookEnrichment get() = BookEnrichment.BOOK_ENRICHMENT
+
+    /**
      * The table <code>BOOK_GENRES</code>.
      */
     val BOOK_GENRES: BookGenres get() = BookGenres.BOOK_GENRES
@@ -59,11 +61,6 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
      * The table <code>BOOKS</code>.
      */
     val BOOKS: Books get() = Books.BOOKS
-
-    /**
-     * The table <code>DOWNLOADS</code>.
-     */
-    val DOWNLOADS: Downloads get() = Downloads.DOWNLOADS
 
     /**
      * The table <code>GENRES</code>.
@@ -91,21 +88,6 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     val SERIES: Series get() = Series.SERIES
 
     /**
-     * The table <code>USER_COMMENTS</code>.
-     */
-    val USER_COMMENTS: UserComments get() = UserComments.USER_COMMENTS
-
-    /**
-     * The table <code>USER_NOTES</code>.
-     */
-    val USER_NOTES: UserNotes get() = UserNotes.USER_NOTES
-
-    /**
-     * The table <code>USER_STARS</code>.
-     */
-    val USER_STARS: UserStars get() = UserStars.USER_STARS
-
-    /**
      * The table <code>USERS</code>.
      */
     val USERS: Users get() = Users.USERS
@@ -115,17 +97,14 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     override fun getTables(): List<Table<*>> = listOf(
         Authors.AUTHORS,
         BookAuthors.BOOK_AUTHORS,
+        BookEnrichment.BOOK_ENRICHMENT,
         BookGenres.BOOK_GENRES,
         Books.BOOKS,
-        Downloads.DOWNLOADS,
         Genres.GENRES,
         KindleDevices.KINDLE_DEVICES,
         KindleSendEvents.KINDLE_SEND_EVENTS,
         KindleSendQueue.KINDLE_SEND_QUEUE,
         Series.SERIES,
-        UserComments.USER_COMMENTS,
-        UserNotes.USER_NOTES,
-        UserStars.USER_STARS,
         Users.USERS
     )
 }

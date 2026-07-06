@@ -7,15 +7,11 @@ import io.ktor.server.routing.*
 
 context(applicationModule: ApplicationModule)
 fun Route.statusRoute() {
-    val adminService = applicationModule.adminService.value
-
     get("/status") {
-        adminService.requireAdminRights {
-            call.respond(
-                Success(
-                    data = mapOf("isAdmin" to true),
-                ),
-            )
-        }
+        call.respond(
+            Success(
+                data = mapOf("isAdmin" to true),
+            ),
+        )
     }
 }
