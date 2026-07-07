@@ -48,6 +48,35 @@ class LuceneBookSearchServiceTest {
     }
 
     @Test
+    fun `rebuild deletes the previous index backup and keeps serving`(
+        applicationModule: ApplicationModule,
+    ) = runBlocking {
+        addBulkSearchFixtures(applicationModule, bookCount = 5)
+
+        val indexPath = Files.createTempDirectory("test-kotbusta-lucene-swap-")
+        val service = LuceneBookSearchService(
+            transactionProvider = applicationModule.transactionProvider.value,
+            indexPath = indexPath,
+        )
+        val backupPath = indexPath.resolveSibling("${indexPath.fileName}-backup")
+
+        try {
+            service.rebuildNow()
+            assertTrue(service.search(SearchQuery(query = "bulk", limit = 10)).total > 0)
+
+            // The second rebuild displaces the first index while its reader is still
+            // open. The backup must be removed once the new reader is installed and
+            // must not linger, and the service must keep returning results.
+            service.rebuildNow()
+
+            assertEquals(false, Files.exists(backupPath))
+            assertEquals(5L, service.search(SearchQuery(query = "bulk", limit = 10)).total)
+        } finally {
+            service.close()
+        }
+    }
+
+    @Test
     fun `semantic search ranks books by stored embeddings`(
         applicationModule: ApplicationModule,
     ) = runBlocking {

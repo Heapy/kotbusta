@@ -275,12 +275,28 @@ class LuceneBookSearchService(
 
         try {
             val indexedBooks = buildIndex(tempIndexPath)
-            swapIndexFiles(tempIndexPath)
+            val backupPath = swapIndexFiles(tempIndexPath)
 
             val newIndex = loadIndexIfCurrent(indexPath)
                 ?: throw IllegalStateException("Lucene index build completed without a readable commit")
 
             installActiveIndex(newIndex)
+
+            // Delete the previous index only after installActiveIndex has closed the
+            // old reader, releasing its file handles. On filesystems with
+            // delete-on-last-close semantics (NFS silly-rename, some CIFS/FUSE-backed
+            // volumes) unlinking files that are still mmap'd by the live reader leaves
+            // hidden placeholder entries behind, which makes the recursive delete fail
+            // with DirectoryNotEmptyException. A stale backup is harmless: it is
+            // cleared at the start of the next swap.
+            backupPath?.let { path ->
+                try {
+                    path.deleteRecursivelyIfExists()
+                } catch (e: Exception) {
+                    log.warn("Failed to delete previous Lucene index backup at $path", e)
+                }
+            }
+
             state.set(SearchIndexState.READY)
             log.info("Lucene search index rebuilt with $indexedBooks books")
         } catch (e: Exception) {
@@ -338,8 +354,18 @@ class LuceneBookSearchService(
         total
     }
 
-    private fun swapIndexFiles(tempIndexPath: Path) {
+    /**
+     * Moves the freshly built index at [tempIndexPath] into place, preserving the
+     * previous index directory as a sibling `-backup`. Returns the backup path when a
+     * previous index was displaced (so the caller can delete it once its reader is
+     * closed), or null when there was no previous index. The old index files are
+     * intentionally NOT deleted here: the live reader still has them open at this
+     * point, so deleting them is unsafe on filesystems without unlink-on-open support.
+     */
+    private fun swapIndexFiles(tempIndexPath: Path): Path? {
         val backupPath = indexPath.resolveSibling("${indexPath.name}-backup")
+        // Clear any leftover backup from a previous crash before we move onto it; no
+        // reader is open on it at this point, so the delete is safe here.
         backupPath.deleteRecursivelyIfExists()
 
         val hadPrevious = Files.exists(indexPath)
@@ -356,7 +382,7 @@ class LuceneBookSearchService(
             throw e
         }
 
-        backupPath.deleteRecursivelyIfExists()
+        return if (hadPrevious) backupPath else null
     }
 
     private fun buildLuceneQuery(query: SearchQuery): Query {
