@@ -45,16 +45,17 @@ class EmailServiceTest {
     }
 
     @Test
-    fun `attachment carries rfc2231 filename with ascii fallback`() {
+    fun `cyrillic attachment name is sent as rfc2231 filename only`() {
         val raw = rawEmail(
             subject = "Your book: Медитация випассаны",
             attachmentName = "Медитация випассаны.epub",
         )
 
         val disposition = raw.lines().first { it.startsWith("Content-Disposition: ") }
-        assertTrue(disposition.contains("""filename="book.epub""""), disposition)
-        assertTrue(
-            disposition.contains("filename*=UTF-8''%D0%9C%D0%B5%D0%B4%D0%B8%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20"),
+        assertEquals(
+            "Content-Disposition: attachment; " +
+                "filename*=UTF-8''%D0%9C%D0%B5%D0%B4%D0%B8%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20" +
+                "%D0%B2%D0%B8%D0%BF%D0%B0%D1%81%D1%81%D0%B0%D0%BD%D1%8B.epub",
             disposition,
         )
         assertTrue(raw.contains("""Content-Type: application/epub+zip; name="book.epub""""))

@@ -118,10 +118,15 @@ internal fun buildRawEmail(
 ): ByteArray {
     val boundary = "----=_Part_${System.currentTimeMillis()}"
     val fallbackName = asciiFallbackFileName(attachmentName)
+    // For non-ASCII names send ONLY the RFC 2231 filename*. Common parsers
+    // (Python's email, and likely Amazon's ingestion) prefer a plain
+    // filename= when both are present, which would replace the real title
+    // with the ASCII fallback; extended-only is what calibre sends to
+    // Kindle and is known to decode correctly there.
     val disposition = if (fallbackName == attachmentName) {
         """attachment; filename="$fallbackName""""
     } else {
-        """attachment; filename="$fallbackName"; filename*=${rfc2231FileName(attachmentName)}"""
+        "attachment; filename*=${rfc2231FileName(attachmentName)}"
     }
 
     val emailBuilder = StringBuilder()
