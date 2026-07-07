@@ -9,6 +9,7 @@ import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.service.BookFileException
 import io.heapy.kotbusta.service.ConversionFormat
+import io.heapy.kotbusta.util.asciiFallbackFileName
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -47,10 +48,7 @@ fun Route.downloadBookRoute() {
                     .increment()
                 call.response.header(
                     HttpHeaders.ContentDisposition,
-                    ContentDisposition.Attachment.withParameter(
-                        ContentDisposition.Parameters.FileName,
-                        materialized.fileName,
-                    ).toString(),
+                    downloadContentDisposition(materialized.fileName).toString(),
                 )
                 ConversionFormat.entries
                     .find { it.extension.equals(materialized.format, ignoreCase = true) }
@@ -61,5 +59,22 @@ fun Route.downloadBookRoute() {
                 materialized.cleanup()
             }
         }
+    }
+}
+
+internal fun downloadContentDisposition(fileName: String): ContentDisposition {
+    val fallback = asciiFallbackFileName(fileName)
+    val disposition = ContentDisposition.Attachment.withParameter(
+        ContentDisposition.Parameters.FileName,
+        fallback,
+    )
+
+    return if (fallback == fileName) {
+        disposition
+    } else {
+        disposition.withParameter(
+            ContentDisposition.Parameters.FileNameAsterisk,
+            fileName,
+        )
     }
 }

@@ -32,11 +32,15 @@ class InpxParserTest {
         val tx = applicationModule.transactionProvider.value
         val parser = applicationModule.inpxParser.value
         val booksDir = Files.createTempDirectory("inpx-test-")
+        val stats = ImportStats()
 
         writeInpx(booksDir, listOf(book(9001, "Alpha"), book(9002, "Beta"), book(9003, "Gamma")))
-        parser.parseAndImport(booksDir, ImportStats())
+        parser.parseAndImport(booksDir, stats)
 
         assertEquals(3, countSynthetic(tx))
+        assertEquals(1, stats.inpFilesTotal.load())
+        assertEquals(1, stats.inpFilesProcessed.load())
+        assertEquals(null, stats.currentInpFile.load())
         val firstSnapshot = syntheticTitles(tx)
 
         parser.parseAndImport(booksDir, ImportStats())
@@ -132,6 +136,37 @@ class InpxParserTest {
         assertEquals(0, stagingTableCount(tx))
     }
 
+    @Test
+    fun `import aborts after one hundred sequential invalid book records`(
+        applicationModule: ApplicationModule,
+    ) = runBlocking {
+        val tx = applicationModule.transactionProvider.value
+        val parser = applicationModule.inpxParser.value
+        val booksDir = Files.createTempDirectory("inpx-test-")
+
+        writeInpx(booksDir, listOf(book(9001, "Alpha"), book(9002, "Beta")))
+        parser.parseAndImport(booksDir, ImportStats())
+        val before = syntheticTitles(tx)
+
+        val stats = ImportStats()
+        writeRawInpxEntries(booksDir, listOf("bad.inp" to List(100) { "not enough fields" }))
+
+        val error = assertThrows(Exception::class.java) {
+            runBlocking {
+                parser.parseAndImport(booksDir, stats)
+            }
+        }
+
+        assertTrue(error.message!!.contains("100 sequential invalid book records"))
+        assertEquals(100, stats.bookErrors.load())
+        assertEquals(100, stats.sequentialBookErrors.load())
+        assertEquals(1, stats.inpFilesTotal.load())
+        assertEquals(0, stats.inpFilesProcessed.load())
+        assertEquals(null, stats.currentInpFile.load())
+        assertEquals(before, syntheticTitles(tx))
+        assertEquals(0, stagingTableCount(tx))
+    }
+
     private data class InpBook(
         val id: Int,
         val title: String,
@@ -179,6 +214,17 @@ class InpxParserTest {
                 }
                 zip.putNextEntry(ZipEntry(entryName))
                 zip.write(lines.toByteArray(Charsets.UTF_8))
+                zip.closeEntry()
+            }
+        }
+    }
+
+    private fun writeRawInpxEntries(dir: Path, entries: List<Pair<String, List<String>>>) {
+        val inpxFile = dir.resolve("flibusta_fb2_local.inpx").toFile()
+        ZipOutputStream(inpxFile.outputStream()).use { zip ->
+            entries.forEach { (entryName, lines) ->
+                zip.putNextEntry(ZipEntry(entryName))
+                zip.write(lines.joinToString("\n").toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
             }
         }
