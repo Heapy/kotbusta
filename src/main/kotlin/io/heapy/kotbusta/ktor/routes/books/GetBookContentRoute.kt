@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.ktor.routes.books
 
+import io.heapy.komok.tech.logging.logger
 import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.dao.getBookById
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
@@ -12,6 +13,8 @@ import io.heapy.kotbusta.service.BookFileException
 import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+
+private val log = logger {}
 
 context(applicationModule: ApplicationModule)
 fun Route.getBookContentRoute() {
@@ -31,7 +34,8 @@ fun Route.getBookContentRoute() {
             val rendered = try {
                 bookContentService.render(book)
             } catch (e: BookFileException) {
-                notFoundError(e.message ?: "Book content not available")
+                log.warn("Book content not available for book $bookId: ${e.message}", e)
+                notFoundError("Book content not available")
             }
 
             applicationModule.prometheusRegistry.value

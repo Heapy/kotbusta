@@ -3,6 +3,7 @@ package io.heapy.kotbusta.util
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
+import javax.xml.stream.XMLInputFactory
 
 /** Matches a run of whitespace characters. */
 internal val WHITESPACE_RUN = Regex("""\s+""")
@@ -25,6 +26,18 @@ private val XML_UNSAFE_CHARS = Regex("""[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\uFEFF]""
  * tens of MB even with embedded cover art and illustrations.
  */
 internal const val MAX_FB2_BYTES = 48 * 1024 * 1024
+
+/**
+ * Creates the shared FB2 StAX input factory. DTD and external entity support stay
+ * disabled to harden all FB2 parsing paths against XXE in one place.
+ */
+internal fun newFb2XmlInputFactory(): XMLInputFactory =
+    XMLInputFactory.newInstance().apply {
+        setProperty(XMLInputFactory.IS_COALESCING, true)
+        setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
+        setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
+        setProperty(XMLInputFactory.SUPPORT_DTD, false)
+    }
 
 /**
  * Reads an FB2 byte stream and returns it as cleaned text ready for XML parsing:
@@ -51,6 +64,8 @@ internal fun decodeFb2Content(input: InputStream): String? {
         val content = when {
             bytes.startsWith(0xFF, 0xFE) -> String(bytes, Charsets.UTF_16LE)
             bytes.startsWith(0xFE, 0xFF) -> String(bytes, Charsets.UTF_16BE)
+            bytes.startsWith(0x3C, 0x00) -> String(bytes, Charsets.UTF_16LE)
+            bytes.startsWith(0x00, 0x3C) -> String(bytes, Charsets.UTF_16BE)
             isValidUtf8(bytes) -> String(bytes, Charsets.UTF_8)
             else -> String(bytes, Charset.forName("windows-1251"))
         }

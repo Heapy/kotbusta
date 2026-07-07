@@ -8,6 +8,7 @@ import io.heapy.kotbusta.util.takeCodePointSafe
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import kotlin.io.path.exists
 
@@ -33,6 +34,10 @@ class MaterializedBook(
     }
 }
 
+internal fun resolveFb2Entry(zip: ZipFile, book: Book): ZipEntry? =
+    zip.entries().asSequence().find { it.name == book.filePath }
+        ?: zip.getEntry("${book.id}.fb2")
+
 /**
  * Resolves a book's bytes from the on-disk archive layout
  * (`${booksDataPath}/${archivePath}.zip`, entry `filePath`) and, when a
@@ -57,7 +62,7 @@ class ZipBookFileService(
         try {
             val fb2File = File(tempDir, "${book.id}.fb2")
             ZipFile(archiveFile.toFile()).use { zip ->
-                val entry = zip.entries().asSequence().find { it.name == book.filePath }
+                val entry = resolveFb2Entry(zip, book)
                     ?: throw BookFileException("FB2 entry '${book.filePath}' not found in ${book.archivePath}.zip")
                 zip.getInputStream(entry).use { input ->
                     fb2File.outputStream().use(input::copyTo)

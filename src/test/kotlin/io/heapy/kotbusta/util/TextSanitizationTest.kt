@@ -41,6 +41,15 @@ class TextSanitizationTest {
     }
 
     @Test
+    fun `decodeFb2Content decodes UTF-16LE without BOM`() {
+        val text = "<FictionBook><body><section><p>Привет</p></section></body></FictionBook>"
+        val decoded = decodeFb2Content(ByteArrayInputStream(text.toByteArray(Charsets.UTF_16LE)))!!
+
+        assertTrue(decoded.contains("FictionBook"), decoded)
+        assertTrue(decoded.contains("Привет"), decoded)
+    }
+
+    @Test
     fun `decodeFb2Content returns null for empty input`() {
         assertNull(decodeFb2Content(ByteArrayInputStream(ByteArray(0))))
     }

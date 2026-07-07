@@ -120,6 +120,19 @@ class BookContentServiceTest {
     }
 
     @Test
+    fun `renders ids for internal anchor targets`() {
+        val fb2 = "<FictionBook xmlns:xlink=\"http://www.w3.org/1999/xlink\"><body><section>" +
+            "<p><a xlink:href=\"#note1\">note</a></p>" +
+            "<section id=\"note1\"><p>Footnote</p></section>" +
+            "</section></body></FictionBook>"
+
+        val html = service.renderContent(fb2).html
+
+        assertTrue(html.contains("<a href=\"#note1\">note</a>"), html)
+        assertTrue(html.contains("<section id=\"note1\" class=\"fb2-section\">"), html)
+    }
+
+    @Test
     fun `returns empty html for a book without a body`() {
         val fb2 = "<FictionBook><description><title-info>" +
             "<book-title>T</book-title></title-info></description></FictionBook>"
@@ -171,6 +184,27 @@ class BookContentServiceTest {
         assertTrue(result.html.contains("tail survives"), result.html)
         assertTrue(result.html.contains("—"), result.html) // &mdash; -> em dash
         assertTrue(result.html.contains(" "), result.html) // &nbsp; -> no-break space
+    }
+
+    @Test
+    fun `cover binary is not charged against body image budget`() {
+        val bodyBase64 = Base64.getEncoder().encodeToString(byteArrayOf(1, 2, 3, 4, 5))
+        val coverBinary = "not!valid!base64!".repeat(1024)
+        val fb2 = "<FictionBook xmlns:xlink=\"http://www.w3.org/1999/xlink\">" +
+            "<description><title-info><coverpage><image xlink:href=\"#cover\"/></coverpage></title-info></description>" +
+            "<body><section><p><image xlink:href=\"#img1\"/></p></section></body>" +
+            "<binary id=\"cover\" content-type=\"image/jpeg\">$coverBinary</binary>" +
+            "<binary id=\"img1\" content-type=\"image/png\">$bodyBase64</binary>" +
+            "</FictionBook>"
+
+        val result = service.renderContent(fb2)
+
+        assertTrue(result.hasImages)
+        assertFalse(result.truncated)
+        assertTrue(
+            result.html.contains("<img class=\"fb2-image\" alt=\"\" src=\"data:image/png;base64,$bodyBase64\">"),
+            result.html,
+        )
     }
 
     @Test

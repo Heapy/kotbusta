@@ -2,9 +2,9 @@ package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.util.decodeFb2Content
+import io.heapy.kotbusta.util.newFb2XmlInputFactory
 import java.io.StringReader
 import java.util.zip.ZipFile
-import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 
 /**
@@ -48,11 +48,7 @@ class CoverService {
     }
 
     private fun extractCoverFromFb2(content: String): ByteArray? {
-        val xmlInputFactory = XMLInputFactory.newInstance()
-        xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
-        xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
-        xmlInputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
-        xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
+        val xmlInputFactory = newFb2XmlInputFactory()
 
         try {
             // Parse from a character Reader so StAX honors the charset decodeFb2Content

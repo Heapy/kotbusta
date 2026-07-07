@@ -1,5 +1,5 @@
 import { render, h } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { api } from './utils/api.js';
 
 // Components
@@ -64,6 +64,7 @@ function App() {
   const [pageOffset, setPageOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const readerEnteredInApp = useRef(false);
 
   // Initialize route from URL hash
   useEffect(() => {
@@ -146,11 +147,20 @@ function App() {
   const handleReadBook = (bookId) => {
     setSelectedBookId(bookId);
     setReading(true);
+    readerEnteredInApp.current = true;
     window.location.hash = `#/${currentView}/book/${bookId}/read`;
   };
 
   const handleBackFromBook = () => {
     window.history.back();
+  };
+
+  const handleBackFromReader = () => {
+    if (readerEnteredInApp.current) {
+      window.history.back();
+    } else {
+      window.location.hash = `#/${currentView}/book/${selectedBookId}`;
+    }
   };
 
   const handlePageChange = (offset) => {
@@ -186,7 +196,7 @@ function App() {
       ? (reading
           ? h(BookReader, {
               bookId: selectedBookId,
-              onBack: handleBackFromBook
+              onBack: handleBackFromReader
             })
           : h(BookDetail, {
               bookId: selectedBookId,

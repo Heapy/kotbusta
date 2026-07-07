@@ -4,6 +4,7 @@ import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.model.Book
 import io.heapy.kotbusta.util.WHITESPACE_RUN
 import io.heapy.kotbusta.util.decodeFb2Content
+import io.heapy.kotbusta.util.newFb2XmlInputFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -39,8 +40,7 @@ class BookContentService(
 
         val content = try {
             ZipFile(archiveFile.toFile()).use { zip ->
-                val entry = zip.entries().asSequence().find { it.name == book.filePath }
-                    ?: zip.getEntry("${book.id}.fb2")
+                val entry = resolveFb2Entry(zip, book)
                     ?: throw BookFileException("FB2 entry '${book.filePath}' not found in ${book.archivePath}.zip")
                 zip.getInputStream(entry).use { decodeFb2Content(it) }
             }
@@ -55,7 +55,7 @@ class BookContentService(
     }
 
     internal fun renderContent(content: String): RenderedBook {
-        val factory = newXmlInputFactory()
+        val factory = newFb2XmlInputFactory()
         val binaries = collectBinaries(content, factory)
         val body = buildBodyHtml(content, factory, binaries.byId)
         return RenderedBook(
@@ -73,31 +73,44 @@ class BookContentService(
      */
     private fun collectBinaries(content: String, factory: XMLInputFactory): BinaryResult {
         val byId = HashMap<String, String>()
+        val coverIds = HashSet<String>()
         var truncated = false
         var usedBase64Chars = 0L
 
-        val reader = factory.createXMLStreamReader(StringReader(content))
+        var reader: XMLStreamReader? = null
         try {
+            val xml = factory.createXMLStreamReader(StringReader(content))
+            reader = xml
             var inBinary = false
+            var coverpageDepth = 0
             var id: String? = null
             var contentType = DEFAULT_IMAGE_CONTENT_TYPE
-            while (reader.hasNext()) {
-                when (reader.next()) {
-                    XMLStreamConstants.START_ELEMENT -> if (reader.localName == "binary") {
-                        inBinary = true
-                        id = reader.getAttributeValue(null, "id")
-                        val declared = reader.getAttributeValue(null, "content-type")?.trim()
-                        contentType = if (!declared.isNullOrBlank() && CONTENT_TYPE_RE.matches(declared)) {
-                            declared
-                        } else {
-                            DEFAULT_IMAGE_CONTENT_TYPE
+            while (xml.hasNext()) {
+                when (xml.next()) {
+                    XMLStreamConstants.START_ELEMENT -> when (xml.localName) {
+                        "coverpage" -> coverpageDepth++
+                        "image" -> if (coverpageDepth > 0) {
+                            val href = xml.getAttributeValue(XLINK_NS, "href")
+                                ?: xml.getAttributeValue(null, "href")
+                            href?.removePrefix("#")?.takeIf(String::isNotBlank)?.let(coverIds::add)
                         }
+                        "binary" -> {
+                            inBinary = true
+                            id = xml.getAttributeValue(null, "id")
+                            val declared = xml.getAttributeValue(null, "content-type")?.trim()
+                            contentType = if (!declared.isNullOrBlank() && CONTENT_TYPE_RE.matches(declared)) {
+                                declared
+                            } else {
+                                DEFAULT_IMAGE_CONTENT_TYPE
+                            }
+                        }
+                        else -> {}
                     }
 
                     XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> {
                         val key = id
-                        if (inBinary && key != null && key !in byId) {
-                            val raw = reader.text
+                        if (inBinary && key != null && key !in coverIds && key !in byId) {
+                            val raw = xml.text
                             if (raw.isNotBlank() && BASE64_RE.matches(raw)) {
                                 val base64 = raw.replace(WHITESPACE_RUN, "")
                                 when {
@@ -114,17 +127,20 @@ class BookContentService(
                         }
                     }
 
-                    XMLStreamConstants.END_ELEMENT -> if (reader.localName == "binary") {
-                        inBinary = false
-                        id = null
-                        contentType = DEFAULT_IMAGE_CONTENT_TYPE
+                    XMLStreamConstants.END_ELEMENT -> when (xml.localName) {
+                        "coverpage" -> if (coverpageDepth > 0) coverpageDepth--
+                        "binary" -> {
+                            inBinary = false
+                            id = null
+                            contentType = DEFAULT_IMAGE_CONTENT_TYPE
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
             log.warn("Failed while collecting FB2 binaries: ${e.message}", e)
         } finally {
-            reader.close()
+            reader?.close()
         }
 
         return BinaryResult(byId, truncated)
@@ -139,31 +155,25 @@ class BookContentService(
         factory: XMLInputFactory,
         binaries: Map<String, String>,
     ): BodyHtml {
-        val reader = factory.createXMLStreamReader(StringReader(content))
         val writer = Fb2HtmlWriter(binaries)
+        var reader: XMLStreamReader? = null
         try {
-            while (reader.hasNext()) {
-                when (reader.next()) {
-                    XMLStreamConstants.START_ELEMENT -> writer.startElement(reader)
-                    XMLStreamConstants.END_ELEMENT -> writer.endElement(reader)
-                    XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> writer.characters(reader.text)
+            val xml = factory.createXMLStreamReader(StringReader(content))
+            reader = xml
+            while (xml.hasNext()) {
+                when (xml.next()) {
+                    XMLStreamConstants.START_ELEMENT -> writer.startElement(xml)
+                    XMLStreamConstants.END_ELEMENT -> writer.endElement(xml)
+                    XMLStreamConstants.CHARACTERS, XMLStreamConstants.CDATA -> writer.characters(xml.text)
                 }
             }
         } catch (e: Exception) {
             log.warn("Failed while rendering FB2 body (returning partial content): ${e.message}", e)
         } finally {
-            reader.close()
+            reader?.close()
         }
         return BodyHtml(writer.html.toString(), writer.imageCount)
     }
-
-    private fun newXmlInputFactory(): XMLInputFactory =
-        XMLInputFactory.newInstance().apply {
-            setProperty(XMLInputFactory.IS_COALESCING, true)
-            setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
-            setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
-            setProperty(XMLInputFactory.SUPPORT_DTD, false)
-        }
 
     private class BinaryResult(val byId: Map<String, String>, val truncated: Boolean)
 
@@ -206,37 +216,37 @@ class BookContentService(
             when (name) {
                 "section" -> {
                     sectionDepth++
-                    html.append("<section class=\"fb2-section\">")
+                    html.append("<section").appendIdAttribute(reader).append(" class=\"fb2-section\">")
                 }
                 "title" -> {
                     titleLevel = minOf(sectionDepth + 1, 6)
                     inTitle = true
                     titleParaCount = 0
                     paragraphDepth++
-                    html.append("<h").append(titleLevel).append(" class=\"fb2-title\">")
+                    html.append("<h").append(titleLevel).appendIdAttribute(reader).append(" class=\"fb2-title\">")
                 }
                 "p" -> if (inTitle) {
                     if (titleParaCount > 0) html.append("<br>")
                     titleParaCount++
                 } else {
                     paragraphDepth++
-                    html.append("<p>")
+                    html.append("<p").appendIdAttribute(reader).append(">")
                 }
                 "subtitle" -> {
                     paragraphDepth++
-                    html.append("<p class=\"fb2-subtitle\">")
+                    html.append("<p").appendIdAttribute(reader).append(" class=\"fb2-subtitle\">")
                 }
-                "epigraph" -> html.append("<div class=\"fb2-epigraph\">")
-                "cite" -> html.append("<blockquote class=\"fb2-cite\">")
+                "epigraph" -> html.append("<div").appendIdAttribute(reader).append(" class=\"fb2-epigraph\">")
+                "cite" -> html.append("<blockquote").appendIdAttribute(reader).append(" class=\"fb2-cite\">")
                 "text-author" -> {
                     paragraphDepth++
-                    html.append("<p class=\"fb2-text-author\">")
+                    html.append("<p").appendIdAttribute(reader).append(" class=\"fb2-text-author\">")
                 }
-                "poem" -> html.append("<div class=\"fb2-poem\">")
-                "stanza" -> html.append("<div class=\"fb2-stanza\">")
+                "poem" -> html.append("<div").appendIdAttribute(reader).append(" class=\"fb2-poem\">")
+                "stanza" -> html.append("<div").appendIdAttribute(reader).append(" class=\"fb2-stanza\">")
                 "v" -> {
                     paragraphDepth++
-                    html.append("<div class=\"fb2-verse\">")
+                    html.append("<div").appendIdAttribute(reader).append(" class=\"fb2-verse\">")
                 }
                 "empty-line" -> html.append("<div class=\"fb2-empty-line\"></div>")
                 "emphasis" -> html.append("<em>")
@@ -261,11 +271,11 @@ class BookContentService(
                 "tr" -> html.append("<tr>")
                 "td" -> {
                     paragraphDepth++
-                    html.append("<td>")
+                    html.append("<td").appendIdAttribute(reader).append(">")
                 }
                 "th" -> {
                     paragraphDepth++
-                    html.append("<th>")
+                    html.append("<th").appendIdAttribute(reader).append(">")
                 }
                 // Unknown element: emit no tag; its text still flows through characters().
                 else -> {}
@@ -376,6 +386,14 @@ private fun StringBuilder.appendEscaped(text: String): StringBuilder {
             '\'' -> append("&#39;")
             else -> append(c)
         }
+    }
+    return this
+}
+
+private fun StringBuilder.appendIdAttribute(reader: XMLStreamReader): StringBuilder {
+    val id = reader.getAttributeValue(null, "id")
+    if (!id.isNullOrBlank()) {
+        append(" id=\"").appendEscaped(id).append("\"")
     }
     return this
 }

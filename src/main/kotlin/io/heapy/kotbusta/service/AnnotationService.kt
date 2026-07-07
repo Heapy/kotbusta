@@ -3,20 +3,15 @@ package io.heapy.kotbusta.service
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.util.WHITESPACE_RUN
 import io.heapy.kotbusta.util.decodeFb2Content
+import io.heapy.kotbusta.util.newFb2XmlInputFactory
 import java.io.InputStream
 import java.io.StringReader
-import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 
 class AnnotationService {
     fun extractAnnotation(inputStream: InputStream): String? {
         val content = decodeFb2Content(inputStream) ?: return null
-        val xmlInputFactory = XMLInputFactory.newInstance().apply {
-            setProperty(XMLInputFactory.IS_COALESCING, true)
-            setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
-            setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false)
-            setProperty(XMLInputFactory.SUPPORT_DTD, false)
-        }
+        val xmlInputFactory = newFb2XmlInputFactory()
 
         return try {
             // Parse from a character Reader (not the raw bytes) so StAX consumes the

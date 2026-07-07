@@ -6,12 +6,19 @@ const MIN_QUERY_LENGTH = 2;
 const MAX_MATCHES = 2000;
 const SEARCH_DEBOUNCE_MS = 200;
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Wrap case-insensitive occurrences of `query` in <mark class="reader-match"> within
 // each text node under `root`. Matches that span inline tags aren't found (an accepted
 // reader limitation). Returns the mark elements in document order, capped at MAX_MATCHES.
 function highlightMatches(root, query) {
   const matches = [];
-  const needle = query.toLowerCase();
+  const escapedQuery = escapeRegExp(query);
+  if (!escapedQuery) return matches;
+
+  const pattern = new RegExp(escapedQuery, 'gi');
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
   const textNodes = [];
   let node;
@@ -19,21 +26,23 @@ function highlightMatches(root, query) {
 
   for (const textNode of textNodes) {
     const text = textNode.nodeValue;
-    const haystack = text.toLowerCase();
-    let idx = haystack.indexOf(needle);
-    if (idx === -1) continue;
+    pattern.lastIndex = 0;
+    let match = pattern.exec(text);
+    if (!match) continue;
 
     const fragment = document.createDocumentFragment();
     let last = 0;
-    while (idx !== -1 && matches.length < MAX_MATCHES) {
+    while (match && matches.length < MAX_MATCHES) {
+      const idx = match.index;
+      const hit = match[0];
       if (idx > last) fragment.appendChild(document.createTextNode(text.slice(last, idx)));
       const mark = document.createElement('mark');
       mark.className = 'reader-match';
-      mark.textContent = text.slice(idx, idx + query.length);
+      mark.textContent = hit;
       fragment.appendChild(mark);
       matches.push(mark);
-      last = idx + query.length;
-      idx = haystack.indexOf(needle, last);
+      last = idx + hit.length;
+      match = pattern.exec(text);
     }
     if (last < text.length) fragment.appendChild(document.createTextNode(text.slice(last)));
     textNode.parentNode.replaceChild(fragment, textNode);
@@ -58,12 +67,15 @@ export function BookReader({ bookId, onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [query, setQuery] = useState('');
+  const [appliedQuery, setAppliedQuery] = useState('');
   const [matchCount, setMatchCount] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
 
   const contentRef = useRef(null);
   const matchesRef = useRef([]);
   const searchInputRef = useRef(null);
+  const lastAppliedQueryRef = useRef('');
+  const searchDebounceRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,41 +95,75 @@ export function BookReader({ bookId, onBack }) {
     return () => { cancelled = true; };
   }, [bookId]);
 
-  // Close on Escape.
-  useEffect(() => {
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') onBack();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onBack]);
-
   const activate = (matches, index) => {
     matches.forEach((mark, i) => mark.classList.toggle('active', i === index));
     const target = matches[index];
     if (target) target.scrollIntoView({ block: 'center', behavior: 'smooth' });
   };
 
+  const clearSearchDebounce = () => {
+    if (searchDebounceRef.current !== null) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
+    }
+  };
+
+  const applySearch = (rawQuery) => {
+    const root = contentRef.current;
+    const trimmed = rawQuery.trim();
+
+    if (!root) {
+      matchesRef.current = [];
+      lastAppliedQueryRef.current = trimmed;
+      setAppliedQuery(trimmed);
+      setMatchCount(0);
+      setActiveIndex(0);
+      return [];
+    }
+
+    clearMarks(root);
+    const matches = trimmed.length >= MIN_QUERY_LENGTH ? highlightMatches(root, trimmed) : [];
+    matchesRef.current = matches;
+    lastAppliedQueryRef.current = trimmed;
+    setAppliedQuery(trimmed);
+    setMatchCount(matches.length);
+    setActiveIndex(0);
+    if (matches.length > 0) activate(matches, 0);
+    return matches;
+  };
+
+  // Close on Escape, unless the focused search box has text to clear.
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      if (document.activeElement === searchInputRef.current && query.length > 0) {
+        event.preventDefault();
+        clearSearchDebounce();
+        setQuery('');
+        applySearch('');
+        return;
+      }
+      onBack();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onBack, query]);
+
   // Re-run the (debounced) search whenever the query or the loaded content changes.
   useEffect(() => {
+    clearSearchDebounce();
     const root = contentRef.current;
     if (!root) return;
-    const handle = setTimeout(() => {
-      clearMarks(root);
-      const trimmed = query.trim();
-      const matches = trimmed.length >= MIN_QUERY_LENGTH ? highlightMatches(root, trimmed) : [];
-      matchesRef.current = matches;
-      setMatchCount(matches.length);
-      setActiveIndex(0);
-      if (matches.length > 0) activate(matches, 0);
+    searchDebounceRef.current = setTimeout(() => {
+      searchDebounceRef.current = null;
+      applySearch(query);
     }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(handle);
+    return () => clearSearchDebounce();
   }, [query, content && content.html]);
 
-  const goToMatch = (delta) => {
-    const matches = matchesRef.current;
+  const goToMatch = (delta, matches = matchesRef.current, currentIndex = activeIndex) => {
     if (matches.length === 0) return;
-    const next = (activeIndex + delta + matches.length) % matches.length;
+    const next = (currentIndex + delta + matches.length) % matches.length;
     setActiveIndex(next);
     activate(matches, next);
   };
@@ -125,12 +171,19 @@ export function BookReader({ bookId, onBack }) {
   const onSearchKeyDown = (event) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      goToMatch(event.shiftKey ? -1 : 1);
+      clearSearchDebounce();
+      const trimmed = query.trim();
+      let matches = matchesRef.current;
+      let currentIndex = activeIndex;
+      if (trimmed !== lastAppliedQueryRef.current) {
+        matches = applySearch(query);
+        currentIndex = 0;
+      }
+      goToMatch(event.shiftKey ? -1 : 1, matches, currentIndex);
     }
   };
 
-  const trimmedQuery = query.trim();
-  const hasQuery = trimmedQuery.length >= MIN_QUERY_LENGTH;
+  const hasAppliedQuery = appliedQuery.length >= MIN_QUERY_LENGTH;
 
   return h('div', { className: 'reader-page' },
     h('div', { className: 'reader-bar' },
@@ -146,7 +199,7 @@ export function BookReader({ bookId, onBack }) {
           onInput: (event) => setQuery(event.target.value),
           onKeyDown: onSearchKeyDown
         }),
-        hasQuery && h('span', { className: 'reader-match-count' },
+        hasAppliedQuery && h('span', { className: 'reader-match-count' },
           matchCount > 0 ? `${activeIndex + 1}/${matchCount}` : '0/0'
         ),
         h('button', {
