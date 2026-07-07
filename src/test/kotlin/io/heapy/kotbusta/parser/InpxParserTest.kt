@@ -167,6 +167,30 @@ class InpxParserTest {
         assertEquals(0, stagingTableCount(tx))
     }
 
+    @Test
+    fun `sequential invalid book streak resets between inp files`(
+        applicationModule: ApplicationModule,
+    ) = runBlocking {
+        val tx = applicationModule.transactionProvider.value
+        val parser = applicationModule.inpxParser.value
+        val booksDir = Files.createTempDirectory("inpx-test-")
+        val invalidLines = List(60) { "not enough fields" }
+
+        writeRawInpxEntries(
+            booksDir,
+            listOf(
+                "a-first.inp" to listOf(rawBookLine(book(9001, "Alpha"))) + invalidLines,
+                "b-second.inp" to invalidLines + listOf(rawBookLine(book(9002, "Beta"))),
+            ),
+        )
+
+        parser.parseAndImport(booksDir, ImportStats())
+
+        assertEquals(2, countSynthetic(tx))
+        assertEquals(listOf("Alpha", "Beta"), syntheticTitles(tx))
+        assertEquals(0, stagingTableCount(tx))
+    }
+
     private data class InpBook(
         val id: Int,
         val title: String,
@@ -192,32 +216,31 @@ class InpxParserTest {
     }
 
     private fun writeInpxEntries(dir: Path, entries: List<Pair<String, List<InpBook>>>) {
-        val sep = ''
         val inpxFile = dir.resolve("flibusta_fb2_local.inpx").toFile()
         ZipOutputStream(inpxFile.outputStream()).use { zip ->
             entries.forEach { (entryName, books) ->
-                val lines = books.joinToString("\n") { b ->
-                    listOf(
-                        b.author,
-                        b.genre,
-                        b.title,
-                        "",
-                        "",
-                        b.id.toString(),
-                        "1024",
-                        b.id.toString(),
-                        if (b.deleted) "1" else "0",
-                        "fb2",
-                        "2024-01-01",
-                        "ru",
-                    ).joinToString(sep.toString())
-                }
+                val lines = books.joinToString("\n", transform = ::rawBookLine)
                 zip.putNextEntry(ZipEntry(entryName))
                 zip.write(lines.toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
             }
         }
     }
+
+    private fun rawBookLine(b: InpBook): String = listOf(
+        b.author,
+        b.genre,
+        b.title,
+        "",
+        "",
+        b.id.toString(),
+        "1024",
+        b.id.toString(),
+        if (b.deleted) "1" else "0",
+        "fb2",
+        "2024-01-01",
+        "ru",
+    ).joinToString("\u0004")
 
     private fun writeRawInpxEntries(dir: Path, entries: List<Pair<String, List<String>>>) {
         val inpxFile = dir.resolve("flibusta_fb2_local.inpx").toFile()

@@ -88,6 +88,7 @@ class InpxParser(
                 stats.addMessage("Found ${entries.size} .inp files to process")
 
                 entries.forEachIndexed { index, entry ->
+                    stats.resetSequentialBookErrors()
                     stats.setCurrentInpFile(entry.name)
                     val archiveName = entry.name.removeSuffix(".inp")
                     val books = zipFile.getInputStream(entry)
