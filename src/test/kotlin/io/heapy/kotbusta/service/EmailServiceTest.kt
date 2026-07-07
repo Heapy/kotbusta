@@ -2,6 +2,7 @@ package io.heapy.kotbusta.service
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.Base64
@@ -170,6 +171,21 @@ class EmailServiceTest {
 
         assertFalse(raw.lines().any { it.startsWith("Bcc:") }, "injected header must not appear")
         assertTrue(raw.contains("Subject: Your book: Evil Bcc: evil@example.com\r\n"))
+    }
+
+    @Test
+    fun `recipient with crlf is rejected to prevent header injection`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            buildRawEmail(
+                from = "sender@example.com",
+                to = "device@kindle.com\r\nBcc: evil@example.com",
+                subject = "Your book: X",
+                body = "b",
+                attachmentBytes = byteArrayOf(1, 2, 3),
+                attachmentName = "X.epub",
+                mimeType = "application/epub+zip",
+            )
+        }
     }
 
     @Test

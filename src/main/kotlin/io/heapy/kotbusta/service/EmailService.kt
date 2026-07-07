@@ -125,6 +125,9 @@ internal fun buildRawEmail(
     attachmentName: String,
     mimeType: String,
 ): ByteArray {
+    require(to.none { it.isISOControl() }) { "recipient address must not contain CR or LF" }
+    require(from.none { it.isISOControl() }) { "sender address must not contain CR or LF" }
+
     val boundary = "----=_Part_${System.currentTimeMillis()}"
     val fallbackName = asciiFallbackFileName(attachmentName)
     // For non-ASCII names send ONLY the RFC 2231 filename*. Common parsers
