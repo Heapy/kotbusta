@@ -21,6 +21,7 @@ interface EmailService {
         recipientEmail: String,
         bookFile: File,
         bookTitle: String,
+        attachmentFileName: String,
         format: String,
     ): EmailResult
 }
@@ -33,6 +34,7 @@ class SesEmailService(
         recipientEmail: String,
         bookFile: File,
         bookTitle: String,
+        attachmentFileName: String,
         format: String,
     ): EmailResult {
         return try {
@@ -48,7 +50,7 @@ class SesEmailService(
                 subject = "Your book: $title",
                 body = "Please find your requested book attached.",
                 attachmentBytes = bookFile.readBytes(),
-                attachmentName = "$title.${format.lowercase()}",
+                attachmentName = attachmentFileName,
                 mimeType = mimeType,
             )
 

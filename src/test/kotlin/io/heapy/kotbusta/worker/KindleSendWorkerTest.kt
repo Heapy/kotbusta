@@ -41,6 +41,7 @@ class KindleSendWorkerTest {
 
         assertEquals(KindleSendStatus.COMPLETED.name, status(tx, queueId))
         assertEquals(1, email.calls)
+        assertEquals("Worker_Book.epub", email.lastAttachmentFileName)
     }
 
     @Test
@@ -170,22 +171,32 @@ class KindleSendWorkerTest {
 
     private class FakeEmailService(private val result: EmailResult) : EmailService {
         var calls = 0
+        var lastAttachmentFileName: String? = null
+
         override suspend fun sendBookToKindle(
             recipientEmail: String,
             bookFile: File,
             bookTitle: String,
+            attachmentFileName: String,
             format: String,
         ): EmailResult {
             calls++
+            lastAttachmentFileName = attachmentFileName
             return result
         }
     }
 
     private class FakeBookFileService : BookFileService {
         override suspend fun materialize(book: Book, format: String): MaterializedBook {
+            val normalizedFormat = format.lowercase()
             val dir = Files.createTempDirectory("fake-materialize-").toFile()
             val file = File(dir, "book.$format").apply { writeText("fake") }
-            return MaterializedBook(file = file, fileName = "book.$format", format = format, tempDir = dir)
+            return MaterializedBook(
+                file = file,
+                fileName = "Worker_Book.$normalizedFormat",
+                format = normalizedFormat,
+                tempDir = dir,
+            )
         }
     }
 
