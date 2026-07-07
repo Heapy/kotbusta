@@ -2,6 +2,7 @@ package io.heapy.kotbusta.service
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.Base64
@@ -17,6 +18,15 @@ class EmailServiceTest {
             attachmentName = attachmentName,
             mimeType = "application/epub+zip",
         ).toString(Charsets.ISO_8859_1)
+
+    private fun assertAllHeaderLinesWithinRfc5322(raw: String) {
+        raw.split("\r\n").forEach { line ->
+            assertTrue(
+                line.toByteArray(Charsets.ISO_8859_1).size <= 998,
+                "line exceeds RFC 5322 998-octet limit (${line.length} chars): ${line.take(80)}...",
+            )
+        }
+    }
 
     @Test
     fun `headers are pure ascii for cyrillic titles`() {
@@ -74,6 +84,41 @@ class EmailServiceTest {
     }
 
     @Test
+    fun `ascii attachment filename with spaces is sent as plain quoted filename`() {
+        val raw = rawEmail(
+            subject = "Your book: War and Peace",
+            attachmentName = "War and Peace.epub",
+        )
+
+        assertTrue(raw.contains("Content-Disposition: attachment; filename=\"War and Peace.epub\""))
+        assertFalse(raw.contains("filename*"))
+    }
+
+    @Test
+    fun `sanitized cyrillic title keeps raw message lines within rfc5322 limit`() {
+        val longCyrillic = "Медитація".repeat(40)
+        val title = sanitizeBookTitle(longCyrillic)
+        val raw = rawEmail(
+            subject = "Your book: $title",
+            attachmentName = "$title.epub",
+        )
+
+        assertAllHeaderLinesWithinRfc5322(raw)
+    }
+
+    @Test
+    fun `sanitized ascii title keeps raw message lines within rfc5322 limit`() {
+        val longAscii = "War and Peace ".repeat(120)
+        val title = sanitizeBookTitle(longAscii)
+        val raw = rawEmail(
+            subject = "Your book: $title",
+            attachmentName = "$title.epub",
+        )
+
+        assertAllHeaderLinesWithinRfc5322(raw)
+    }
+
+    @Test
     fun `lines end with crlf`() {
         val raw = rawEmail(
             subject = "Your book: Clean_Title",
@@ -126,6 +171,21 @@ class EmailServiceTest {
 
         assertFalse(raw.lines().any { it.startsWith("Bcc:") }, "injected header must not appear")
         assertTrue(raw.contains("Subject: Your book: Evil Bcc: evil@example.com\r\n"))
+    }
+
+    @Test
+    fun `recipient with crlf is rejected to prevent header injection`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            buildRawEmail(
+                from = "sender@example.com",
+                to = "device@kindle.com\r\nBcc: evil@example.com",
+                subject = "Your book: X",
+                body = "b",
+                attachmentBytes = byteArrayOf(1, 2, 3),
+                attachmentName = "X.epub",
+                mimeType = "application/epub+zip",
+            )
+        }
     }
 
     @Test

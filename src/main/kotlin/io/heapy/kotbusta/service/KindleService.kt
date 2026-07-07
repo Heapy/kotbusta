@@ -52,7 +52,7 @@ class KindleService(
     context(_: TransactionContext, userSession: UserSession)
     fun createDevice(request: CreateDeviceRequest): DeviceResponse {
         // Validate email format
-        if (!request.email.endsWith("@kindle.com", ignoreCase = true)) {
+        if (!isValidKindleEmail(request.email)) {
             throw IllegalArgumentException("Email must be a valid Kindle email address (ending with @kindle.com)")
         }
 
@@ -216,5 +216,10 @@ class KindleService(
 
     private companion object : Logger()
 }
+
+internal fun isValidKindleEmail(email: String): Boolean =
+    email.isNotBlank() &&
+        email.none { it.isISOControl() || it.isWhitespace() } &&
+        email.endsWith("@kindle.com", ignoreCase = true)
 
 class QuotaExceededException(message: String) : Exception(message)

@@ -99,12 +99,21 @@ class SesEmailService(
 
 private val CONTROL_OR_QUOTE = Regex("""[\p{Cntrl}"]+""")
 private val WHITESPACE = Regex("""\s+""")
+private const val MAX_SANITIZED_BOOK_TITLE_LENGTH = 100
 
 internal fun sanitizeBookTitle(title: String): String =
     title
         .replace(CONTROL_OR_QUOTE, " ")
         .replace(WHITESPACE, " ")
         .trim()
+        .let { sanitizedTitle ->
+            val truncated = sanitizedTitle.take(MAX_SANITIZED_BOOK_TITLE_LENGTH)
+            if (truncated.lastOrNull()?.let { Character.isHighSurrogate(it) } == true) {
+                truncated.dropLast(1)
+            } else {
+                truncated
+            }.trim()
+        }
         .ifBlank { "book" }
 
 internal fun buildRawEmail(
@@ -116,6 +125,9 @@ internal fun buildRawEmail(
     attachmentName: String,
     mimeType: String,
 ): ByteArray {
+    require(to.none { it.isISOControl() }) { "recipient address must not contain CR or LF" }
+    require(from.none { it.isISOControl() }) { "sender address must not contain CR or LF" }
+
     val boundary = "----=_Part_${System.currentTimeMillis()}"
     val fallbackName = asciiFallbackFileName(attachmentName)
     // For non-ASCII names send ONLY the RFC 2231 filename*. Common parsers
@@ -123,8 +135,8 @@ internal fun buildRawEmail(
     // filename= when both are present, which would replace the real title
     // with the ASCII fallback; extended-only is what calibre sends to
     // Kindle and is known to decode correctly there.
-    val disposition = if (fallbackName == attachmentName) {
-        """attachment; filename="$fallbackName""""
+    val disposition = if (attachmentName.all { it.code in 0x20..0x7E }) {
+        """attachment; filename="$attachmentName""""
     } else {
         "attachment; filename*=${rfc2231FileName(attachmentName)}"
     }
