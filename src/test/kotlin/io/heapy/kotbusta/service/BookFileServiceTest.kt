@@ -57,6 +57,23 @@ class BookFileServiceTest {
     }
 
     @Test
+    fun `materialize preserves russian title in download filename`() = runBlocking {
+        writeArchive(archivePath = "fb2-001", entryName = "42.fb2", content = "<fb2>raw</fb2>")
+        val service = ZipBookFileService(booksDataPath, RecordingConversionService())
+
+        val materialized = service.materialize(
+            book(title = "Преступление и наказание"),
+            "fb2",
+        )
+
+        try {
+            assertEquals("Преступление_и_наказание.fb2", materialized.fileName)
+        } finally {
+            materialized.cleanup()
+        }
+    }
+
+    @Test
     fun `materialize fails when archive entry is missing`() {
         writeArchive(archivePath = "fb2-001", entryName = "other.fb2", content = "other")
         val service = ZipBookFileService(booksDataPath, RecordingConversionService())
@@ -84,10 +101,12 @@ class BookFileServiceTest {
         }
     }
 
-    private fun book(): Book =
+    private fun book(
+        title: String = "Clean Title",
+    ): Book =
         Book(
             id = 42,
-            title = "Clean Title",
+            title = title,
             annotation = null,
             genres = listOf("Fantasy"),
             language = "en",

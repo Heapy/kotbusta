@@ -84,10 +84,11 @@ class InpxParser(
                     .sortedBy { it.name }
                     .toList()
 
+                stats.setInpFilesTotal(entries.size)
                 stats.addMessage("Found ${entries.size} .inp files to process")
 
                 entries.forEachIndexed { index, entry ->
-                    stats.incInpFiles()
+                    stats.setCurrentInpFile(entry.name)
                     val archiveName = entry.name.removeSuffix(".inp")
                     val books = zipFile.getInputStream(entry)
                         .bufferedReader(Charsets.UTF_8)
@@ -109,8 +110,10 @@ class InpxParser(
                         }
                     }
 
+                    stats.incInpFiles()
                     stats.addMessage("Processed ${entry.name} (${index + 1}/${entries.size}): ${books.size} books")
                 }
+                stats.setCurrentInpFile(null)
             }
 
             transactionProvider.transaction(READ_WRITE) {
@@ -124,6 +127,7 @@ class InpxParser(
                     "${seriesIds.size} series, ${genreIds.size} genres",
             )
         } catch (e: Exception) {
+            stats.setCurrentInpFile(null)
             bestEffortDrop(staging)
             throw e
         }
@@ -568,8 +572,7 @@ class InpxParser(
         return try {
             val parts = line.split('') // Field separator in INP files
             if (parts.size < 8) {
-                log.warn("Invalid line: $line")
-                stats.incInvalidBooks()
+                recordInvalidBook(stats, "Invalid line: $line")
                 return null
             }
 
@@ -592,21 +595,20 @@ class InpxParser(
             }
 
             if (warnings.isNotEmpty()) {
-                log.warn("Invalid book: $line. Warnings: $warnings")
-                stats.incInvalidBooks()
+                recordInvalidBook(stats, "Invalid book: $line. Warnings: $warnings")
                 return null
             }
 
             if (deleted == "1") {
                 log.debug("Book $bookId deleted upstream")
+                stats.resetSequentialBookErrors()
                 stats.incDeletedBooks()
                 return null
             }
 
             val authors = parseAuthors(authorPart)
             if (authors.isEmpty()) {
-                log.warn("No authors for book $bookId")
-                stats.incInvalidBooks()
+                recordInvalidBook(stats, "No authors for book $bookId")
                 return null
             }
 
@@ -621,6 +623,7 @@ class InpxParser(
 
             val filePath = "$bookId.$fileFormat"
 
+            stats.resetSequentialBookErrors()
             stats.incAddedBooks()
 
             ParsedBook(
@@ -637,10 +640,31 @@ class InpxParser(
                 fileSize = fileSize,
                 dateAdded = parseDateAdded(dateAdded),
             )
+        } catch (e: ImportAbortedException) {
+            throw e
         } catch (e: Exception) {
-            log.error("Error parsing line: $line", e)
-            stats.incInvalidBooks()
+            recordInvalidBook(stats, "Error parsing line: $line", e)
             null
+        }
+    }
+
+    private fun recordInvalidBook(
+        stats: ImportStats,
+        message: String,
+        exception: Exception? = null,
+    ) {
+        if (exception == null) {
+            log.warn(message)
+        } else {
+            log.error(message, exception)
+        }
+
+        val sequentialErrors = stats.incInvalidBooks()
+        if (sequentialErrors >= ImportStats.MAX_SEQUENTIAL_BOOK_ERRORS) {
+            val abortMessage =
+                "Stopping import after $sequentialErrors sequential invalid book records"
+            stats.addMessage(abortMessage)
+            throw ImportAbortedException(abortMessage)
         }
     }
 
@@ -678,3 +702,7 @@ class InpxParser(
         private val ARCHIVE_RANGE_REGEX = Regex(""".*?(\d+)-(\d+)$""")
     }
 }
+
+private class ImportAbortedException(
+    message: String,
+) : IllegalStateException(message)

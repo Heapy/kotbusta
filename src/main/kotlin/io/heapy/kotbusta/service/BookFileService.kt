@@ -89,11 +89,20 @@ class ZipBookFileService(
 
     private fun sanitizedTitle(book: Book): String =
         book.title
+            .trim()
             .ifBlank { "book_${book.id}" }
-            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            .replace(UNSAFE_FILENAME_CHARS, "_")
+            .replace(WHITESPACE, "_")
+            .replace(UNDERSCORES, "_")
+            .trim('.', '_')
+            .ifBlank { "book_${book.id}" }
             .take(100)
 
-    private companion object : Logger()
+    private companion object : Logger() {
+        private val UNSAFE_FILENAME_CHARS = Regex("""[\p{Cntrl}/\\:*?"<>|]+""")
+        private val WHITESPACE = Regex("""\s+""")
+        private val UNDERSCORES = Regex("""_+""")
+    }
 }
 
 class BookFileException(message: String) : Exception(message)

@@ -13,6 +13,7 @@ export function AdminPanel() {
   const [jobStatus, setJobStatus] = useState(null);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [startingImport, setStartingImport] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -51,12 +52,14 @@ export function AdminPanel() {
 
   const startImport = async () => {
     if (!confirm('Start a new data import job?')) return;
+    setStartingImport(true);
     try {
       await api.post('/api/admin/import');
-      alert('Import job started!');
       await loadJobStatus();
     } catch (err) {
       alert('Failed to start import: ' + err.message);
+    } finally {
+      setStartingImport(false);
     }
   };
 
@@ -85,6 +88,17 @@ export function AdminPanel() {
   }
 
   const isRunning = jobStatus?.status === 'RUNNING';
+  const processedFiles = jobStatus?.inpFilesProcessed || 0;
+  const totalFiles = jobStatus?.inpFilesTotal || 0;
+  const progressPercent = totalFiles > 0
+    ? Math.min(100, Math.round((processedFiles / totalFiles) * 100))
+    : (jobStatus?.status === 'COMPLETED' ? 100 : 0);
+  const progressLabel = totalFiles > 0
+    ? `${processedFiles} / ${totalFiles} files`
+    : `${processedFiles} files`;
+  const currentFile = jobStatus?.currentInpFile;
+  const sequentialErrors = jobStatus?.sequentialBookErrors || 0;
+  const maxSequentialErrors = jobStatus?.maxSequentialBookErrors || 100;
   const messages = Object.entries(jobStatus?.messages || {})
     .sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
@@ -94,8 +108,8 @@ export function AdminPanel() {
       h('button', {
         className: 'button primary',
         onClick: startImport,
-        disabled: isRunning
-      }, isRunning ? 'Import Running...' : 'Start Import')
+        disabled: isRunning || startingImport
+      }, isRunning ? 'Import Running...' : (startingImport ? 'Starting...' : 'Start Import'))
     ),
 
     h('section', { className: 'section' },
@@ -117,6 +131,28 @@ export function AdminPanel() {
           h('span', { className: statusClass(jobStatus.status) }, jobStatus.status)
         ),
 
+        h('div', { className: 'import-progress' },
+          h('div', { className: 'progress-topline' },
+            h('span', { className: 'progress-label' }, 'Progress'),
+            h('span', { className: 'progress-value' }, `${progressPercent}% · ${progressLabel}`)
+          ),
+          h('div', {
+            className: 'progress-track',
+            role: 'progressbar',
+            'aria-valuemin': 0,
+            'aria-valuemax': 100,
+            'aria-valuenow': progressPercent
+          },
+            h('div', {
+              className: `progress-fill ${isRunning && totalFiles === 0 ? 'indeterminate' : ''}`,
+              style: totalFiles > 0 ? { width: `${progressPercent}%` } : {}
+            })
+          ),
+          currentFile && h('div', { className: 'progress-current' },
+            'Current file: ', currentFile
+          )
+        ),
+
         messages.length > 0 && h('div', { className: 'job-log' },
           h('div', { className: 'job-log-title' }, 'Import Log'),
           h('div', { className: 'job-log-body' },
@@ -132,7 +168,7 @@ export function AdminPanel() {
         h('div', { className: 'metrics-grid' },
           h('div', { className: 'metric' },
             h('div', { className: 'metric-label' }, 'Files'),
-            h('div', { className: 'metric-value' }, jobStatus.inpFilesProcessed)
+            h('div', { className: 'metric-value' }, progressLabel)
           ),
           h('div', { className: 'metric' },
             h('div', { className: 'metric-label' }, 'Added'),
@@ -145,6 +181,12 @@ export function AdminPanel() {
           h('div', { className: 'metric' },
             h('div', { className: 'metric-label' }, 'Book Errors'),
             h('div', { className: 'metric-value danger-text' }, jobStatus.bookErrors)
+          ),
+          h('div', { className: 'metric' },
+            h('div', { className: 'metric-label' }, 'Error Streak'),
+            h('div', {
+              className: `metric-value ${sequentialErrors > 0 ? 'danger-text' : ''}`
+            }, `${sequentialErrors} / ${maxSequentialErrors}`)
           )
         ),
 
