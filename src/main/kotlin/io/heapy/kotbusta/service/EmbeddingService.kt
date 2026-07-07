@@ -78,19 +78,22 @@ class DjlEmbeddingService(
 }
 
 internal class AutoTokenTypeTextEmbeddingTranslator(
-    tokenizer: HuggingFaceTokenizer,
+    private val tokenizer: HuggingFaceTokenizer,
 ) : Translator<String, FloatArray> {
-    private val withoutTokenTypes = textEmbeddingTranslator(tokenizer, includeTokenTypes = false)
-    private val withTokenTypes = textEmbeddingTranslator(tokenizer, includeTokenTypes = true)
+    @Volatile
     private var delegate: TextEmbeddingTranslator? = null
 
     override fun getBatchifier(): Batchifier =
         Batchifier.STACK
 
     override fun prepare(ctx: TranslatorContext) {
-        val includeTokenTypes = requiresTokenTypes(ctx.model.describeInput().keys())
-        delegate = if (includeTokenTypes) withTokenTypes else withoutTokenTypes
-        selectedDelegate().prepare(ctx)
+        val translator = delegate ?: synchronized(this) {
+            delegate ?: textEmbeddingTranslator(
+                tokenizer,
+                requiresTokenTypes(ctx.model.describeInput().keys()),
+            ).also { delegate = it }
+        }
+        translator.prepare(ctx)
     }
 
     override fun processInput(ctx: TranslatorContext, input: String): NDList =
