@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.service
 
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -127,6 +128,37 @@ class EmailServiceTest {
 
         assertFalse(raw.replace("\r\n", "").contains('\n'), "found LF without CR")
         assertTrue(raw.endsWith("\r\n"))
+    }
+
+    @Test
+    fun `base64 attachment body decodes and wraps at mime line length`() {
+        val attachmentBytes = ByteArray(200) { it.toByte() }
+        val raw = buildRawEmail(
+            from = "sender@example.com",
+            to = "device@kindle.com",
+            subject = "Your book: Clean_Title",
+            body = "Please find your requested book attached.",
+            attachmentBytes = attachmentBytes,
+            attachmentName = "Clean_Title.epub",
+            mimeType = "application/epub+zip",
+        ).toString(Charsets.ISO_8859_1)
+
+        val boundary = raw.lines()
+            .first { it.startsWith("Content-Type: multipart/mixed; boundary=") }
+            .substringAfter("boundary=\"")
+            .substringBefore("\"")
+        val attachmentHeaderBlock =
+            "Content-Transfer-Encoding: base64\r\n" +
+                "Content-Disposition: attachment; filename=\"Clean_Title.epub\"\r\n\r\n"
+        val base64Body = raw.substringAfter(attachmentHeaderBlock)
+            .substringBefore("\r\n--$boundary--")
+
+        assertArrayEquals(attachmentBytes, Base64.getMimeDecoder().decode(base64Body))
+        base64Body.split("\r\n")
+            .filter { it.isNotEmpty() }
+            .forEach { line ->
+                assertTrue(line.length <= 76, "base64 line exceeds 76 chars: ${line.length}")
+            }
     }
 
     @Test

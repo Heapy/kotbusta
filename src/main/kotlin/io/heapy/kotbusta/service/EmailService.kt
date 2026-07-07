@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.ses.model.RawMessage
 import aws.sdk.kotlin.services.ses.model.SendRawEmailRequest
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.util.asciiFallbackFileName
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 
@@ -141,10 +142,12 @@ internal fun buildRawEmail(
         "attachment; filename*=${rfc2231FileName(attachmentName)}"
     }
 
-    val emailBuilder = StringBuilder()
+    val out = ByteArrayOutputStream()
+    fun write(text: String) = out.write(text.toByteArray())
     fun line(text: String = "") {
         // RFC 5322 requires CRLF line endings in raw messages.
-        emailBuilder.append(text).append("\r\n")
+        write(text)
+        write("\r\n")
     }
 
     // Headers
@@ -169,13 +172,18 @@ internal fun buildRawEmail(
     line("Content-Transfer-Encoding: base64")
     line("Content-Disposition: $disposition")
     line()
-    line(Base64.getMimeEncoder().encodeToString(attachmentBytes))
-    line()
+    // Stream-encode the attachment straight into `out` to avoid holding a
+    // separate full-size base64 String. wrap(...).close() flushes the final
+    // base64 group; ByteArrayOutputStream.close() is a no-op, so `out` stays
+    // usable afterwards.
+    Base64.getMimeEncoder().wrap(out).use { it.write(attachmentBytes) }
+    line()  // terminate the final base64 line
+    line()  // blank line before the closing boundary
 
     // End boundary
     line("--$boundary--")
 
-    return emailBuilder.toString().toByteArray()
+    return out.toByteArray()
 }
 
 /**
