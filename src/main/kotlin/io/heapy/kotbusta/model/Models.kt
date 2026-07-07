@@ -45,6 +45,15 @@ data class Book(
 )
 
 @Serializable
+data class BookContent(
+    val id: Int,
+    val title: String,
+    val html: String,
+    val hasImages: Boolean = false,
+    val truncated: Boolean = false,
+)
+
+@Serializable
 data class BookSummary(
     val id: Int,
     val title: String,

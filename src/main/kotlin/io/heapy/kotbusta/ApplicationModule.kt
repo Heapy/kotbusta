@@ -14,6 +14,7 @@ import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.AnnotationService
+import io.heapy.kotbusta.service.BookContentService
 import io.heapy.kotbusta.service.BookSearchService
 import io.heapy.kotbusta.service.CoverService
 import io.heapy.kotbusta.service.DefaultTimeService
@@ -178,6 +179,12 @@ class ApplicationModule {
         ZipBookFileService(
             booksDataPath = booksDataPath.value,
             conversionService = conversionService.value,
+        )
+    }
+
+    val bookContentService by bean {
+        BookContentService(
+            booksDataPath = booksDataPath.value,
         )
     }
 

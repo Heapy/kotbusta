@@ -8,6 +8,7 @@ import io.heapy.kotbusta.ktor.routes.auth.logoutRoute
 import io.heapy.kotbusta.ktor.routes.healthMetricsRoutes
 import io.heapy.kotbusta.ktor.routes.books.downloadBookRoute
 import io.heapy.kotbusta.ktor.routes.books.getBookByIdRoute
+import io.heapy.kotbusta.ktor.routes.books.getBookContentRoute
 import io.heapy.kotbusta.ktor.routes.books.getBookCoverRoute
 import io.heapy.kotbusta.ktor.routes.books.getBooksRoute
 import io.heapy.kotbusta.ktor.routes.books.getSimilarBooksRoute
@@ -42,6 +43,7 @@ fun Application.configureRouting() {
                 getBookByIdRoute()
                 getSimilarBooksRoute()
                 getBookCoverRoute()
+                getBookContentRoute()
                 downloadBookRoute()
                 getDevicesRoute()
                 createDeviceRoute()

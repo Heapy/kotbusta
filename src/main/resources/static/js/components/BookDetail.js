@@ -3,7 +3,7 @@ import { useState, useEffect } from 'preact/hooks';
 import { api } from '../utils/api.js';
 import { BookCard } from './BookCard.js';
 
-export function BookDetail({ bookId, onBack, onSelectBook }) {
+export function BookDetail({ bookId, onBack, onSelectBook, onRead }) {
   const [book, setBook] = useState(null);
   const [similarBooks, setSimilarBooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +101,16 @@ export function BookDetail({ bookId, onBack, onSelectBook }) {
         ),
 
         h('div', { className: 'side-actions' },
+          h('section', { className: 'panel' },
+            h('h3', { className: 'section-title' }, 'Read'),
+            h('div', { className: 'action-stack' },
+              h('button', {
+                className: 'button primary full',
+                onClick: () => onRead(bookId)
+              }, 'Read in browser')
+            )
+          ),
+
           h('section', { className: 'panel' },
             h('h3', { className: 'section-title' }, 'Download'),
             h('div', { className: 'action-stack' },

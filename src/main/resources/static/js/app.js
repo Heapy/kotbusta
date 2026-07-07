@@ -5,6 +5,7 @@ import { api } from './utils/api.js';
 // Components
 import { Header } from './components/Header.js';
 import { BookDetail } from './components/BookDetail.js';
+import { BookReader } from './components/BookReader.js';
 import { BooksList } from './components/BooksList.js';
 import { KindleManagement } from './components/KindleManagement.js';
 import { AdminPanel } from './components/AdminPanel.js';
@@ -23,15 +24,21 @@ function parseRoute() {
   const page = parseInt(queryParams.get('page') || '1', 10);
   const offset = (page - 1) * 20; // 20 items per page
 
+  // Check if it's a book reader route: /view/book/:id/read
+  const readMatch = path.match(/^\/([^/]+)\/book\/(\d+)\/read$/);
+  if (readMatch) {
+    return { view: readMatch[1], bookId: parseInt(readMatch[2], 10), reading: true, offset: 0 };
+  }
+
   // Check if it's a book detail route: /view/book/:id
   const bookMatch = path.match(/^\/([^/]+)\/book\/(\d+)$/);
   if (bookMatch) {
-    return { view: bookMatch[1], bookId: parseInt(bookMatch[2], 10), offset: 0 };
+    return { view: bookMatch[1], bookId: parseInt(bookMatch[2], 10), reading: false, offset: 0 };
   }
 
   // Otherwise it's a view route
   const view = path.slice(1) || 'books'; // Remove leading slash
-  return { view, bookId: null, offset };
+  return { view, bookId: null, reading: false, offset };
 }
 
 // Update URL hash based on current state
@@ -53,6 +60,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentView, setCurrentView] = useState('books');
   const [selectedBookId, setSelectedBookId] = useState(null);
+  const [reading, setReading] = useState(false);
   const [pageOffset, setPageOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -66,6 +74,7 @@ function App() {
     if (route.bookId) {
       setSelectedBookId(route.bookId);
     }
+    setReading(route.reading || false);
     setPageOffset(route.offset);
   }, []);
 
@@ -81,6 +90,7 @@ function App() {
       } else {
         setSelectedBookId(null);
       }
+      setReading(route.reading || false);
       setPageOffset(route.offset);
     };
 
@@ -133,6 +143,12 @@ function App() {
     updateRoute(currentView, bookId, pageOffset);
   };
 
+  const handleReadBook = (bookId) => {
+    setSelectedBookId(bookId);
+    setReading(true);
+    window.location.hash = `#/${currentView}/book/${bookId}/read`;
+  };
+
   const handleBackFromBook = () => {
     window.history.back();
   };
@@ -159,7 +175,7 @@ function App() {
   }
 
   return h('div', { className: 'app-shell' },
-    h(Header, {
+    !reading && h(Header, {
       user: user,
       onNavigate: handleNavigate,
       currentView: currentView,
@@ -167,11 +183,17 @@ function App() {
     }),
 
     selectedBookId
-      ? h(BookDetail, {
-          bookId: selectedBookId,
-          onBack: handleBackFromBook,
-          onSelectBook: handleSelectBook
-        })
+      ? (reading
+          ? h(BookReader, {
+              bookId: selectedBookId,
+              onBack: handleBackFromBook
+            })
+          : h(BookDetail, {
+              bookId: selectedBookId,
+              onBack: handleBackFromBook,
+              onSelectBook: handleSelectBook,
+              onRead: handleReadBook
+            }))
       : [
           currentView === 'books' && h(BooksList, {
             onSelectBook: handleSelectBook,

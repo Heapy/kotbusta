@@ -975,3 +975,195 @@ img {
     width: 100%;
   }
 }
+
+/* Book reader */
+.reader-page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.reader-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem clamp(0.75rem, 3vw, 1.25rem);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.reader-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 730;
+  color: var(--text);
+}
+
+.reader-search {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.reader-search-input {
+  min-height: 2.25rem;
+  width: min(16rem, 42vw);
+  padding: 0.4rem 0.7rem;
+  color: var(--text);
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.reader-search-input:hover {
+  border-color: var(--border-strong);
+}
+
+.reader-search-input::placeholder {
+  color: var(--text-soft);
+}
+
+.reader-match-count {
+  min-width: 3.2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.reader-notice {
+  width: min(46rem, 100%);
+  margin: 0.75rem auto 0;
+  padding: 0.5rem 0.9rem;
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.reader-content {
+  width: min(46rem, 100%);
+  margin: 0 auto;
+  padding: 2.5rem clamp(1rem, 4vw, 1.5rem) 6rem;
+  color: var(--text);
+  font-size: 1.075rem;
+  line-height: 1.75;
+}
+
+.reader-content p {
+  margin: 0 0 1rem;
+}
+
+.reader-content .fb2-title {
+  margin: 2rem 0 1rem;
+  line-height: 1.2;
+  font-weight: 740;
+}
+
+.reader-content h1.fb2-title {
+  font-size: 1.85rem;
+}
+
+.reader-content h2.fb2-title {
+  font-size: 1.45rem;
+}
+
+.reader-content h3.fb2-title {
+  font-size: 1.2rem;
+}
+
+.reader-content h4.fb2-title,
+.reader-content h5.fb2-title,
+.reader-content h6.fb2-title {
+  font-size: 1.05rem;
+}
+
+.fb2-subtitle {
+  margin: 1.5rem 0 0.75rem;
+  font-weight: 700;
+}
+
+.fb2-epigraph {
+  width: min(80%, 30rem);
+  margin: 1.25rem 0 1.25rem auto;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.fb2-cite {
+  margin: 1.25rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.fb2-text-author {
+  text-align: right;
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.fb2-poem {
+  margin: 1.25rem 0;
+}
+
+.fb2-stanza {
+  margin: 0 0 1rem;
+}
+
+.fb2-empty-line {
+  height: 1rem;
+}
+
+.fb2-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem auto;
+  border-radius: var(--radius-sm);
+}
+
+.fb2-table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.fb2-table td,
+.fb2-table th {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+}
+
+mark.reader-match {
+  background: var(--accent-soft);
+  color: inherit;
+  border-radius: 3px;
+}
+
+mark.reader-match.active {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+@media (max-width: 520px) {
+  .reader-bar .button {
+    width: auto;
+  }
+
+  .reader-title {
+    display: none;
+  }
+
+  .reader-search-input {
+    width: 100%;
+  }
+}
