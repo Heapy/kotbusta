@@ -26,9 +26,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.nio.file.Path
+import java.util.Locale
 import java.util.zip.ZipFile
 import kotlin.io.path.exists
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.Instant
 
 class BookEnrichmentWorker(
@@ -80,7 +82,12 @@ class BookEnrichmentWorker(
 
     suspend fun processPass(scope: CoroutineScope): Int {
         var processed = 0
-        var anyProcessed = false
+        var enriched = 0
+        var failed = 0
+        var loggedAt = 0
+        var totalBooks = 0
+        var alreadyEnriched = 0
+        var startedAt: Instant? = null
 
         while (true) {
             val claimedBookIds = transactionProvider.transaction(READ_WRITE) {
@@ -90,15 +97,33 @@ class BookEnrichmentWorker(
                 break
             }
 
+            // First batch of a pass with actual work: read the totals once (kept out
+            // of idle passes to avoid two COUNT queries every interval when caught up).
+            if (startedAt == null) {
+                startedAt = Clock.System.now()
+                val progress = transactionProvider.transaction(READ_ONLY) {
+                    countProgress()
+                }
+                totalBooks = progress.total
+                alreadyEnriched = progress.enriched
+                log.info("Book enrichment pass started: $alreadyEnriched/$totalBooks already enriched, catching up the rest")
+            }
+
             val batchResults = processClaimedBatch(claimedBookIds)
             transactionProvider.transaction(READ_WRITE) {
                 recordResults(batchResults)
             }
 
             val doneCount = batchResults.count { it is EnrichmentResult.Done }
+            enriched += doneCount
+            failed += batchResults.size - doneCount
             completedSinceRebuild += doneCount
             processed += batchResults.size
-            anyProcessed = true
+
+            if (processed - loggedAt >= PROGRESS_LOG_EVERY) {
+                loggedAt = processed
+                logProgress(totalBooks, alreadyEnriched + enriched, processed, startedAt)
+            }
 
             if (rebuildEvery > 0 && completedSinceRebuild >= rebuildEvery) {
                 completedSinceRebuild = 0
@@ -106,11 +131,38 @@ class BookEnrichmentWorker(
             }
         }
 
-        if (anyProcessed) {
+        val start = startedAt
+        if (start != null) {
             bookSearchService.scheduleRebuild(scope)
+            val elapsed = Clock.System.now() - start
+            log.info("Book enrichment pass complete: $processed processed ($enriched enriched, $failed failed) in $elapsed; ${alreadyEnriched + enriched}/$totalBooks enriched overall")
         }
 
         return processed
+    }
+
+    private fun logProgress(
+        totalBooks: Int,
+        enrichedTotal: Int,
+        processedThisPass: Int,
+        startedAt: Instant,
+    ) {
+        val elapsedSeconds = (Clock.System.now() - startedAt).inWholeSeconds
+        val rate = if (elapsedSeconds > 0) processedThisPass.toDouble() / elapsedSeconds else 0.0
+        val remaining = (totalBooks - enrichedTotal).coerceAtLeast(0)
+        val percent = if (totalBooks > 0) enrichedTotal * 100.0 / totalBooks else 0.0
+        val eta = if (rate > 0) (remaining / rate).toLong().seconds.toString() else "unknown"
+        log.info(
+            String.format(
+                Locale.ROOT,
+                "Book enrichment progress: %,d/%,d enriched (%.1f%%), %.1f books/s, ETA %s",
+                enrichedTotal,
+                totalBooks,
+                percent,
+                rate,
+                eta,
+            ),
+        )
     }
 
     private suspend fun processClaimedBatch(bookIds: List<Int>): List<EnrichmentResult> {
@@ -228,6 +280,14 @@ class BookEnrichmentWorker(
     }
 
     context(_: TransactionContext)
+    private fun countProgress(): EnrichmentProgress = useTx { dslContext ->
+        EnrichmentProgress(
+            total = dslContext.fetchCount(BOOKS),
+            enriched = dslContext.fetchCount(BOOK_ENRICHMENT, BOOK_ENRICHMENT.STATUS.eq(STATUS_DONE)),
+        )
+    }
+
+    context(_: TransactionContext)
     private fun deleteProcessingClaims(): Int = useTx { dslContext ->
         dslContext
             .deleteFrom(BOOK_ENRICHMENT)
@@ -290,6 +350,11 @@ class BookEnrichmentWorker(
         log.warn("Book ${result.bookId} enrichment failed: ${result.error}")
     }
 
+    private data class EnrichmentProgress(
+        val total: Int,
+        val enriched: Int,
+    )
+
     private sealed interface PreparedEnrichment {
         data class Ready(
             val bookId: Int,
@@ -320,5 +385,6 @@ class BookEnrichmentWorker(
         private const val STATUS_PROCESSING = "PROCESSING"
         private const val STATUS_DONE = "DONE"
         private const val STATUS_FAILED = "FAILED"
+        private const val PROGRESS_LOG_EVERY = 1000
     }
 }
