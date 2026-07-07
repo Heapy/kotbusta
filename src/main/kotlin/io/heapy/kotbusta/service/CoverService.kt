@@ -1,9 +1,8 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
-import java.io.ByteArrayInputStream
-import java.io.InputStream
-import java.nio.charset.Charset
+import io.heapy.kotbusta.util.decodeFb2Content
+import java.io.StringReader
 import java.util.zip.ZipFile
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
@@ -28,9 +27,11 @@ class CoverService {
                     return null
                 }
 
-                val bytes = zipFile.getInputStream(entry).use { it.readAllBytes() }
-                val cleanedInputStream = cleanInputStream(ByteArrayInputStream(bytes))
-                val coverImage = extractCoverFromFb2(cleanedInputStream)
+                val content = zipFile.getInputStream(entry).use { decodeFb2Content(it) } ?: run {
+                    log.debug("No decodable content for book $bookId in $archivePath")
+                    return null
+                }
+                val coverImage = extractCoverFromFb2(content)
 
                 if (coverImage != null) {
                     log.debug("Successfully extracted cover for book $bookId (${coverImage.size} bytes)")
@@ -46,7 +47,7 @@ class CoverService {
         }
     }
 
-    private fun extractCoverFromFb2(inputStream: InputStream): ByteArray? {
+    private fun extractCoverFromFb2(content: String): ByteArray? {
         val xmlInputFactory = XMLInputFactory.newInstance()
         xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true)
         xmlInputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
@@ -54,7 +55,9 @@ class CoverService {
         xmlInputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false)
 
         try {
-            val reader = xmlInputFactory.createXMLStreamReader(inputStream)
+            // Parse from a character Reader so StAX honors the charset decodeFb2Content
+            // already picked, instead of re-sniffing the prolog (see AnnotationService).
+            val reader = xmlInputFactory.createXMLStreamReader(StringReader(content))
 
             var inBinary = false
             var binaryId: String? = null
@@ -119,36 +122,6 @@ class CoverService {
         } catch (e: Exception) {
             log.error("Error extracting cover: ${e.message}", e)
             return null
-        }
-    }
-
-    private fun cleanInputStream(inputStream: InputStream): InputStream {
-        return try {
-            val bytes = inputStream.readAllBytes()
-
-            // Try to detect and fix encoding issues
-            val content = when {
-                isValidUtf8(bytes) -> String(bytes, Charsets.UTF_8)
-                else -> String(bytes, Charset.forName("windows-1251"))
-            }
-
-            // Clean up invalid XML characters
-            val cleanContent = content.replace(Regex("[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]"), "")
-
-            ByteArrayInputStream(cleanContent.toByteArray(Charsets.UTF_8))
-        } catch (e: Exception) {
-            log.warn("Failed to clean input stream: ${e.message}")
-            inputStream
-        }
-    }
-
-    private fun isValidUtf8(bytes: ByteArray): Boolean {
-        return try {
-            val decoder = Charsets.UTF_8.newDecoder()
-            decoder.decode(java.nio.ByteBuffer.wrap(bytes))
-            true
-        } catch (e: Exception) {
-            false
         }
     }
 
