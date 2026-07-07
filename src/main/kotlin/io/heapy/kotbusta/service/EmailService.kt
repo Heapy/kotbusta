@@ -4,8 +4,10 @@ import aws.sdk.kotlin.services.ses.SesClient
 import aws.sdk.kotlin.services.ses.model.RawMessage
 import aws.sdk.kotlin.services.ses.model.SendRawEmailRequest
 import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.util.WHITESPACE_RUN
 import io.heapy.kotbusta.util.asciiFallbackFileName
 import io.heapy.kotbusta.util.attachmentContentDisposition
+import io.heapy.kotbusta.util.takeCodePointSafe
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
@@ -102,22 +104,15 @@ class SesEmailService(
 }
 
 private val CONTROL_OR_QUOTE = Regex("""[\p{Cntrl}"]+""")
-private val WHITESPACE = Regex("""\s+""")
 private const val MAX_SANITIZED_BOOK_TITLE_LENGTH = 100
 
 internal fun sanitizeBookTitle(title: String): String =
     title
         .replace(CONTROL_OR_QUOTE, " ")
-        .replace(WHITESPACE, " ")
+        .replace(WHITESPACE_RUN, " ")
         .trim()
-        .let { sanitizedTitle ->
-            val truncated = sanitizedTitle.take(MAX_SANITIZED_BOOK_TITLE_LENGTH)
-            if (truncated.lastOrNull()?.let { Character.isHighSurrogate(it) } == true) {
-                truncated.dropLast(1)
-            } else {
-                truncated
-            }.trim()
-        }
+        .takeCodePointSafe(MAX_SANITIZED_BOOK_TITLE_LENGTH)
+        .trim()
         .ifBlank { "book" }
 
 internal fun buildRawEmail(
