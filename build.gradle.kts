@@ -31,7 +31,7 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.core)
 
-    implementation(libs.aws.sdk.ses)
+    implementation(libs.aws.sdk.sesv2)
     implementation(libs.lucene.core)
     implementation(libs.lucene.analysis.common)
     implementation(libs.lucene.queryparser)

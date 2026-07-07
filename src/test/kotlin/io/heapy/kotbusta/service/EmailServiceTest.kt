@@ -3,6 +3,7 @@ package io.heapy.kotbusta.service
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -224,5 +225,46 @@ class EmailServiceTest {
     fun `sanitize strips control characters and quotes`() {
         assertEquals("Evil Bcc: x", sanitizeBookTitle("Evil\r\nBcc:\u0000 \"x\""))
         assertEquals("book", sanitizeBookTitle("  \r\n "))
+    }
+
+    @Test
+    fun `default max raw message size matches SES v2 40 MiB ceiling`() {
+        assertEquals(41_943_040L, SES_MAX_RAW_MESSAGE_BYTES)
+    }
+
+    @Test
+    fun `message at or below the limit is not flagged as oversized`() {
+        val limit = 4L * 1024 * 1024
+        assertNull(oversizedBookError(compressedBytes = 1, rawMessageBytes = (limit - 1).toInt(), maxRawMessageBytes = limit))
+        assertNull(oversizedBookError(compressedBytes = 1, rawMessageBytes = limit.toInt(), maxRawMessageBytes = limit))
+    }
+
+    @Test
+    fun `message over the limit yields an actionable error in book-size terms`() {
+        val limit = 40L * 1024 * 1024
+        val error = oversizedBookError(
+            compressedBytes = 35 * 1024 * 1024,
+            rawMessageBytes = 48 * 1024 * 1024,
+            maxRawMessageBytes = limit,
+        )
+        // 40 MiB / 1.37 ~= 29.2 MiB is the largest book that fits the message ceiling.
+        assertEquals(
+            "Book is too large to send to Kindle by email: it is 35.0 MB compressed, " +
+                "over the ~29.2 MB limit for email delivery.",
+            error,
+        )
+    }
+
+    @Test
+    fun `zipSingleEntry round-trips the content under the given entry name`() {
+        val content = ByteArray(4096) { (it * 31).toByte() }
+        val zipped = zipSingleEntry("Медитация.epub", content)
+
+        java.util.zip.ZipInputStream(zipped.inputStream()).use { zip ->
+            val entry = zip.nextEntry
+            assertEquals("Медитация.epub", entry?.name)
+            assertArrayEquals(content, zip.readBytes())
+            assertNull(zip.nextEntry, "expected exactly one entry")
+        }
     }
 }

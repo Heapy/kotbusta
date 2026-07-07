@@ -1,6 +1,6 @@
 package io.heapy.kotbusta
 
-import aws.sdk.kotlin.services.ses.SesClient
+import aws.sdk.kotlin.services.sesv2.SesV2Client
 import io.heapy.komok.tech.config.dotenv.dotenv
 import io.heapy.komok.tech.di.delegate.MutableBean
 import io.heapy.komok.tech.di.delegate.bean
@@ -217,7 +217,7 @@ class ApplicationModule {
 
     // Kindle Configuration
     val sesClient by bean {
-        SesClient {}
+        SesV2Client {}
     }
 
     val sesSenderEmail by bean {

@@ -31,7 +31,7 @@ slf4j-jul-to-slf4j = { module = "org.slf4j:jul-to-slf4j", version.ref = "slf4j" 
 
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite" }
 
-aws-sdk-ses = { module = "aws.sdk.kotlin:ses", version.ref = "aws-sdk" }
+aws-sdk-sesv2 = { module = "aws.sdk.kotlin:sesv2", version.ref = "aws-sdk" }
 lucene-core = { module = "org.apache.lucene:lucene-core", version.ref = "lucene" }
 lucene-analysis-common = { module = "org.apache.lucene:lucene-analysis-common", version.ref = "lucene" }
 lucene-queryparser = { module = "org.apache.lucene:lucene-queryparser", version.ref = "lucene" }
