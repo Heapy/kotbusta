@@ -2,6 +2,7 @@ package io.heapy.kotbusta.util
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
@@ -53,5 +54,32 @@ class TextSanitizationTest {
         )
 
         assertEquals("abc", decodeFb2Content(ByteArrayInputStream(bytes)))
+    }
+
+    @Test
+    fun `decodeFb2Content decodes known HTML entities and escapes the rest`() {
+        val fb2 = "<p>a&nbsp;b &mdash; c &amp; d &unknown; e &copy;</p>"
+
+        val decoded = decodeFb2Content(ByteArrayInputStream(fb2.toByteArray(Charsets.UTF_8)))!!
+
+        assertTrue(decoded.contains("a b"), decoded)        // &nbsp; -> no-break space
+        assertTrue(decoded.contains("—"), decoded)          // &mdash; -> em dash
+        assertTrue(decoded.contains("&amp; d"), decoded)         // XML-predefined passes through
+        assertTrue(decoded.contains("&amp;unknown; e"), decoded) // unknown name rendered literally
+        assertTrue(decoded.contains("©"), decoded)          // &copy; -> ©
+    }
+
+    @Test
+    fun `decodeFb2Content escapes a bare ampersand so parsing cannot abort`() {
+        val decoded = decodeFb2Content(ByteArrayInputStream("Tom & Jerry".toByteArray(Charsets.UTF_8)))
+
+        assertEquals("Tom &amp; Jerry", decoded)
+    }
+
+    @Test
+    fun `decodeFb2Content rejects input larger than the size cap`() {
+        val oversize = ByteArray(MAX_FB2_BYTES + 1) { 'a'.code.toByte() }
+
+        assertNull(decodeFb2Content(ByteArrayInputStream(oversize)))
     }
 }

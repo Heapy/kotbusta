@@ -6,6 +6,7 @@ import io.heapy.kotbusta.util.WHITESPACE_RUN
 import io.heapy.kotbusta.util.decodeFb2Content
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.io.StringReader
 import java.nio.file.Path
 import java.util.zip.ZipFile
@@ -36,11 +37,18 @@ class BookContentService(
             throw BookFileException("Book archive not found: ${book.archivePath}.zip")
         }
 
-        val content = ZipFile(archiveFile.toFile()).use { zip ->
-            val entry = zip.entries().asSequence().find { it.name == book.filePath }
-                ?: zip.getEntry("${book.id}.fb2")
-                ?: throw BookFileException("FB2 entry '${book.filePath}' not found in ${book.archivePath}.zip")
-            zip.getInputStream(entry).use { decodeFb2Content(it) }
+        val content = try {
+            ZipFile(archiveFile.toFile()).use { zip ->
+                val entry = zip.entries().asSequence().find { it.name == book.filePath }
+                    ?: zip.getEntry("${book.id}.fb2")
+                    ?: throw BookFileException("FB2 entry '${book.filePath}' not found in ${book.archivePath}.zip")
+                zip.getInputStream(entry).use { decodeFb2Content(it) }
+            }
+        } catch (e: IOException) {
+            // A corrupt/truncated archive surfaces as ZipException (an IOException). That's a
+            // content-unavailable case, not a server fault, so map it to the BookFileException
+            // the route already turns into a 404 instead of letting it become a 500.
+            throw BookFileException("Failed to read ${book.archivePath}.zip: ${e.message}")
         } ?: return@withContext RenderedBook(html = "", hasImages = false, truncated = false)
 
         renderContent(content)

@@ -4,10 +4,16 @@ import io.heapy.kotbusta.model.Book
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import java.util.Base64
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import kotlin.io.path.outputStream
+import kotlin.io.path.writeBytes
 import kotlin.time.Instant
 
 class BookContentServiceTest {
@@ -147,5 +153,58 @@ class BookContentServiceTest {
 
         assertTrue(result.html.isNotBlank(), "expected non-empty rendered body")
         assertTrue(result.html.contains("fb2-body"), result.html)
+    }
+
+    @Test
+    fun `renders a body with HTML entities end-to-end without truncating`(@TempDir dir: Path) {
+        val fb2 = "<FictionBook><body><section>" +
+            "<p>before&nbsp;after &mdash; done &amp; ok</p>" +
+            "<p>tail survives</p>" +
+            "</section></body></FictionBook>"
+        writeFb2Zip(dir, "entities", "55.fb2", fb2.toByteArray(Charsets.UTF_8))
+
+        val result = runBlocking {
+            BookContentService(booksDataPath = dir).render(book(55, "55.fb2", "entities"))
+        }
+
+        // The undeclared &nbsp;/&mdash; must not abort the parse and drop the rest of the book.
+        assertTrue(result.html.contains("tail survives"), result.html)
+        assertTrue(result.html.contains("—"), result.html) // &mdash; -> em dash
+        assertTrue(result.html.contains(" "), result.html) // &nbsp; -> no-break space
+    }
+
+    @Test
+    fun `render maps a corrupt archive to BookFileException`(@TempDir dir: Path) {
+        dir.resolve("broken.zip").writeBytes("PK not a real zip".toByteArray())
+
+        assertThrows(BookFileException::class.java) {
+            runBlocking {
+                BookContentService(booksDataPath = dir).render(book(1, "1.fb2", "broken"))
+            }
+        }
+    }
+
+    private fun book(id: Int, filePath: String, archivePath: String) = Book(
+        id = id,
+        title = "T",
+        annotation = null,
+        genres = emptyList(),
+        language = "ru",
+        authors = emptyList(),
+        series = null,
+        seriesNumber = null,
+        filePath = filePath,
+        archivePath = archivePath,
+        fileSize = null,
+        dateAdded = Instant.fromEpochSeconds(0),
+        coverImageUrl = null,
+    )
+
+    private fun writeFb2Zip(dir: Path, archiveName: String, entryName: String, bytes: ByteArray) {
+        ZipOutputStream(dir.resolve("$archiveName.zip").outputStream()).use { zip ->
+            zip.putNextEntry(ZipEntry(entryName))
+            zip.write(bytes)
+            zip.closeEntry()
+        }
     }
 }
