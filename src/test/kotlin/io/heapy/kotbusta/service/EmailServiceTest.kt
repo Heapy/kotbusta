@@ -65,7 +65,7 @@ class EmailServiceTest {
         val disposition = raw.lines().first { it.startsWith("Content-Disposition: ") }
         assertEquals(
             "Content-Disposition: attachment; " +
-                "filename*=UTF-8''%D0%9C%D0%B5%D0%B4%D0%B8%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20" +
+                "filename*=utf-8''%D0%9C%D0%B5%D0%B4%D0%B8%D1%82%D0%B0%D1%86%D0%B8%D1%8F%20" +
                 "%D0%B2%D0%B8%D0%BF%D0%B0%D1%81%D1%81%D0%B0%D0%BD%D1%8B.epub",
             disposition,
         )
@@ -80,7 +80,7 @@ class EmailServiceTest {
         )
 
         assertTrue(raw.contains("Subject: Your book: Clean_Title\r\n"))
-        assertTrue(raw.contains("Content-Disposition: attachment; filename=\"Clean_Title.epub\"\r\n"))
+        assertTrue(raw.contains("Content-Disposition: attachment; filename=Clean_Title.epub\r\n"))
         assertFalse(raw.contains("filename*"))
     }
 
@@ -149,7 +149,7 @@ class EmailServiceTest {
             .substringBefore("\"")
         val attachmentHeaderBlock =
             "Content-Transfer-Encoding: base64\r\n" +
-                "Content-Disposition: attachment; filename=\"Clean_Title.epub\"\r\n\r\n"
+                "Content-Disposition: attachment; filename=Clean_Title.epub\r\n\r\n"
         val base64Body = raw.substringAfter(attachmentHeaderBlock)
             .substringBefore("\r\n--$boundary--")
 

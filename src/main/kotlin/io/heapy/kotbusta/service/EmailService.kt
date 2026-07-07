@@ -5,6 +5,7 @@ import aws.sdk.kotlin.services.ses.model.RawMessage
 import aws.sdk.kotlin.services.ses.model.SendRawEmailRequest
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.util.asciiFallbackFileName
+import io.heapy.kotbusta.util.attachmentContentDisposition
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
@@ -131,16 +132,7 @@ internal fun buildRawEmail(
 
     val boundary = "----=_Part_${System.currentTimeMillis()}"
     val fallbackName = asciiFallbackFileName(attachmentName)
-    // For non-ASCII names send ONLY the RFC 2231 filename*. Common parsers
-    // (Python's email, and likely Amazon's ingestion) prefer a plain
-    // filename= when both are present, which would replace the real title
-    // with the ASCII fallback; extended-only is what calibre sends to
-    // Kindle and is known to decode correctly there.
-    val disposition = if (attachmentName.all { it.code in 0x20..0x7E }) {
-        """attachment; filename="$attachmentName""""
-    } else {
-        "attachment; filename*=${rfc2231FileName(attachmentName)}"
-    }
+    val disposition = attachmentContentDisposition(attachmentName, includeAsciiFallback = false)
 
     val out = ByteArrayOutputStream()
     fun write(text: String) = out.write(text.toByteArray())
@@ -221,17 +213,3 @@ internal fun encodeMimeHeaderValue(text: String): String {
         "=?UTF-8?B?${Base64.getEncoder().encodeToString(it.toByteArray())}?="
     }
 }
-
-/**
- * RFC 2231/5987 extended parameter value (`UTF-8''%D0%9C...`) carrying the
- * real Unicode file name alongside the ASCII fallback `filename`.
- */
-internal fun rfc2231FileName(fileName: String): String =
-    fileName.toByteArray().joinToString(separator = "", prefix = "UTF-8''") { byte ->
-        val char = byte.toInt().toChar()
-        if (char in 'a'..'z' || char in 'A'..'Z' || char in '0'..'9' || char in "!#$&+-.^_`|~") {
-            char.toString()
-        } else {
-            "%%%02X".format(byte.toInt() and 0xFF)
-        }
-    }
