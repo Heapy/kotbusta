@@ -99,12 +99,21 @@ class SesEmailService(
 
 private val CONTROL_OR_QUOTE = Regex("""[\p{Cntrl}"]+""")
 private val WHITESPACE = Regex("""\s+""")
+private const val MAX_SANITIZED_BOOK_TITLE_LENGTH = 100
 
 internal fun sanitizeBookTitle(title: String): String =
     title
         .replace(CONTROL_OR_QUOTE, " ")
         .replace(WHITESPACE, " ")
         .trim()
+        .let { sanitizedTitle ->
+            val truncated = sanitizedTitle.take(MAX_SANITIZED_BOOK_TITLE_LENGTH)
+            if (truncated.lastOrNull()?.let { Character.isHighSurrogate(it) } == true) {
+                truncated.dropLast(1)
+            } else {
+                truncated
+            }.trim()
+        }
         .ifBlank { "book" }
 
 internal fun buildRawEmail(

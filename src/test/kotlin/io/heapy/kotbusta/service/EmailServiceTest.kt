@@ -18,6 +18,15 @@ class EmailServiceTest {
             mimeType = "application/epub+zip",
         ).toString(Charsets.ISO_8859_1)
 
+    private fun assertAllHeaderLinesWithinRfc5322(raw: String) {
+        raw.split("\r\n").forEach { line ->
+            assertTrue(
+                line.toByteArray(Charsets.ISO_8859_1).size <= 998,
+                "line exceeds RFC 5322 998-octet limit (${line.length} chars): ${line.take(80)}...",
+            )
+        }
+    }
+
     @Test
     fun `headers are pure ascii for cyrillic titles`() {
         val raw = rawEmail(
@@ -82,6 +91,30 @@ class EmailServiceTest {
 
         assertTrue(raw.contains("Content-Disposition: attachment; filename=\"War and Peace.epub\""))
         assertFalse(raw.contains("filename*"))
+    }
+
+    @Test
+    fun `sanitized cyrillic title keeps raw message lines within rfc5322 limit`() {
+        val longCyrillic = "Медитація".repeat(40)
+        val title = sanitizeBookTitle(longCyrillic)
+        val raw = rawEmail(
+            subject = "Your book: $title",
+            attachmentName = "$title.epub",
+        )
+
+        assertAllHeaderLinesWithinRfc5322(raw)
+    }
+
+    @Test
+    fun `sanitized ascii title keeps raw message lines within rfc5322 limit`() {
+        val longAscii = "War and Peace ".repeat(120)
+        val title = sanitizeBookTitle(longAscii)
+        val raw = rawEmail(
+            subject = "Your book: $title",
+            attachmentName = "$title.epub",
+        )
+
+        assertAllHeaderLinesWithinRfc5322(raw)
     }
 
     @Test
