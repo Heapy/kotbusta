@@ -400,6 +400,10 @@ img {
   margin-top: 1.25rem;
 }
 
+.detail-layout + .section {
+  margin-top: clamp(1.75rem, 4vw, 2.75rem);
+}
+
 .panel.running {
   border-color: rgba(37, 99, 235, 0.45);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
