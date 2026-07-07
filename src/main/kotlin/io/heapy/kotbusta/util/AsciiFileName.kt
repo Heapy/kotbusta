@@ -22,7 +22,7 @@ internal fun asciiFallbackFileName(fileName: String): String {
             }
         }
         .joinToString("")
-        .replace(Regex("_+"), "_")
+        .replace(UNDERSCORE_RUN, "_")
         .trim('.', '-', '_')
         .ifBlank { "book" }
         .take(100)

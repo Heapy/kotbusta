@@ -2,6 +2,9 @@ package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.model.Book
+import io.heapy.kotbusta.util.UNDERSCORE_RUN
+import io.heapy.kotbusta.util.WHITESPACE_RUN
+import io.heapy.kotbusta.util.takeCodePointSafe
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -92,27 +95,15 @@ class ZipBookFileService(
             .trim()
             .ifBlank { "book_${book.id}" }
             .replace(UNSAFE_FILENAME_CHARS, "_")
-            .replace(WHITESPACE, "_")
-            .replace(UNDERSCORES, "_")
+            .replace(WHITESPACE_RUN, "_")
+            .replace(UNDERSCORE_RUN, "_")
             .trim('.', '_')
             .ifBlank { "book_${book.id}" }
-            .truncateForFilename()
-
-    private fun String.truncateForFilename(): String {
-        val truncated = take(100)
-        val withoutTrailingHighSurrogate = if (truncated.lastOrNull()?.isHighSurrogate() == true) {
-            truncated.dropLast(1)
-        } else {
-            truncated
-        }
-
-        return withoutTrailingHighSurrogate.trimEnd('.', '_')
-    }
+            .takeCodePointSafe(100)
+            .trimEnd('.', '_')
 
     private companion object : Logger() {
         private val UNSAFE_FILENAME_CHARS = Regex("""[\p{Cntrl}/\\:*?"<>|]+""")
-        private val WHITESPACE = Regex("""\s+""")
-        private val UNDERSCORES = Regex("""_+""")
     }
 }
 

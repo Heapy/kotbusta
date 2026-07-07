@@ -4,7 +4,11 @@ import aws.sdk.kotlin.services.ses.SesClient
 import aws.sdk.kotlin.services.ses.model.RawMessage
 import aws.sdk.kotlin.services.ses.model.SendRawEmailRequest
 import io.heapy.komok.tech.logging.Logger
+import io.heapy.kotbusta.util.WHITESPACE_RUN
 import io.heapy.kotbusta.util.asciiFallbackFileName
+import io.heapy.kotbusta.util.attachmentContentDisposition
+import io.heapy.kotbusta.util.takeCodePointSafe
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 
@@ -19,6 +23,7 @@ interface EmailService {
         recipientEmail: String,
         bookFile: File,
         bookTitle: String,
+        attachmentFileName: String,
         format: String,
     ): EmailResult
 }
@@ -31,6 +36,7 @@ class SesEmailService(
         recipientEmail: String,
         bookFile: File,
         bookTitle: String,
+        attachmentFileName: String,
         format: String,
     ): EmailResult {
         return try {
@@ -46,7 +52,7 @@ class SesEmailService(
                 subject = "Your book: $title",
                 body = "Please find your requested book attached.",
                 attachmentBytes = bookFile.readBytes(),
-                attachmentName = "$title.${format.lowercase()}",
+                attachmentName = attachmentFileName,
                 mimeType = mimeType,
             )
 
@@ -98,22 +104,15 @@ class SesEmailService(
 }
 
 private val CONTROL_OR_QUOTE = Regex("""[\p{Cntrl}"]+""")
-private val WHITESPACE = Regex("""\s+""")
 private const val MAX_SANITIZED_BOOK_TITLE_LENGTH = 100
 
 internal fun sanitizeBookTitle(title: String): String =
     title
         .replace(CONTROL_OR_QUOTE, " ")
-        .replace(WHITESPACE, " ")
+        .replace(WHITESPACE_RUN, " ")
         .trim()
-        .let { sanitizedTitle ->
-            val truncated = sanitizedTitle.take(MAX_SANITIZED_BOOK_TITLE_LENGTH)
-            if (truncated.lastOrNull()?.let { Character.isHighSurrogate(it) } == true) {
-                truncated.dropLast(1)
-            } else {
-                truncated
-            }.trim()
-        }
+        .takeCodePointSafe(MAX_SANITIZED_BOOK_TITLE_LENGTH)
+        .trim()
         .ifBlank { "book" }
 
 internal fun buildRawEmail(
@@ -130,21 +129,14 @@ internal fun buildRawEmail(
 
     val boundary = "----=_Part_${System.currentTimeMillis()}"
     val fallbackName = asciiFallbackFileName(attachmentName)
-    // For non-ASCII names send ONLY the RFC 2231 filename*. Common parsers
-    // (Python's email, and likely Amazon's ingestion) prefer a plain
-    // filename= when both are present, which would replace the real title
-    // with the ASCII fallback; extended-only is what calibre sends to
-    // Kindle and is known to decode correctly there.
-    val disposition = if (attachmentName.all { it.code in 0x20..0x7E }) {
-        """attachment; filename="$attachmentName""""
-    } else {
-        "attachment; filename*=${rfc2231FileName(attachmentName)}"
-    }
+    val disposition = attachmentContentDisposition(attachmentName, includeAsciiFallback = false)
 
-    val emailBuilder = StringBuilder()
+    val out = ByteArrayOutputStream()
+    fun write(text: String) = out.write(text.toByteArray())
     fun line(text: String = "") {
         // RFC 5322 requires CRLF line endings in raw messages.
-        emailBuilder.append(text).append("\r\n")
+        write(text)
+        write("\r\n")
     }
 
     // Headers
@@ -169,13 +161,18 @@ internal fun buildRawEmail(
     line("Content-Transfer-Encoding: base64")
     line("Content-Disposition: $disposition")
     line()
-    line(Base64.getMimeEncoder().encodeToString(attachmentBytes))
-    line()
+    // Stream-encode the attachment straight into `out` to avoid holding a
+    // separate full-size base64 String. wrap(...).close() flushes the final
+    // base64 group; ByteArrayOutputStream.close() is a no-op, so `out` stays
+    // usable afterwards.
+    Base64.getMimeEncoder().wrap(out).use { it.write(attachmentBytes) }
+    line()  // terminate the final base64 line
+    line()  // blank line before the closing boundary
 
     // End boundary
     line("--$boundary--")
 
-    return emailBuilder.toString().toByteArray()
+    return out.toByteArray()
 }
 
 /**
@@ -213,17 +210,3 @@ internal fun encodeMimeHeaderValue(text: String): String {
         "=?UTF-8?B?${Base64.getEncoder().encodeToString(it.toByteArray())}?="
     }
 }
-
-/**
- * RFC 2231/5987 extended parameter value (`UTF-8''%D0%9C...`) carrying the
- * real Unicode file name alongside the ASCII fallback `filename`.
- */
-internal fun rfc2231FileName(fileName: String): String =
-    fileName.toByteArray().joinToString(separator = "", prefix = "UTF-8''") { byte ->
-        val char = byte.toInt().toChar()
-        if (char in 'a'..'z' || char in 'A'..'Z' || char in '0'..'9' || char in "!#$&+-.^_`|~") {
-            char.toString()
-        } else {
-            "%%%02X".format(byte.toInt() and 0xFF)
-        }
-    }

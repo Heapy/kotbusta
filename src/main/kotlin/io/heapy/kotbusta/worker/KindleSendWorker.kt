@@ -187,7 +187,8 @@ class KindleSendWorker(
                 recipientEmail = device.email,
                 bookFile = materialized.file,
                 bookTitle = book.title,
-                format = item.format,
+                attachmentFileName = materialized.fileName,
+                format = materialized.format,
             )
         } finally {
             materialized.cleanup()

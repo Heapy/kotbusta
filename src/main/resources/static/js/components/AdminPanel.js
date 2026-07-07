@@ -98,7 +98,6 @@ export function AdminPanel() {
     : `${processedFiles} files`;
   const currentFile = jobStatus?.currentInpFile;
   const sequentialErrors = jobStatus?.sequentialBookErrors || 0;
-  const maxSequentialErrors = jobStatus?.maxSequentialBookErrors || 100;
   const messages = Object.entries(jobStatus?.messages || {})
     .sort((a, b) => new Date(a[0]) - new Date(b[0]));
 
@@ -186,7 +185,7 @@ export function AdminPanel() {
             h('div', { className: 'metric-label' }, 'Error Streak'),
             h('div', {
               className: `metric-value ${sequentialErrors > 0 ? 'danger-text' : ''}`
-            }, `${sequentialErrors} / ${maxSequentialErrors}`)
+            }, `${sequentialErrors}`)
           )
         ),
 
