@@ -1,16 +1,16 @@
 package io.heapy.kotbusta.service
 
 import io.heapy.komok.tech.logging.Logger
-import java.io.ByteArrayInputStream
+import io.heapy.kotbusta.util.WHITESPACE_RUN
+import io.heapy.kotbusta.util.decodeFb2Content
 import java.io.InputStream
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.io.StringReader
 import javax.xml.stream.XMLInputFactory
 import javax.xml.stream.XMLStreamConstants
 
 class AnnotationService {
     fun extractAnnotation(inputStream: InputStream): String? {
-        val cleanedInputStream = cleanInputStream(inputStream)
+        val content = decodeFb2Content(inputStream) ?: return null
         val xmlInputFactory = XMLInputFactory.newInstance().apply {
             setProperty(XMLInputFactory.IS_COALESCING, true)
             setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true)
@@ -19,7 +19,11 @@ class AnnotationService {
         }
 
         return try {
-            val reader = xmlInputFactory.createXMLStreamReader(cleanedInputStream)
+            // Parse from a character Reader (not the raw bytes) so StAX consumes the
+            // already-decoded text and ignores the `encoding=` in the XML declaration.
+            // decodeFb2Content already picked the right charset; letting the parser
+            // re-guess it from the prolog is what produced the windows-1251 mojibake.
+            val reader = xmlInputFactory.createXMLStreamReader(StringReader(content))
             val text = StringBuilder()
             var annotationDepth = 0
 
@@ -43,6 +47,12 @@ class AnnotationService {
                             if (annotationDepth == 0) {
                                 break
                             }
+                        } else if (reader.localName == "description") {
+                            // The annotation only lives inside <description>; once it
+                            // closes we're done. This avoids scanning — and choking on
+                            // a malformed or huge <body> for the books that have no
+                            // annotation, which is common in the Flibusta dump.
+                            break
                         }
                     }
                 }
@@ -50,37 +60,13 @@ class AnnotationService {
             reader.close()
 
             text.toString()
-                .replace(Regex("\\s+"), " ")
-                .replace(Regex("\\s+([,.;:!?])"), "$1")
+                .replace(WHITESPACE_RUN, " ")
+                .replace(Regex("""\s+([,.;:!?])"""), "$1")
                 .trim()
                 .takeIf(String::isNotBlank)
         } catch (e: Exception) {
             log.warn("Failed to extract FB2 annotation: ${e.message}", e)
             null
-        }
-    }
-
-    private fun cleanInputStream(inputStream: InputStream): InputStream {
-        return try {
-            val bytes = inputStream.readAllBytes()
-            val content = when {
-                isValidUtf8(bytes) -> String(bytes, Charsets.UTF_8)
-                else -> String(bytes, Charset.forName("windows-1251"))
-            }
-            val cleanContent = content.replace(Regex("[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]"), "")
-            ByteArrayInputStream(cleanContent.toByteArray(Charsets.UTF_8))
-        } catch (e: Exception) {
-            log.warn("Failed to clean FB2 input stream: ${e.message}", e)
-            inputStream
-        }
-    }
-
-    private fun isValidUtf8(bytes: ByteArray): Boolean {
-        return try {
-            Charsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes))
-            true
-        } catch (_: Exception) {
-            false
         }
     }
 
