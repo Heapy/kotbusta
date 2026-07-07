@@ -74,6 +74,26 @@ class BookFileServiceTest {
     }
 
     @Test
+    fun `materialize does not split astral character in truncated download filename`() = runBlocking {
+        writeArchive(archivePath = "fb2-001", entryName = "42.fb2", content = "<fb2>raw</fb2>")
+        val service = ZipBookFileService(booksDataPath, RecordingConversionService())
+        val title = "A".repeat(99) + "🎉"
+
+        val materialized = service.materialize(book(title = title), "fb2")
+
+        try {
+            assertEquals(
+                materialized.fileName,
+                String(materialized.fileName.toByteArray(Charsets.UTF_8), Charsets.UTF_8),
+            )
+            assertFalse(materialized.fileName.removeSuffix(".fb2").endsWith('.'))
+            assertFalse(materialized.fileName.removeSuffix(".fb2").endsWith('_'))
+        } finally {
+            materialized.cleanup()
+        }
+    }
+
+    @Test
     fun `materialize fails when archive entry is missing`() {
         writeArchive(archivePath = "fb2-001", entryName = "other.fb2", content = "other")
         val service = ZipBookFileService(booksDataPath, RecordingConversionService())

@@ -96,7 +96,18 @@ class ZipBookFileService(
             .replace(UNDERSCORES, "_")
             .trim('.', '_')
             .ifBlank { "book_${book.id}" }
-            .take(100)
+            .truncateForFilename()
+
+    private fun String.truncateForFilename(): String {
+        val truncated = take(100)
+        val withoutTrailingHighSurrogate = if (truncated.lastOrNull()?.isHighSurrogate() == true) {
+            truncated.dropLast(1)
+        } else {
+            truncated
+        }
+
+        return withoutTrailingHighSurrogate.trimEnd('.', '_')
+    }
 
     private companion object : Logger() {
         private val UNSAFE_FILENAME_CHARS = Regex("""[\p{Cntrl}/\\:*?"<>|]+""")
