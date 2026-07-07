@@ -74,6 +74,17 @@ class EmailServiceTest {
     }
 
     @Test
+    fun `ascii attachment filename with spaces is sent as plain quoted filename`() {
+        val raw = rawEmail(
+            subject = "Your book: War and Peace",
+            attachmentName = "War and Peace.epub",
+        )
+
+        assertTrue(raw.contains("Content-Disposition: attachment; filename=\"War and Peace.epub\""))
+        assertFalse(raw.contains("filename*"))
+    }
+
+    @Test
     fun `lines end with crlf`() {
         val raw = rawEmail(
             subject = "Your book: Clean_Title",

@@ -123,8 +123,8 @@ internal fun buildRawEmail(
     // filename= when both are present, which would replace the real title
     // with the ASCII fallback; extended-only is what calibre sends to
     // Kindle and is known to decode correctly there.
-    val disposition = if (fallbackName == attachmentName) {
-        """attachment; filename="$fallbackName""""
+    val disposition = if (attachmentName.all { it.code in 0x20..0x7E }) {
+        """attachment; filename="$attachmentName""""
     } else {
         "attachment; filename*=${rfc2231FileName(attachmentName)}"
     }
