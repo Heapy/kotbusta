@@ -10,6 +10,7 @@ import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.BookEnrichment
 import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
+import io.heapy.kotbusta.jooq.tables.FeaturedBooks
 import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
@@ -34,6 +35,8 @@ val IDX_BOOK_GENRES_GENRE: Index = Internal.createIndex(DSL.name("IDX_BOOK_GENRE
 val IDX_BOOKS_LANGUAGE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_LANGUAGE"), Books.BOOKS, arrayOf(Books.BOOKS.LANGUAGE), false)
 val IDX_BOOKS_SERIES: Index = Internal.createIndex(DSL.name("IDX_BOOKS_SERIES"), Books.BOOKS, arrayOf(Books.BOOKS.SERIES_ID), false)
 val IDX_BOOKS_TITLE: Index = Internal.createIndex(DSL.name("IDX_BOOKS_TITLE"), Books.BOOKS, arrayOf(Books.BOOKS.TITLE), false)
+val IDX_FEATURED_BOOKS_RATING: Index = Internal.createIndex(DSL.name("IDX_FEATURED_BOOKS_RATING"), FeaturedBooks.FEATURED_BOOKS, arrayOf(FeaturedBooks.FEATURED_BOOKS.SOURCE, FeaturedBooks.FEATURED_BOOKS.RATING), false)
+val IDX_FEATURED_BOOKS_SOURCE_BOOK: Index = Internal.createIndex(DSL.name("IDX_FEATURED_BOOKS_SOURCE_BOOK"), FeaturedBooks.FEATURED_BOOKS, arrayOf(FeaturedBooks.FEATURED_BOOKS.SOURCE, FeaturedBooks.FEATURED_BOOKS.BOOK_ID), true)
 val IDX_GENRES_NAME: Index = Internal.createIndex(DSL.name("IDX_GENRES_NAME"), Genres.GENRES, arrayOf(Genres.GENRES.NAME), false)
 val IDX_KINDLE_DEVICES_EMAIL: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_EMAIL"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.EMAIL), false)
 val IDX_KINDLE_DEVICES_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_DEVICES_USER"), KindleDevices.KINDLE_DEVICES, arrayOf(KindleDevices.KINDLE_DEVICES.USER_ID), false)

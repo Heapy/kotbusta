@@ -40,6 +40,7 @@ dependencies {
     runtimeOnly(libs.djl.onnxruntime.engine)
     implementation(libs.micrometer.registry.prometheus)
     implementation(ktorLibs.server.metrics.micrometer)
+    implementation(libs.jsoup)
 
     testImplementation(ktorLibs.server.testHost)
 }

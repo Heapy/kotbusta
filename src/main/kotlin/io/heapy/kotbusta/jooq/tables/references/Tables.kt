@@ -10,6 +10,7 @@ import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.BookEnrichment
 import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
+import io.heapy.kotbusta.jooq.tables.FeaturedBooks
 import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
@@ -43,6 +44,11 @@ val BOOK_GENRES: BookGenres = BookGenres.BOOK_GENRES
  * The table <code>BOOKS</code>.
  */
 val BOOKS: Books = Books.BOOKS
+
+/**
+ * The table <code>FEATURED_BOOKS</code>.
+ */
+val FEATURED_BOOKS: FeaturedBooks = FeaturedBooks.FEATURED_BOOKS
 
 /**
  * The table <code>GENRES</code>.

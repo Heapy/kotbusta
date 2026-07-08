@@ -29,7 +29,8 @@ export function BookCard({ book, onSelect }) {
         (book.genres || []).slice(0, 3).map(genre =>
           h('span', { key: genre, className: 'chip' }, genre)
         ),
-        book.language && h('span', { className: 'chip accent' }, book.language)
+        book.language && h('span', { className: 'chip accent' }, book.language),
+        book.rating != null && h('span', { className: 'chip accent' }, `★ ${book.rating.toFixed(1)}`)
       )
     )
   );

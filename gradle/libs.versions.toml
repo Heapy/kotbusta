@@ -12,6 +12,7 @@ aws-sdk = "1.6.106"
 lucene = "10.5.0"
 djl = "0.36.0"
 micrometer = "1.16.5"
+jsoup = "1.22.2"
 
 [libraries]
 jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
@@ -39,6 +40,7 @@ djl-api = { module = "ai.djl:api", version.ref = "djl" }
 djl-huggingface-tokenizers = { module = "ai.djl.huggingface:tokenizers", version.ref = "djl" }
 djl-onnxruntime-engine = { module = "ai.djl.onnxruntime:onnxruntime-engine", version.ref = "djl" }
 micrometer-registry-prometheus = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
+jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

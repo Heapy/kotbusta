@@ -13,9 +13,11 @@ import io.heapy.kotbusta.jooq.keys.BOOKS__FK_BOOKS_PK_SERIES
 import io.heapy.kotbusta.jooq.keys.BOOKS__PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.BOOK_AUTHORS__FK_BOOK_AUTHORS_PK_BOOKS
 import io.heapy.kotbusta.jooq.keys.BOOK_GENRES__FK_BOOK_GENRES_PK_BOOKS
+import io.heapy.kotbusta.jooq.keys.FEATURED_BOOKS__FK_FEATURED_BOOKS_PK_BOOKS
 import io.heapy.kotbusta.jooq.tables.Authors.AuthorsPath
 import io.heapy.kotbusta.jooq.tables.BookAuthors.BookAuthorsPath
 import io.heapy.kotbusta.jooq.tables.BookGenres.BookGenresPath
+import io.heapy.kotbusta.jooq.tables.FeaturedBooks.FeaturedBooksPath
 import io.heapy.kotbusta.jooq.tables.Genres.GenresPath
 import io.heapy.kotbusta.jooq.tables.Series.SeriesPath
 import io.heapy.kotbusta.jooq.tables.records.BooksRecord
@@ -216,6 +218,22 @@ open class Books(
 
     val bookGenres: BookGenresPath
         get(): BookGenresPath = bookGenres()
+
+    private lateinit var _featuredBooks: FeaturedBooksPath
+
+    /**
+     * Get the implicit to-many join path to the <code>FEATURED_BOOKS</code>
+     * table
+     */
+    fun featuredBooks(): FeaturedBooksPath {
+        if (!this::_featuredBooks.isInitialized)
+            _featuredBooks = FeaturedBooksPath(this, null, FEATURED_BOOKS__FK_FEATURED_BOOKS_PK_BOOKS.inverseKey)
+
+        return _featuredBooks;
+    }
+
+    val featuredBooks: FeaturedBooksPath
+        get(): FeaturedBooksPath = featuredBooks()
 
     /**
      * Get the implicit many-to-many join path to the <code>AUTHORS</code> table

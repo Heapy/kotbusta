@@ -29,6 +29,7 @@ import io.heapy.kotbusta.service.PandocConversionService
 import io.heapy.kotbusta.service.TimeService
 import io.heapy.kotbusta.service.ZipBookFileService
 import io.heapy.kotbusta.worker.BookEnrichmentWorker
+import io.heapy.kotbusta.worker.FeaturedBooksWorker
 import io.heapy.kotbusta.worker.KindleSendWorker
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
@@ -316,6 +317,23 @@ class ApplicationModule {
         )
     }
 
+    val featuredWorkerIntervalMs by bean {
+        env["KOTBUSTA_FEATURED_WORKER_INTERVAL_MS"]?.toLongOrNull() ?: 86_400_000L
+    }
+
+    val featuredWorkerPageCount by bean {
+        env["KOTBUSTA_FEATURED_WORKER_PAGE_COUNT"]?.toIntOrNull() ?: 1
+    }
+
+    val featuredBooksWorker by bean {
+        FeaturedBooksWorker(
+            httpClient = httpClient.value,
+            bookSearchService = bookSearchService.value,
+            transactionProvider = transactionProvider.value,
+            pageCount = featuredWorkerPageCount.value,
+        )
+    }
+
     val roDslContext by bean {
         System.setProperty("org.jooq.no-logo", "true")
         System.setProperty("org.jooq.no-tips", "true")
@@ -417,12 +435,26 @@ class ApplicationModule {
         bookSearchService.value.initialize(workerScope)
     }
 
+    fun initializeFeaturedBooksWorker() {
+        if (featuredWorkerIntervalMs.value <= 0L) {
+            log.info("Featured books worker disabled because interval is ${featuredWorkerIntervalMs.value}ms")
+            return
+        }
+        featuredBooksWorker.value.start(
+            scope = workerScope,
+            intervalMillis = featuredWorkerIntervalMs.value,
+        )
+    }
+
     fun stopBackgroundWorkers() {
         if (bookEnrichmentWorker.isInitialized) {
             bookEnrichmentWorker.value.stop()
         }
         if (kindleSendWorker.isInitialized) {
             kindleSendWorker.value.stop()
+        }
+        if (featuredBooksWorker.isInitialized) {
+            featuredBooksWorker.value.stop()
         }
     }
 
@@ -477,6 +509,7 @@ class ApplicationModule {
         initializeSearchService()
         initializeKindleSendWorker()
         initializeBookEnrichmentWorker()
+        initializeFeaturedBooksWorker()
         initializeShutdownHook()
     }
 

@@ -9,6 +9,7 @@ import io.heapy.kotbusta.jooq.tables.BookAuthors
 import io.heapy.kotbusta.jooq.tables.BookEnrichment
 import io.heapy.kotbusta.jooq.tables.BookGenres
 import io.heapy.kotbusta.jooq.tables.Books
+import io.heapy.kotbusta.jooq.tables.FeaturedBooks
 import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
@@ -63,6 +64,11 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     val BOOKS: Books get() = Books.BOOKS
 
     /**
+     * The table <code>FEATURED_BOOKS</code>.
+     */
+    val FEATURED_BOOKS: FeaturedBooks get() = FeaturedBooks.FEATURED_BOOKS
+
+    /**
      * The table <code>GENRES</code>.
      */
     val GENRES: Genres get() = Genres.GENRES
@@ -100,6 +106,7 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
         BookEnrichment.BOOK_ENRICHMENT,
         BookGenres.BOOK_GENRES,
         Books.BOOKS,
+        FeaturedBooks.FEATURED_BOOKS,
         Genres.GENRES,
         KindleDevices.KINDLE_DEVICES,
         KindleSendEvents.KINDLE_SEND_EVENTS,

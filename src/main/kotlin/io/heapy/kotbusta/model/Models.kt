@@ -115,6 +115,8 @@ data class BookSummary(
     val series: String?,
     val seriesNumber: Int?,
     val coverImageUrl: String?,
+    val rating: Double? = null,
+    val ratingSource: String? = null,
 )
 
 @Serializable
