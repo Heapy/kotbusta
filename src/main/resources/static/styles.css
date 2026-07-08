@@ -1009,6 +1009,81 @@ img {
   color: var(--text);
 }
 
+.reader-toc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.reader-toc-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(22rem, 85vw);
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+}
+
+.reader-toc-sidebar.open {
+  transform: translateX(0);
+}
+
+.reader-toc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.reader-toc-heading {
+  font-weight: 730;
+  color: var(--text);
+}
+
+.reader-toc-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.reader-toc-entry {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reader-toc-entry:hover {
+  background: var(--surface-strong);
+}
+
+.reader-toc-entry.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.reader-toc-empty {
+  padding: 0.75rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 .reader-search {
   display: flex;
   align-items: center;
@@ -1042,17 +1117,6 @@ img {
   color: var(--text-muted);
 }
 
-.reader-notice {
-  width: min(46rem, 100%);
-  margin: 0.75rem auto 0;
-  padding: 0.5rem 0.9rem;
-  background: var(--warning-soft);
-  color: var(--warning);
-  border-radius: var(--radius);
-  font-size: 0.9rem;
-  text-align: center;
-}
-
 .reader-content {
   width: min(46rem, 100%);
   margin: 0 auto;
@@ -1060,6 +1124,12 @@ img {
   color: var(--text);
   font-size: 1.075rem;
   line-height: 1.75;
+}
+
+.reader-pagination {
+  width: min(46rem, 100%);
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 1.5rem) 3rem;
 }
 
 .reader-content p {

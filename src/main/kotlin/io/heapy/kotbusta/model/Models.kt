@@ -1,5 +1,6 @@
 package io.heapy.kotbusta.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
@@ -45,12 +46,63 @@ data class Book(
 )
 
 @Serializable
+sealed interface FbNode
+
+@Serializable
+@SerialName("el")
+data class FbElement(
+    val tag: String,
+    val className: String? = null,
+    val id: String? = null,
+    val href: String? = null,
+    val src: String? = null,
+    val children: List<FbNode> = emptyList(),
+) : FbNode
+
+@Serializable
+@SerialName("text")
+data class FbText(
+    val value: String,
+) : FbNode
+
+@Serializable
 data class BookContent(
     val id: Int,
     val title: String,
-    val html: String,
+    val page: Int,
+    val totalPages: Int,
+    val hasMore: Boolean,
+    val nodes: List<FbNode>,
     val hasImages: Boolean = false,
-    val truncated: Boolean = false,
+)
+
+@Serializable
+data class TocEntry(
+    val title: String,
+    val level: Int,
+    val page: Int,
+)
+
+@Serializable
+data class BookToc(
+    val id: Int,
+    val totalPages: Int,
+    val entries: List<TocEntry>,
+    val anchors: Map<String, Int>,
+)
+
+@Serializable
+data class PageMatchCount(
+    val page: Int,
+    val count: Int,
+)
+
+@Serializable
+data class BookSearchResult(
+    val id: Int,
+    val query: String,
+    val totalMatches: Int,
+    val pages: List<PageMatchCount>,
 )
 
 @Serializable

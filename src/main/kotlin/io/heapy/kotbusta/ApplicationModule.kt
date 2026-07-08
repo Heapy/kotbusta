@@ -14,6 +14,7 @@ import io.heapy.kotbusta.ktor.routes.StaticFilesConfig
 import io.heapy.kotbusta.parser.InpxParser
 import io.heapy.kotbusta.service.AdminService
 import io.heapy.kotbusta.service.AnnotationService
+import io.heapy.kotbusta.service.BookContentCacheService
 import io.heapy.kotbusta.service.BookContentService
 import io.heapy.kotbusta.service.BookSearchService
 import io.heapy.kotbusta.service.CoverService
@@ -185,6 +186,17 @@ class ApplicationModule {
     val bookContentService by bean {
         BookContentService(
             booksDataPath = booksDataPath.value,
+        )
+    }
+
+    val bookContentCacheSize by bean {
+        env["KOTBUSTA_BOOK_CONTENT_CACHE_SIZE"]?.toIntOrNull() ?: 24
+    }
+
+    val bookContentCacheService by bean {
+        BookContentCacheService(
+            parser = bookContentService.value,
+            maxEntries = bookContentCacheSize.value,
         )
     }
 
@@ -437,10 +449,17 @@ class ApplicationModule {
         }
     }
 
+    fun stopBookContentCache() {
+        if (bookContentCacheService.isInitialized) {
+            bookContentCacheService.value.close()
+        }
+    }
+
     fun close() {
         stopBackgroundWorkers()
         stopSearchService()
         stopEmbeddingService()
+        stopBookContentCache()
         stopHttpClient()
         cancelBackgroundScope()
     }

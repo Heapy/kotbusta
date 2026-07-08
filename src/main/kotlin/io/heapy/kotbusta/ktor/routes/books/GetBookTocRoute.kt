@@ -8,23 +8,21 @@ import io.heapy.kotbusta.ktor.notFoundError
 import io.heapy.kotbusta.ktor.routes.requireApprovedUser
 import io.heapy.kotbusta.ktor.routes.requiredParameter
 import io.heapy.kotbusta.model.ApiResponse.Success
-import io.heapy.kotbusta.model.BookContent
+import io.heapy.kotbusta.model.BookToc
 import io.heapy.kotbusta.service.BookFileException
-import io.ktor.http.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 private val log = logger {}
 
 context(applicationModule: ApplicationModule)
-fun Route.getBookContentRoute() {
+fun Route.getBookTocRoute() {
     val transactionProvider = applicationModule.transactionProvider.value
     val bookContentCacheService = applicationModule.bookContentCacheService.value
 
-    get("/books/{id}/content") {
+    get("/books/{id}/toc") {
         requireApprovedUser {
             val bookId = call.requiredParameter<Int>("id")
-            val requestedPage = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
 
             val book = transactionProvider
                 .transaction(READ_ONLY) {
@@ -39,26 +37,13 @@ fun Route.getBookContentRoute() {
                 notFoundError("Book content not available")
             }
 
-            applicationModule.prometheusRegistry.value
-                .counter("kotbusta_book_reads_total")
-                .increment()
-
-            val totalPages = parsed.pages.size.coerceAtLeast(1)
-            val page = requestedPage.coerceIn(1, totalPages)
-
-            // Book content is immutable; let the browser cache it. Private because the
-            // endpoint is session-authenticated.
-            call.response.header(HttpHeaders.CacheControl, "private, max-age=86400, immutable")
             call.respond(
                 Success(
-                    data = BookContent(
+                    data = BookToc(
                         id = book.id,
-                        title = book.title,
-                        page = page,
-                        totalPages = totalPages,
-                        hasMore = page < totalPages,
-                        nodes = parsed.pages.getOrNull(page - 1)?.nodes ?: emptyList(),
-                        hasImages = parsed.hasImages,
+                        totalPages = parsed.pages.size.coerceAtLeast(1),
+                        entries = parsed.toc,
+                        anchors = parsed.anchorPageIndex,
                     ),
                 ),
             )

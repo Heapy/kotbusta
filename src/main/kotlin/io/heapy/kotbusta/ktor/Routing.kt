@@ -10,8 +10,10 @@ import io.heapy.kotbusta.ktor.routes.books.downloadBookRoute
 import io.heapy.kotbusta.ktor.routes.books.getBookByIdRoute
 import io.heapy.kotbusta.ktor.routes.books.getBookContentRoute
 import io.heapy.kotbusta.ktor.routes.books.getBookCoverRoute
+import io.heapy.kotbusta.ktor.routes.books.getBookTocRoute
 import io.heapy.kotbusta.ktor.routes.books.getBooksRoute
 import io.heapy.kotbusta.ktor.routes.books.getSimilarBooksRoute
+import io.heapy.kotbusta.ktor.routes.books.searchBookContentRoute
 import io.heapy.kotbusta.ktor.routes.kindle.createDeviceRoute
 import io.heapy.kotbusta.ktor.routes.kindle.deleteDeviceRoute
 import io.heapy.kotbusta.ktor.routes.kindle.getDevicesRoute
@@ -44,6 +46,8 @@ fun Application.configureRouting() {
                 getSimilarBooksRoute()
                 getBookCoverRoute()
                 getBookContentRoute()
+                getBookTocRoute()
+                searchBookContentRoute()
                 downloadBookRoute()
                 getDevicesRoute()
                 createDeviceRoute()
