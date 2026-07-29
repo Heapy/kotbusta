@@ -1,6 +1,10 @@
 import { h } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { api } from '../utils/api.js';
+
+const AMAZON_KINDLE_SETTINGS_URL = 'https://www.amazon.com/mycd';
+const AMAZON_KINDLE_HELP_URL =
+  'https://digprjsurvey.amazon.com/csad/help/node/GX9XLEVV8G4DB28H';
 
 function statusClass(status) {
   if (status === 'COMPLETED') return 'status-badge success';
@@ -12,9 +16,12 @@ function statusClass(status) {
 export function KindleManagement() {
   const [devices, setDevices] = useState([]);
   const [sendHistory, setSendHistory] = useState([]);
+  const [senderEmail, setSenderEmail] = useState(null);
+  const [emailCopied, setEmailCopied] = useState(false);
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [newDevice, setNewDevice] = useState({ email: '', name: '' });
   const [loading, setLoading] = useState(true);
+  const senderEmailInput = useRef(null);
 
   useEffect(() => {
     loadData();
@@ -22,16 +29,36 @@ export function KindleManagement() {
 
   const loadData = async () => {
     try {
-      const [devicesRes, historyRes] = await Promise.all([
+      const [devicesRes, historyRes, configRes] = await Promise.all([
         api.get('/api/kindle/devices'),
-        api.get('/api/kindle/sends?limit=20')
+        api.get('/api/kindle/sends?limit=20'),
+        api.get('/api/kindle/config')
       ]);
       setDevices(devicesRes.data || []);
       setSendHistory(historyRes.data.items || []);
+      setSenderEmail(configRes.data.senderEmail || null);
+      setEmailCopied(false);
     } catch (err) {
       console.error('Failed to load Kindle data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copySenderEmail = async () => {
+    const input = senderEmailInput.current;
+    input?.focus();
+    input?.select();
+
+    try {
+      await navigator.clipboard.writeText(senderEmail);
+      setEmailCopied(true);
+    } catch (err) {
+      try {
+        setEmailCopied(document.execCommand('copy'));
+      } catch (fallbackErr) {
+        setEmailCopied(false);
+      }
     }
   };
 
@@ -81,6 +108,61 @@ export function KindleManagement() {
         className: 'form-panel',
         onSubmit: addDevice
       },
+        h('div', { className: 'kindle-setup-note' },
+          h('div', { className: 'kindle-setup-title' }, 'Set up Amazon first'),
+          h('ol', { className: 'kindle-setup-steps' },
+            senderEmail
+              ? h('li', null,
+                  'In Amazon, open ',
+                  h('strong', null, 'Preferences → Personal Document Settings'),
+                  ', then add this sender address to your ',
+                  h('strong', null, 'Approved Personal Document Email List'),
+                  ':',
+                  h('div', { className: 'kindle-email-copy' },
+                    h('input', {
+                      ref: senderEmailInput,
+                      className: 'input kindle-setup-email',
+                      type: 'text',
+                      value: senderEmail,
+                      readOnly: true,
+                      spellCheck: false,
+                      'aria-label': 'Kotbusta sender email',
+                      onFocus: (event) => event.currentTarget.select(),
+                      onClick: (event) => event.currentTarget.select()
+                    }),
+                    h('button', {
+                      className: 'button compact',
+                      type: 'button',
+                      onClick: copySenderEmail,
+                      'aria-live': 'polite'
+                    }, emailCopied ? 'Copied!' : 'Copy')
+                  )
+                )
+              : h('li', null,
+                  h('strong', null, 'Send to Kindle is not configured. '),
+                  'Ask the Kotbusta administrator to configure the sender email first.'
+                ),
+            h('li', null,
+              'Copy your device’s Send-to-Kindle address (ending in ',
+              h('code', null, '@kindle.com'),
+              ') and enter it below.'
+            )
+          ),
+          h('div', { className: 'kindle-setup-links' },
+            h('a', {
+              className: 'text-link',
+              href: AMAZON_KINDLE_SETTINGS_URL,
+              target: '_blank',
+              rel: 'noopener noreferrer'
+            }, 'Open Amazon settings ↗'),
+            h('a', {
+              className: 'text-link',
+              href: AMAZON_KINDLE_HELP_URL,
+              target: '_blank',
+              rel: 'noopener noreferrer'
+            }, 'Amazon instructions ↗')
+          )
+        ),
         h('input', {
           className: 'input',
           type: 'email',

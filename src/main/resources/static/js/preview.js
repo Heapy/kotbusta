@@ -115,6 +115,10 @@ api.get = async (url) => {
     return { data: devices };
   }
 
+  if (url === '/api/kindle/config') {
+    return { data: { senderEmail: 'kotbusta@heapyhop.com' } };
+  }
+
   if (url.startsWith('/api/kindle/sends')) {
     return { data: { items: sendHistory } };
   }

@@ -682,6 +682,51 @@ img {
   border-radius: var(--radius);
 }
 
+.kindle-setup-note {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.25rem;
+  padding: 0.85rem 1rem;
+  background: var(--accent-soft);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: var(--radius-sm);
+}
+
+.kindle-setup-title {
+  font-weight: 740;
+}
+
+.kindle-setup-steps {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.kindle-setup-email {
+  color: var(--text);
+  cursor: text;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+}
+
+.kindle-email-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+}
+
+.kindle-setup-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.88rem;
+}
+
 .form-actions {
   display: flex;
   flex-wrap: wrap;
@@ -977,6 +1022,10 @@ img {
 
   .button {
     width: 100%;
+  }
+
+  .kindle-email-copy {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -211,6 +211,11 @@ data class UpdateDeviceRequest(
 )
 
 @Serializable
+data class KindleConfigResponse(
+    val senderEmail: String?,
+)
+
+@Serializable
 data class SendToKindleRequest(
     val deviceId: Int,
     val format: KindleFormat = KindleFormat.EPUB,

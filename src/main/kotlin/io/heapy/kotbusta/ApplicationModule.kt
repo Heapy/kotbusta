@@ -240,8 +240,14 @@ class ApplicationModule {
         SesV2Client {}
     }
 
-    val sesSenderEmail by bean {
+    val kindleSenderEmail: MutableBean<String?> by bean {
         env["KOTBUSTA_SES_SENDER_EMAIL"]
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+    }
+
+    val sesSenderEmail by bean {
+        kindleSenderEmail.value
             ?: error("KOTBUSTA_SES_SENDER_EMAIL not configured")
     }
 
@@ -399,7 +405,7 @@ class ApplicationModule {
         // Kindle delivery is optional: only start the worker when both the interval
         // and the SES sender are configured. This keeps the core app (search,
         // download, conversion) runnable without any AWS/SES configuration.
-        val senderEmail = env["KOTBUSTA_SES_SENDER_EMAIL"]
+        val senderEmail = kindleSenderEmail.value
         when {
             kindleWorkerIntervalMs.value <= 0L ->
                 log.info("Kindle send worker disabled because interval is ${kindleWorkerIntervalMs.value}ms")
