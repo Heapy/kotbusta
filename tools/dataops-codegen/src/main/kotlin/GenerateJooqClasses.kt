@@ -13,7 +13,7 @@ import org.sqlite.SQLiteDataSource
 import java.util.*
 import kotlin.io.path.deleteIfExists
 
-fun main() {
+public fun main() {
     drop()
     migrate()
     jooq()

@@ -1,0 +1,25 @@
+product: jvm/lib
+
+layout: maven-like
+
+dependencies:
+  - $libs.jooq.core: exported
+  - $libs.sqlite.jdbc: exported
+  - $libs.komok.tech.logging
+  - $libs.komok.tech.config.dotenv
+  - $libs.logback.classic
+
+test-dependencies:
+  - $libs.junit.jupiter
+
+settings:
+  kotlin:
+    version: 2.4.10
+    freeCompilerArgs:
+      - -Xreturn-value-checker=full
+  jvm:
+    jdk:
+      version: 25
+      distributions: [liberica]
+    test:
+      junitPlatformVersion: 6.1.0

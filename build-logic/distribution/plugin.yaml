@@ -1,0 +1,22 @@
+tasks:
+  installDist:
+    action: !io.heapy.toolchain.distribution.installDist
+      applicationJar: ${module.jar}
+      runtimeClasspath: ${module.runtimeClasspath}
+      applicationName: ${pluginSettings.applicationName}
+      applicationVersion: ${pluginSettings.applicationVersion}
+      mainClass: ${module.settings.jvm.mainClass}
+      optsEnvironmentVariable: ${pluginSettings.optsEnvironmentVariable}
+      defaultJvmArgs: ${pluginSettings.defaultJvmArgs}
+      installDirectory: ${project.rootDir}/build/install/${pluginSettings.applicationName}
+
+  distTar:
+    action: !io.heapy.toolchain.distribution.distTar
+      installDirectory: ${tasks.installDist.action.installDirectory}
+      applicationName: ${pluginSettings.applicationName}
+      archiveFileName: ${pluginSettings.archiveFileName}
+      archiveFile: ${project.rootDir}/build/distributions/${pluginSettings.archiveFileName}
+
+commands:
+  - installDist
+  - distTar

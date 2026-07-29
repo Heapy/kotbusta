@@ -4,10 +4,10 @@
 # Ignore Idea project-specific configuration files
 .idea
 
-# Ignore Gradle project-specific cache directory
+# Ignore local build-tool caches
 .gradle
 
-# Ignore Gradle build output directory
+# Ignore Kotlin Toolchain build output
 build
 
 # Kotlin compiler errors

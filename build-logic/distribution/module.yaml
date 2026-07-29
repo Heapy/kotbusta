@@ -1,0 +1,18 @@
+product: jvm/amper-plugin
+
+dependencies:
+  - $libs.commons.compress
+
+pluginInfo:
+  id: distribution
+  settingsClass: io.heapy.toolchain.distribution.DistributionSettings
+
+settings:
+  kotlin:
+    version: 2.4.10
+  jvm:
+    jdk:
+      version: 25
+      distributions: [liberica]
+    test:
+      junitPlatformVersion: 6.1.0

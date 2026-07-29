@@ -1,0 +1,83 @@
+product: jvm/app
+
+layout: maven-like
+
+dependencies:
+  - ./dataops
+  - $libs.ktor.server.cio
+  - $libs.ktor.server.contentNegotiation
+  - $libs.ktor.serialization.kotlinx.json
+  - $libs.kotlinx.serialization.json
+  - $libs.ktor.server.auth
+  - $libs.ktor.server.sessions
+  - $libs.ktor.server.statusPages
+  - $libs.ktor.client.cio
+  - $libs.ktor.client.contentNegotiation
+  - $libs.komok.tech.config.dotenv
+  - $libs.komok.tech.to.be.injected
+  - $libs.komok.tech.logging
+  - $libs.logback.classic
+  - $libs.slf4j.jul.to.slf4j
+  - $libs.kotlinx.coroutines.core
+  - $libs.aws.sdk.sesv2
+  - $libs.lucene.core
+  - $libs.lucene.analysis.common
+  - $libs.lucene.queryparser
+  - $libs.djl.api
+  - $libs.djl.huggingface.tokenizers
+  - $libs.djl.onnxruntime.engine: runtime-only
+  - $libs.micrometer.registry.prometheus
+  - $libs.ktor.server.metrics.micrometer
+  - $libs.jsoup
+
+test-dependencies:
+  - $libs.ktor.server.testHost
+  - $libs.junit.jupiter
+
+settings:
+  kotlin:
+    version: 2.4.10
+    serialization:
+      enabled: true
+      version: 1.11.0
+    freeCompilerArgs:
+      - -Xcollection-literals
+      - -Xexplicit-context-arguments
+      - -Xname-based-destructuring=complete
+      - -Xreturn-value-checker=full
+      - -Xwhen-expressions=indy
+      - -opt-in=kotlin.concurrent.atomics.ExperimentalAtomicApi
+  jvm:
+    mainClass: io.heapy.kotbusta.Application
+    jdk:
+      version: 25
+      distributions: [liberica]
+    test:
+      junitPlatformVersion: 6.1.0
+      freeJvmArgs:
+        - --add-modules=jdk.incubator.vector
+
+plugins:
+  distribution:
+    enabled: true
+    applicationName: kotbusta
+    applicationVersion: unspecified
+    archiveFileName: kotbusta.tar
+    optsEnvironmentVariable: KOTBUSTA_OPTS
+    defaultJvmArgs:
+      - --add-modules=jdk.incubator.vector
+      - -Dai.djl.offline=true
+      - -DENGINE_CACHE_DIR=.djl/engine-cache
+
+mavenPlugins:
+  jacoco-maven-plugin.prepare-agent: enabled
+  jacoco-maven-plugin.report:
+    enabled: true
+    configuration:
+      includes:
+        - io/heapy/kotbusta/**
+      excludes:
+        - "**/*Test*"
+        - io/heapy/kotbusta/test/**
+      formats: [HTML, XML]
+      outputDirectory: ./build/reports/jacoco

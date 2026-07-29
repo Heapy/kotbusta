@@ -1,0 +1,10 @@
+modules:
+  - ./build-logic/distribution
+  - ./dataops
+  - ./tools/dataops-codegen
+
+plugins:
+  - ./build-logic/distribution
+
+mavenPlugins:
+  - org.jacoco:jacoco-maven-plugin:0.8.14

@@ -2,8 +2,6 @@
 
 A modern web application for browsing, searching, and downloading books that using Flibusta (MyHomeLib) digital library format. Built with Kotlin/Ktor backend and Preact frontend.
 
-![Coverage](.github/badges/jacoco.svg)
-
 ## Features
 
 - 📚 **Browse Books**: View books with covers, metadata, and descriptions
@@ -135,9 +133,12 @@ A modern web application for browsing, searching, and downloading books that usi
    # Structure should match: books-data/fb2-*.zip, books-data/flibusta_fb2_local.inpx
    ```
 
-5. **Start the application in IDEA**
-   - Run Kotbusta run-configuration
-   - The SQLite database will be created automatically on first run
+5. **Start the application**
+   ```bash
+   ./kotlin run -m kotbusta
+   ```
+
+   The Kotlin Toolchain wrapper provisions the configured JDK 25 Liberica toolchain. The SQLite database will be created automatically on first run.
 
 6. **Access the application**
    - Open http://localhost:8080
@@ -181,14 +182,40 @@ A modern web application for browsing, searching, and downloading books that usi
 
 1. **Backend development**
    ```bash
-   Start `Kotbusta` run-configuration in IDEA
-   # Navigate to http://localhost:8080`
+   ./kotlin run -m kotbusta
    ```
+
+   Navigate to http://localhost:8080.
 
 2. **Frontend development**
    - Edit files in `src/main/resources/static/`
    - No build process needed, Kotbusta uses native ES modules
    - Reload browser to see changes
+
+### Build and Verification
+
+```bash
+# Build all modules
+./kotlin build
+
+# Run the complete test suite
+./kotlin test
+
+# Generate JaCoCo HTML and XML reports under build/reports/jacoco
+./kotlin task :kotbusta:jacoco-maven-plugin.report
+
+# Create the installed application and reproducible TAR
+./kotlin do installDist -m kotbusta
+./kotlin do distTar -m kotbusta
+```
+
+### Generate jOOQ Sources
+
+Set `KOTBUSTA_DB_PATH` in `.env`, then run the dedicated code-generation module from the project root:
+
+```bash
+./kotlin run -m dataops-codegen --working-dir=.
+```
 
 ### Database Schema
 
@@ -209,6 +236,13 @@ The application uses SQLite with the following main tables:
 
 ```
 kotbusta/
+├── kotlin                       # Kotlin Toolchain 0.11.1 wrapper
+├── project.yaml                 # Project modules and local plugins
+├── module.yaml                  # Application module
+├── libs.versions.toml           # Shared dependency catalog
+├── build-logic/distribution/    # Reusable installDist/distTar plugin
+├── dataops/                     # Database migrations and data-access module
+├── tools/dataops-codegen/       # jOOQ code-generation application
 ├── src/main/kotlin/io/heapy/kotbusta/
 │   ├── Application.kt         # Main application entry point
 │   ├── ApplicationModule.kt   # Dependency injection and bean configuration
@@ -225,7 +259,7 @@ kotbusta/
 ├── src/main/resources/
 │   ├── static/                # Frontend files (HTML, CSS, JS)
 │   └── logback.xml            # Logging configuration
-└── .env                       # Application configuration
+└── .env                         # Application configuration
 ```
 
 ## Documentation

@@ -16,11 +16,13 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           java-version: "25"
-          distribution: "corretto"
+          distribution: "liberica"
       - name: "Unpack test data"
         run: src/test/resources/unpack-flibusta-sample.sh
-      - name: "Run tests and build distribution"
-        run: ./gradlew test distTar
+      - name: "Run tests"
+        run: ./kotlin test
+      - name: "Build distribution"
+        run: ./kotlin do distTar -m kotbusta
       - uses: actions/upload-artifact@v7
         with:
           name: "Kotlin Application"
