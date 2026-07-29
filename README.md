@@ -2,6 +2,8 @@
 
 A modern web application for browsing, searching, and downloading books that using Flibusta (MyHomeLib) digital library format. Built with Kotlin/Ktor backend and Preact frontend.
 
+![Coverage](.github/badges/jacoco.svg)
+
 ## Features
 
 - 📚 **Browse Books**: View books with covers, metadata, and descriptions
@@ -201,8 +203,8 @@ A modern web application for browsing, searching, and downloading books that usi
 # Run the complete test suite
 ./kotlin test
 
-# Generate JaCoCo HTML and XML reports under build/reports/jacoco
-./kotlin task :kotbusta:jacoco-maven-plugin.report
+# Run application tests, generate JaCoCo reports, and refresh the coverage badge
+./generate-coverage-badge.sh
 
 # Create the installed application and reproducible TAR
 ./kotlin do installDist -m kotbusta
