@@ -52,10 +52,10 @@ class BookEnrichmentWorker(
         intervalMillis: Long,
     ) {
         job = scope.launch {
-            recoverProcessing()
+            val _ = recoverProcessing()
             while (isActive) {
                 try {
-                    processPass(scope)
+                    val _ = processPass(scope)
                 } catch (e: Exception) {
                     log.error("Error in book enrichment worker", e)
                 }
@@ -195,7 +195,7 @@ class BookEnrichmentWorker(
             }
         }
 
-        val done = ready.zip(vectors).map { (item, vector) ->
+        val done = ready.zip(vectors).map { [item, vector] ->
             EnrichmentResult.Done(
                 bookId = item.bookId,
                 annotation = item.annotation,
@@ -318,8 +318,8 @@ class BookEnrichmentWorker(
     }
 
     context(_: TransactionContext)
-    private fun upsertDone(result: EnrichmentResult.Done, enrichedAt: Instant) = useTx { dslContext ->
-        dslContext
+    private fun upsertDone(result: EnrichmentResult.Done, enrichedAt: Instant): Unit = useTx { dslContext ->
+        val _ = dslContext
             .insertInto(BOOK_ENRICHMENT)
             .set(BOOK_ENRICHMENT.BOOK_ID, result.bookId)
             .set(BOOK_ENRICHMENT.ANNOTATION, result.annotation)

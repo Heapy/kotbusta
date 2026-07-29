@@ -96,7 +96,7 @@ class KindleSendWorkerTest {
 
         // Simulate a crash: leave the item PROCESSING with an old UPDATED_AT.
         tx.transaction(READ_WRITE) {
-            useTx { dsl ->
+            val _ = useTx { dsl ->
                 dsl.update(KINDLE_SEND_QUEUE)
                     .set(KINDLE_SEND_QUEUE.STATUS, KindleSendStatus.PROCESSING.name)
                     .set(KINDLE_SEND_QUEUE.UPDATED_AT, Clock.System.now() - 1.hours)
@@ -128,7 +128,7 @@ class KindleSendWorkerTest {
         tx: TransactionProvider,
         bookDeleted: Boolean = false,
     ): Int = tx.transaction(READ_WRITE) {
-        useTx { dsl ->
+        val _ = useTx { dsl ->
             // Start from an empty queue so only the seeded item is processed
             // (fixtures ship their own PENDING queue rows).
             dsl.deleteFrom(KINDLE_SEND_EVENTS).execute()
@@ -155,7 +155,7 @@ class KindleSendWorkerTest {
             format = KindleFormat.EPUB,
         )
         if (bookDeleted) {
-            useTx { dsl ->
+            val _ = useTx { dsl ->
                 dsl.deleteFrom(BOOKS)
                     .where(BOOKS.ID.eq(BOOK_ID))
                     .execute()

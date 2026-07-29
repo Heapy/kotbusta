@@ -25,11 +25,15 @@ tasks.register<JavaExec>("regenerateJooq") {
 
 kotlin {
     jvmToolchain(25)
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xreturn-value-checker=full")
+    }
 }
 
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        getByName<JvmTestSuite>("test") {
             useJUnitJupiter(libs.versions.junit)
         }
     }

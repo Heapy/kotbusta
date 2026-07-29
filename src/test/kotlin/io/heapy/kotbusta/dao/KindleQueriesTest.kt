@@ -268,7 +268,7 @@ class KindleQueriesTest {
     @Test
     context(_: TransactionProvider)
     fun `findQueueItemsByUserId should keep queued title after book is removed`() = transaction {
-        useTx { dslContext ->
+        val _ = useTx { dslContext ->
             dslContext
                 .deleteFrom(BOOKS)
                 .where(BOOKS.ID.eq(1))

@@ -8,26 +8,23 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class PandocConversionService : ConversionService {
-
-    companion object : Logger() {
+    private companion object : Logger() {
         private const val PANDOC_TIMEOUT_SECONDS = 120L
-        private val supportedFormats = listOf(
+        private val supportedFormats: List<ConversionFormat> = [
             ConversionFormat.EPUB,
-        )
+        ]
     }
 
-    override fun getSupportedFormats(): List<String> {
-        return supportedFormats.map { it.extension }
-    }
+    override fun getSupportedFormats(): List<String> =
+        supportedFormats.map(ConversionFormat::extension)
 
-    override fun isFormatSupported(format: String): Boolean {
-        return supportedFormats.any { it.extension.equals(format, ignoreCase = true) }
-    }
+    override fun isFormatSupported(format: String): Boolean =
+        supportedFormats.any { it.extension.equals(format, ignoreCase = true) }
 
     override suspend fun convertFb2(
         inputFile: File,
         outputFormat: String,
-        outputFile: File
+        outputFile: File,
     ): ConversionResult = withContext(Dispatchers.IO) {
         log.debug("Starting conversion: ${inputFile.name} -> $outputFormat")
 
@@ -36,7 +33,7 @@ class PandocConversionService : ConversionService {
             return@withContext ConversionResult(
                 success = false,
                 outputFile = null,
-                errorMessage = "Input file does not exist: ${inputFile.absolutePath}"
+                errorMessage = "Input file does not exist: ${inputFile.absolutePath}",
             )
         }
 
@@ -45,7 +42,7 @@ class PandocConversionService : ConversionService {
             return@withContext ConversionResult(
                 success = false,
                 outputFile = null,
-                errorMessage = "Unsupported output format: $outputFormat. Supported formats: ${getSupportedFormats()}"
+                errorMessage = "Unsupported output format: $outputFormat. Supported formats: ${getSupportedFormats()}",
             )
         }
 
@@ -54,7 +51,7 @@ class PandocConversionService : ConversionService {
             return@withContext ConversionResult(
                 success = false,
                 outputFile = null,
-                errorMessage = "Pandoc is not installed or not available in PATH. Please install pandoc to use conversion features."
+                errorMessage = "Pandoc is not installed or not available in PATH. Please install pandoc to use conversion features.",
             )
         }
 
@@ -82,7 +79,7 @@ class PandocConversionService : ConversionService {
                 return@withContext ConversionResult(
                     success = false,
                     outputFile = null,
-                    errorMessage = "Conversion timed out after $PANDOC_TIMEOUT_SECONDS seconds"
+                    errorMessage = "Conversion timed out after $PANDOC_TIMEOUT_SECONDS seconds",
                 )
             }
 
@@ -94,7 +91,7 @@ class PandocConversionService : ConversionService {
                 return@withContext ConversionResult(
                     success = false,
                     outputFile = null,
-                    errorMessage = "Pandoc conversion failed with exit code $exitCode: $errorOutput"
+                    errorMessage = "Pandoc conversion failed with exit code $exitCode: $errorOutput",
                 )
             }
 
@@ -105,36 +102,35 @@ class PandocConversionService : ConversionService {
                 return@withContext ConversionResult(
                     success = false,
                     outputFile = null,
-                    errorMessage = "Conversion completed but output file is empty or missing"
+                    errorMessage = "Conversion completed but output file is empty or missing",
                 )
             }
 
             log.info("Conversion successful: ${inputFile.name} -> ${outputFile.name} (${outputFile.length()} bytes)")
             ConversionResult(
                 success = true,
-                outputFile = outputFile
+                outputFile = outputFile,
             )
-
         } catch (e: IOException) {
             log.error("IO error during conversion", e)
             ConversionResult(
                 success = false,
                 outputFile = null,
-                errorMessage = "IO error during conversion: ${e.message}"
+                errorMessage = "IO error during conversion: ${e.message}",
             )
         } catch (e: InterruptedException) {
             log.error("Conversion was interrupted", e)
             ConversionResult(
                 success = false,
                 outputFile = null,
-                errorMessage = "Conversion was interrupted: ${e.message}"
+                errorMessage = "Conversion was interrupted: ${e.message}",
             )
         } catch (e: Exception) {
             log.error("Unexpected error during conversion", e)
             ConversionResult(
                 success = false,
                 outputFile = null,
-                errorMessage = "Unexpected error during conversion: ${e.message}"
+                errorMessage = "Unexpected error during conversion: ${e.message}",
             )
         }
     }
@@ -153,18 +149,17 @@ class PandocConversionService : ConversionService {
     private fun buildPandocCommand(
         inputFile: File,
         outputFile: File,
-        outputFormat: String
-    ): List<String> {
-        val command = mutableListOf(
+        outputFormat: String,
+    ): List<String> =
+        [
             "pandoc",
             inputFile.name, // Use relative name instead of absolute path
-            "-f", "fb2",
-            "-t", outputFormat.lowercase(),
-            "-o", outputFile.absolutePath,
-            "--extract-media=." // Extract media to current directory
-        )
-
-        return command
-    }
-
+            "-f",
+            "fb2",
+            "-t",
+            outputFormat.lowercase(),
+            "-o",
+            outputFile.absolutePath,
+            "--extract-media=.", // Extract media to current directory
+        ]
 }

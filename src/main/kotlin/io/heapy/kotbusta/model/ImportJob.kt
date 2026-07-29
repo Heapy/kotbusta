@@ -55,7 +55,7 @@ class ImportStats {
     }
 
     fun incInpFiles() {
-        inpFilesProcessed.addAndFetch(1)
+        val _ = inpFilesProcessed.addAndFetch(1)
     }
 
     fun setInpFilesTotal(total: Int) {
@@ -67,15 +67,15 @@ class ImportStats {
     }
 
     fun incDeletedBooks() {
-        booksDeleted.addAndFetch(1)
+        val _ = booksDeleted.addAndFetch(1)
     }
 
     fun incAddedBooks() {
-        booksAdded.addAndFetch(1)
+        val _ = booksAdded.addAndFetch(1)
     }
 
     fun incInvalidBooks(): Int {
-        bookErrors.addAndFetch(1)
+        val _ = bookErrors.addAndFetch(1)
         return sequentialBookErrors.addAndFetch(1)
     }
 

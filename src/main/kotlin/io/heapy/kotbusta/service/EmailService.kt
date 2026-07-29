@@ -78,7 +78,7 @@ class SesEmailService(
                 SendEmailRequest {
                     fromEmailAddress = senderEmail
                     destination = Destination {
-                        toAddresses = listOf(recipientEmail)
+                        toAddresses = [recipientEmail]
                     }
                     content = EmailContent {
                         raw = RawMessage {
@@ -100,14 +100,14 @@ class SesEmailService(
         val errorMessage = exception.message ?: exception.toString()
 
         // Check for retryable errors
-        val retryablePatterns = listOf(
+        val retryablePatterns = [
             "throttl",
             "rate limit",
             "service unavailable",
             "timeout",
             "connection",
             "temporarily",
-        )
+        ]
 
         if (retryablePatterns.any {
                 errorMessage.contains(

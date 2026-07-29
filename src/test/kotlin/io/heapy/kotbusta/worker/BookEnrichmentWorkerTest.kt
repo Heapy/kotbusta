@@ -83,7 +83,7 @@ class BookEnrichmentWorkerTest {
         val tx = applicationModule.transactionProvider.value
         seedBook(tx, BOOK_ID, title = "Claimed Book")
         tx.transaction(READ_WRITE) {
-            useTx { dsl ->
+            val _ = useTx { dsl ->
                 dsl.insertInto(BOOK_ENRICHMENT)
                     .set(BOOK_ENRICHMENT.BOOK_ID, BOOK_ID)
                     .set(BOOK_ENRICHMENT.STATUS, "PROCESSING")
@@ -118,7 +118,7 @@ class BookEnrichmentWorkerTest {
         title: String,
     ) {
         tx.transaction(READ_WRITE) {
-            useTx { dsl ->
+            val _ = useTx { dsl ->
                 val now = Clock.System.now()
                 dsl.insertInto(BOOKS)
                     .set(BOOKS.ID, bookId)

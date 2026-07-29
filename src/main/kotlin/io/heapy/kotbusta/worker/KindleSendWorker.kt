@@ -13,7 +13,8 @@ import io.heapy.kotbusta.dao.updateQueueItemStatus
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.ktor.UserSession
+import io.heapy.kotbusta.jooq.tables.records.KindleDevicesRecord
+import io.heapy.kotbusta.jooq.tables.records.KindleSendQueueRecord
 import io.heapy.kotbusta.model.Book
 import io.heapy.kotbusta.model.KindleSendStatus
 import io.heapy.kotbusta.service.BookFileService
@@ -98,7 +99,7 @@ class KindleSendWorker(
             findPendingQueueItems(batchSize).mapNotNull { item ->
                 val id = item.id!!
                 if (markQueueItemAsProcessing(id)) {
-                    createKindleSendEvent(id, KindleSendStatus.PROCESSING.name)
+                    val _ = createKindleSendEvent(id, KindleSendStatus.PROCESSING.name)
                     id
                 } else {
                     null
@@ -133,10 +134,8 @@ class KindleSendWorker(
         val work = transactionProvider.transaction(READ_ONLY) {
             val item = findQueueItemById(queueId) ?: return@transaction null
             val device = findKindleDeviceByIdAndUserId(item.deviceId, item.userId)
-            val book = context(UserSession(userId = item.userId, email = "", name = "")) {
-                getBookById(item.bookId)
-            }
-            Triple(item, device, book)
+            val book = getBookById(item.bookId)
+            ClaimedWork(item, device, book)
         }
 
         if (work == null) {
@@ -229,9 +228,9 @@ class KindleSendWorker(
         transactionProvider.transaction(READ_WRITE) {
             if (attempts < maxRetries) {
                 val nextRunAt = calculateNextRunTime(attempts)
-                incrementQueueItemAttempts(queueId, nextRunAt)
-                updateQueueItemStatus(queueId, KindleSendStatus.PENDING, error)
-                createKindleSendEvent(
+                val _ = incrementQueueItemAttempts(queueId, nextRunAt)
+                val _ = updateQueueItemStatus(queueId, KindleSendStatus.PENDING, error)
+                val _ = createKindleSendEvent(
                     queueId,
                     KindleSendStatus.PENDING.name,
                     Json.encodeToString(
@@ -243,8 +242,8 @@ class KindleSendWorker(
                     ),
                 )
             } else {
-                updateQueueItemStatus(queueId, KindleSendStatus.FAILED, "Max retries exceeded: $error")
-                createKindleSendEvent(
+                val _ = updateQueueItemStatus(queueId, KindleSendStatus.FAILED, "Max retries exceeded: $error")
+                val _ = createKindleSendEvent(
                     queueId,
                     KindleSendStatus.FAILED.name,
                     Json.encodeToString(FailedEventDetails(reason = "Max retries exceeded", error = error)),
@@ -268,8 +267,8 @@ class KindleSendWorker(
             ?.counter("kotbusta_kindle_send_total", "outcome", status.name.lowercase())
             ?.increment()
         transactionProvider.transaction(READ_WRITE) {
-            updateQueueItemStatus(queueId, status, error)
-            createKindleSendEvent(queueId, status.name, detailsJson)
+            val _ = updateQueueItemStatus(queueId, status, error)
+            val _ = createKindleSendEvent(queueId, status.name, detailsJson)
         }
     }
 
@@ -280,6 +279,12 @@ class KindleSendWorker(
         val delayMinutes = (baseDelayMinutes * jitterFactor).toLong()
         return Clock.System.now() + delayMinutes.minutes
     }
+
+    private data class ClaimedWork(
+        val item: KindleSendQueueRecord,
+        val device: KindleDevicesRecord?,
+        val book: Book?,
+    )
 
     private companion object : Logger()
 }

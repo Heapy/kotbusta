@@ -241,7 +241,7 @@ class BookContentServiceTest {
 
         assertThrows(BookFileException::class.java) {
             runBlocking {
-                BookContentService(booksDataPath = dir).render(book(1, "1.fb2", "broken"))
+                val _ = BookContentService(booksDataPath = dir).render(book(1, "1.fb2", "broken"))
             }
         }
     }

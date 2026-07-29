@@ -57,11 +57,11 @@ class ImportJobService(
                     jobStats.status.store(COMPLETED)
                     jobStats.completedAt.store(Clock.System.now())
                     jobStats.addMessage("Import completed successfully! Lucene index rebuild scheduled.")
-                    stopJob()
+                    val _ = stopJob()
                 } catch (e: Exception) {
                     jobStats.status.store(FAILED)
                     jobStats.addMessage("Error importing data: ${e.message}", e)
-                    stopJob()
+                    val _ = stopJob()
                 }
             }
             true

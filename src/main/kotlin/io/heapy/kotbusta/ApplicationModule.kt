@@ -372,12 +372,12 @@ class ApplicationModule {
         }
         PragmaDataSource(
             base,
-            listOf(
+            [
                 "PRAGMA foreign_keys=ON",
                 "PRAGMA busy_timeout=5000",
                 "PRAGMA synchronous=NORMAL",
-                "PRAGMA query_only=ON"
-            )
+                "PRAGMA query_only=ON",
+            ],
         )
     }
 
@@ -388,12 +388,12 @@ class ApplicationModule {
         }
         PragmaDataSource(
             base,
-            listOf(
+            [
                 "PRAGMA foreign_keys=ON",
                 "PRAGMA busy_timeout=5000",
                 "PRAGMA synchronous=NORMAL",
                 "PRAGMA journal_mode=WAL",
-            )
+            ],
         )
     }
 

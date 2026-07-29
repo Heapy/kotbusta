@@ -23,7 +23,9 @@ class BookContentCacheServiceTest {
             runBlocking {
                 coroutineScope {
                     repeat(8) {
-                        launch { cache.get(book(1)) }
+                        launch {
+                            val _ = cache.get(book(1))
+                        }
                     }
                 }
             }
@@ -39,7 +41,9 @@ class BookContentCacheServiceTest {
         val cache = BookContentCacheService(parser = parser, maxEntries = 10)
         try {
             assertThrows(BookFileException::class.java) {
-                runBlocking { cache.get(book(1)) }
+                runBlocking {
+                    val _ = cache.get(book(1))
+                }
             }
 
             val result = runBlocking { cache.get(book(1)) }
@@ -57,15 +61,15 @@ class BookContentCacheServiceTest {
         val cache = BookContentCacheService(parser = parser, maxEntries = 2)
         try {
             runBlocking {
-                cache.get(book(1))
-                cache.get(book(2))
-                cache.get(book(1)) // touch 1 so 2 becomes the least-recently-used entry
-                cache.get(book(3)) // over budget: should evict 2, not 1
+                val _ = cache.get(book(1))
+                val _ = cache.get(book(2))
+                val _ = cache.get(book(1)) // touch 1 so 2 becomes the least-recently-used entry
+                val _ = cache.get(book(3)) // over budget: should evict 2, not 1
 
-                cache.get(book(1))
+                val _ = cache.get(book(1))
                 assertEquals(1, parser.callCountFor(1), "book 1 should still be cached")
 
-                cache.get(book(2))
+                val _ = cache.get(book(2))
                 assertEquals(2, parser.callCountFor(2), "book 2 should have been evicted and re-parsed")
             }
         } finally {

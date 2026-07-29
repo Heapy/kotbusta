@@ -23,12 +23,10 @@ fun main() {
 }
 
 fun Application.module(applicationModule: ApplicationModule = ApplicationModule()) {
-    context(applicationModule) {
-        contextOf<ApplicationModule>().initialize()
-        configureSerialization()
-        configureStatusPages()
-        configureMetrics()
-        configureAuthentication()
-        configureRouting()
-    }
+    applicationModule.initialize()
+    configureSerialization()
+    configureStatusPages()
+    configureMetrics(applicationModule = applicationModule)
+    configureAuthentication(applicationModule = applicationModule)
+    configureRouting(applicationModule = applicationModule)
 }

@@ -142,7 +142,7 @@ class BookContentRoutesTest {
             }
 
             applicationModule.transactionProvider.value.transaction(READ_WRITE) {
-                useTx { dslContext ->
+                val _ = useTx { dslContext ->
                     dslContext.execute(
                         """
                         INSERT INTO BOOKS (

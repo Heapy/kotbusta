@@ -16,7 +16,7 @@ context(applicationModule: ApplicationModule)
 fun Application.configureMetrics() {
     install(MicrometerMetrics) {
         registry = applicationModule.prometheusRegistry.value
-        meterBinders = listOf(
+        meterBinders = [
             ClassLoaderMetrics(),
             JvmCompilationMetrics(),
             JvmGcMetrics(),
@@ -24,6 +24,6 @@ fun Application.configureMetrics() {
             JvmThreadMetrics(),
             ProcessorMetrics(),
             UptimeMetrics(),
-        )
+        ]
     }
 }

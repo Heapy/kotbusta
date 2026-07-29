@@ -218,7 +218,7 @@ class InpxParserTest {
     private fun writeInpxEntries(dir: Path, entries: List<Pair<String, List<InpBook>>>) {
         val inpxFile = dir.resolve("flibusta_fb2_local.inpx").toFile()
         ZipOutputStream(inpxFile.outputStream()).use { zip ->
-            entries.forEach { (entryName, books) ->
+            entries.forEach { [entryName, books] ->
                 val lines = books.joinToString("\n", transform = ::rawBookLine)
                 zip.putNextEntry(ZipEntry(entryName))
                 zip.write(lines.toByteArray(Charsets.UTF_8))
@@ -245,7 +245,7 @@ class InpxParserTest {
     private fun writeRawInpxEntries(dir: Path, entries: List<Pair<String, List<String>>>) {
         val inpxFile = dir.resolve("flibusta_fb2_local.inpx").toFile()
         ZipOutputStream(inpxFile.outputStream()).use { zip ->
-            entries.forEach { (entryName, lines) ->
+            entries.forEach { [entryName, lines] ->
                 zip.putNextEntry(ZipEntry(entryName))
                 zip.write(lines.joinToString("\n").toByteArray(Charsets.UTF_8))
                 zip.closeEntry()
@@ -323,7 +323,7 @@ class InpxParserTest {
 
     private suspend fun insertEnrichment(tx: TransactionProvider, bookId: Int, annotation: String) {
         tx.transaction(READ_WRITE) {
-            useTx { dsl ->
+            val _ = useTx { dsl ->
                 dsl.insertInto(BOOK_ENRICHMENT)
                     .set(BOOK_ENRICHMENT.BOOK_ID, bookId)
                     .set(BOOK_ENRICHMENT.ANNOTATION, annotation)

@@ -20,7 +20,6 @@ enum class TransactionType {
 @DslMarker
 annotation class TransactionDsl
 
-@TransactionDsl
 context(_: TransactionContext)
 fun <T> useTx(
     body: (DSLContext) -> T,
@@ -36,7 +35,6 @@ private fun unwrap(): DSLContext {
 }
 
 interface TransactionProvider {
-    @TransactionDsl
     suspend fun <T> transaction(
         type: TransactionType,
         block: suspend context(TransactionContext) () -> T,

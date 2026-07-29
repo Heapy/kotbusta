@@ -166,7 +166,7 @@ class KindleService(
         )
 
         // Create QUEUED event
-        createKindleSendEvent(
+        val _ = createKindleSendEvent(
             queueId = queueItem.id!!,
             eventType = "QUEUED",
             details = Json.encodeToString(

@@ -44,14 +44,14 @@ class InpxParser(
         val bookAuthors: String,
         val bookGenres: String,
     ) {
-        val allChildrenFirst: List<String> = listOf(
+        val allChildrenFirst: List<String> = [
             bookAuthors,
             bookGenres,
             books,
             authors,
             series,
             genres,
-        )
+        ]
     }
 
     /**
@@ -135,7 +135,7 @@ class InpxParser(
     }
 
     context(_: TransactionContext)
-    private fun createStagingTables(staging: StagingTables) = useTx { dsl ->
+    private fun createStagingTables(staging: StagingTables): Unit = useTx { dsl ->
         dsl.execute(
             """
             CREATE TABLE ${staging.authors}
@@ -191,7 +191,7 @@ class InpxParser(
             )
             """.trimIndent(),
         )
-        dsl.execute(
+        val _ = dsl.execute(
             """
             CREATE TABLE ${staging.bookGenres}
             (
@@ -461,7 +461,7 @@ class InpxParser(
         }
         pairs.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
-                chunk.map { (bookId, authorId) ->
+                chunk.map { [bookId, authorId] ->
                     dsl.query(
                         "INSERT INTO ${staging.bookAuthors} (BOOK_ID, AUTHOR_ID) VALUES (?, ?)",
                         bookId,
@@ -483,7 +483,7 @@ class InpxParser(
         }
         pairs.chunked(CHUNK_SIZE).forEach { chunk ->
             dsl.batch(
-                chunk.map { (bookId, genreId) ->
+                chunk.map { [bookId, genreId] ->
                     dsl.query(
                         "INSERT INTO ${staging.bookGenres} (BOOK_ID, GENRE_ID) VALUES (?, ?)",
                         bookId,
@@ -495,7 +495,7 @@ class InpxParser(
     }
 
     context(_: TransactionContext)
-    private fun swapLiveCatalog(staging: StagingTables) = useTx { dsl ->
+    private fun swapLiveCatalog(staging: StagingTables): Unit = useTx { dsl ->
         dsl.execute("DELETE FROM BOOK_AUTHORS")
         dsl.execute("DELETE FROM BOOK_GENRES")
         dsl.execute("DELETE FROM BOOKS")
@@ -517,7 +517,8 @@ class InpxParser(
             """.trimIndent(),
         )
         dsl.execute("INSERT INTO BOOK_AUTHORS (BOOK_ID, AUTHOR_ID) SELECT BOOK_ID, AUTHOR_ID FROM ${staging.bookAuthors}")
-        dsl.execute("INSERT INTO BOOK_GENRES (BOOK_ID, GENRE_ID) SELECT BOOK_ID, GENRE_ID FROM ${staging.bookGenres}")
+        val _ =
+            dsl.execute("INSERT INTO BOOK_GENRES (BOOK_ID, GENRE_ID) SELECT BOOK_ID, GENRE_ID FROM ${staging.bookGenres}")
     }
 
     context(_: TransactionContext)

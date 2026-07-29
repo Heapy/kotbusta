@@ -209,7 +209,7 @@ class EmailServiceTest {
     @Test
     fun `recipient with crlf is rejected to prevent header injection`() {
         assertThrows(IllegalArgumentException::class.java) {
-            buildRawEmail(
+            val _ = buildRawEmail(
                 from = "sender@example.com",
                 to = "device@kindle.com\r\nBcc: evil@example.com",
                 subject = "Your book: X",

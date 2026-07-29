@@ -94,8 +94,8 @@ fun Application.configureAuthentication() {
                     requestMethod = HttpMethod.Post,
                     clientId = googleOauthConfig.clientId,
                     clientSecret = googleOauthConfig.clientSecret,
-                    defaultScopes = listOf("profile", "email"),
-                    extraAuthParameters = listOf("access_type" to "online"),
+                    defaultScopes = ["profile", "email"],
+                    extraAuthParameters = ["access_type" to "online"],
                 )
             }
             client = httpClient
@@ -146,7 +146,7 @@ private suspend fun insertOrUpdateUser(
             // Update existing user
             val userId = existingUser.id!!
 
-            updateUser(
+            val _ = updateUser(
                 userId = userId,
                 email = googleUserInfo.email,
                 name = googleUserInfo.name,

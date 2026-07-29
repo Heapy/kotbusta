@@ -100,7 +100,7 @@ class BookFileServiceTest {
 
         val error = assertThrows(BookFileException::class.java) {
             runBlocking {
-                service.materialize(book(), "fb2")
+                val _ = service.materialize(book(), "fb2")
             }
         }
 

@@ -424,7 +424,7 @@ class LuceneBookSearchService(
         return if (hasClause) {
             root.build()
         } else {
-            MatchAllDocsQuery()
+            MatchAllDocsQuery.INSTANCE
         }
     }
 

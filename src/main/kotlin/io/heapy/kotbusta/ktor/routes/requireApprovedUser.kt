@@ -40,9 +40,7 @@ suspend fun requireApprovedUser(
 
     // Check if user is approved
     val userInfo = transactionProvider.transaction(READ_ONLY) {
-        context(userSession) {
-            getUserInfo()
-        }
+        getUserInfo(userSession = userSession)
     }
 
     if (userInfo?.status == APPROVED) {

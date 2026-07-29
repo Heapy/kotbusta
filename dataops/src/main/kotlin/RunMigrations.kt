@@ -16,5 +16,5 @@ fun main() {
 fun runMigrations(
     dataSource: DataSource,
 ) {
-    Migrator(dataSource).migrate()
+    val _ = Migrator(dataSource).migrate()
 }

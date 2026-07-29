@@ -5,6 +5,7 @@ import migrations.model.Migration
 import migrations.model.MigrationResult
 import java.sql.Connection
 import javax.sql.DataSource
+import kotlin.time.Clock
 
 const val next = "-- migrator separator --"
 
@@ -120,7 +121,7 @@ class Migrator(
 
         connection.prepareStatement(sql).use { stmt ->
             stmt.setInt(1, migration.version)
-            stmt.setString(2, java.time.Instant.now().toString())
+            stmt.setString(2, Clock.System.now().toString())
             stmt.executeUpdate()
         }
     }

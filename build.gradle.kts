@@ -68,7 +68,11 @@ kotlin {
 
     compilerOptions {
         freeCompilerArgs.addAll(
-            "-Xcontext-parameters",
+            "-Xcollection-literals",
+            "-Xexplicit-context-arguments",
+            "-Xname-based-destructuring=complete",
+            "-Xreturn-value-checker=full",
+            "-Xwhen-expressions=indy",
             "-opt-in=kotlin.concurrent.atomics.ExperimentalAtomicApi",
         )
     }
@@ -76,7 +80,7 @@ kotlin {
 
 testing {
     suites {
-        val test by getting(JvmTestSuite::class) {
+        getByName<JvmTestSuite>("test") {
             useJUnitJupiter(libs.versions.junit)
         }
     }

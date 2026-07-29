@@ -193,7 +193,7 @@ class LuceneBookSearchServiceTest {
                     2 to FakeEmbeddingService.vectorFor("harry wizard"),
                     5 to FakeEmbeddingService.vectorFor("overlook horror"),
                     8 to FakeEmbeddingService.vectorFor("foundation galaxy"),
-                ).forEach { (bookId, embedding) ->
+                ).forEach { [bookId, embedding] ->
                     dslContext.update(BOOK_ENRICHMENT)
                         .set(BOOK_ENRICHMENT.EMBEDDING, EmbeddingCodec.encode(embedding))
                         .where(BOOK_ENRICHMENT.BOOK_ID.eq(bookId))

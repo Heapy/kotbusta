@@ -177,7 +177,7 @@ class FeaturedBooksWorker(
             matches += candidate to verified.id
         }
 
-        return matches.mapIndexed { index, (candidate, bookId) ->
+        return matches.mapIndexed { index, [candidate, bookId] ->
             FeaturedBookInsert(
                 bookId = bookId,
                 externalTitle = candidate.title,
@@ -213,7 +213,7 @@ class FeaturedBooksWorker(
     }
 
     private fun titlesOverlapEnough(a: String, b: String): Boolean {
-        val (shorter, longer) = if (a.length <= b.length) a to b else b to a
+        val [shorter, longer] = if (a.length <= b.length) a to b else b to a
         if (shorter.isEmpty()) {
             return false
         }

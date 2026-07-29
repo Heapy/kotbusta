@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import kotlin.time.Instant
 
 /**
  * Extended integration tests for UserQueries.
@@ -184,7 +185,7 @@ class UserQueriesExtendedTest {
             )
 
             // When: Getting user info
-            val userInfo = with(userSession) { getUserInfo() }
+            val userInfo = getUserInfo(userSession = userSession)
 
             // Then: Should return user information
             assertNotNull(userInfo)
@@ -209,7 +210,7 @@ class UserQueriesExtendedTest {
         )
 
         // When: Getting user info
-        val userInfo = with(userSession) { getUserInfo() }
+        val userInfo = getUserInfo(userSession = userSession)
 
         // Then: Should return null
         assertNull(userInfo)
@@ -251,7 +252,7 @@ class UserQueriesExtendedTest {
     fun `listPendingUsers should order by created_at descending`() =
         transaction {
             // Given: Multiple pending users (create additional for testing)
-            insertUser(
+            val _ = insertUser(
                 googleId = "google_pending2",
                 email = "pending2@example.com",
                 name = "Pending User 2",
@@ -262,7 +263,7 @@ class UserQueriesExtendedTest {
             val pendingUsers = listPendingUsers(limit = 20, offset = 0)
 
             // Then: Should be ordered by created_at descending
-            for (i in 0 until pendingUsers.size - 1) {
+            for (i in 0..<pendingUsers.size - 1) {
                 val current = pendingUsers[i].createdAt
                 val next = pendingUsers[i + 1].createdAt
                 assertTrue(current >= next) {
@@ -289,7 +290,7 @@ class UserQueriesExtendedTest {
         val initialCount = countPendingUsers()
 
         // When: Approving a pending user
-        updateUserStatus(userId = 3, status = UserStatus.APPROVED)
+        assertTrue(updateUserStatus(userId = 3, status = UserStatus.APPROVED))
 
         // Then: Count should decrease
         val newCount = countPendingUsers()
@@ -368,16 +369,16 @@ class UserQueriesExtendedTest {
     context(_: TransactionProvider)
     fun `updateUserStatus should update updatedAt timestamp`() = transaction {
         // Given: User 3 exists
-        val userBefore = useTx { dslContext ->
-            dslContext
-                .selectFrom(USERS)
-                .where(USERS.ID.eq(3))
-                .fetchOne()
-        }
-        userBefore?.updatedAt
+        val expectedUpdatedAt = Instant.parse("2026-07-29T12:00:00Z")
 
         // When: Updating user status
-        updateUserStatus(userId = 3, status = UserStatus.APPROVED)
+        assertTrue(
+            updateUserStatus(
+                userId = 3,
+                status = UserStatus.APPROVED,
+                updatedAt = expectedUpdatedAt,
+            ),
+        )
 
         // Then: updatedAt should change
         val userAfter = useTx { dslContext ->
@@ -386,9 +387,6 @@ class UserQueriesExtendedTest {
                 .where(USERS.ID.eq(3))
                 .fetchOne()
         }
-        val updatedAtAfter = userAfter?.updatedAt
-
-        assertNotNull(updatedAtAfter)
-        // Note: In fast tests, timestamps might be equal, so we just verify it's not null
+        assertEquals(expectedUpdatedAt, userAfter?.updatedAt)
     }
 }
