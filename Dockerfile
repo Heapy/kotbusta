@@ -2,16 +2,9 @@
 # Build manually with GitHub Actions: ghcr.io/heapy/kotbusta-base:latest
 FROM ghcr.io/heapy/kotbusta-base:latest
 
-# Switch back to root temporarily to copy and set permissions
-USER root
+# Copy the application with its final ownership in one layer.
+COPY --chown=kotbusta:kotbusta /build/install/kotbusta /kotbusta
 
-# Copy the application
-COPY /build/install/kotbusta /kotbusta
-
-# Set ownership
-RUN chown -R kotbusta:kotbusta /kotbusta
-
-# Switch back to non-root user
 USER kotbusta
 
 # Run the application
