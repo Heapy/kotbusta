@@ -1,60 +1,109 @@
-name: "Build Kotbusta Docker"
+name: Build Kotbusta
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
 
 permissions:
   contents: read
 
-on:
-  - push
-  - pull_request
+concurrency:
+  group: kotbusta-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
-    name: "Build Application"
-    runs-on: self-hosted
+  pull-request:
+    name: Verify pull request
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - kotbusta-ci
+    timeout-minutes: 15
+
     steps:
       - uses: actions/checkout@v7
+
       - uses: actions/setup-java@v5
         with:
           java-version: "25"
-          distribution: "liberica"
-      - name: "Unpack test data"
+          distribution: liberica
+          check-latest: false
+
+      - name: Unpack test data
         run: src/test/resources/unpack-flibusta-sample.sh
-      - name: "Run tests"
+
+      - name: Run tests
         run: ./kotlin test
-      - name: "Build distribution"
-        run: ./kotlin do distTar -m kotbusta
-      - uses: actions/upload-artifact@v7
-        with:
-          name: "Kotlin Application"
-          path: "build/distributions/kotbusta.tar"
-          retention-days: 1
-  build-and-push-image:
-    name: "Build Docker Image"
-    if: ${{ github.ref == 'refs/heads/main' }}
-    runs-on: self-hosted
+
+      - name: Build distribution
+        run: ./kotlin "do" distTar -m kotbusta
+
+  main:
+    name: Build and publish Docker image
+    if: github.event_name == 'push'
+    runs-on:
+      - self-hosted
+      - Linux
+      - X64
+      - docker-builder
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
-    needs: build
+
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v8
+
+      - uses: actions/setup-java@v5
         with:
-          name: "Kotlin Application"
-          path: "build/distributions/"
-      - name: "Untar files"
-        run: mkdir -p build/install && tar -xvf build/distributions/kotbusta.tar -C $_
-      - name: "Set up Docker Buildx"
+          java-version: "25"
+          distribution: liberica
+          check-latest: false
+
+      - name: Unpack test data
+        run: src/test/resources/unpack-flibusta-sample.sh
+
+      - name: Run tests
+        run: ./kotlin test
+
+      - name: Build distribution
+        run: ./kotlin "do" distTar -m kotbusta
+
+      - name: Prepare Docker context
+        run: |
+          set -euo pipefail
+          install -d build/install
+          tar -xf build/distributions/kotbusta.tar -C build/install
+
+      - name: Verify runner cache infrastructure
+        run: /usr/local/libexec/heapy-runner-cache/cache-health.sh --quick
+
+      - name: Use persistent Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v4
-      - name: "Login to GHCR"
+        with:
+          name: heapy-ci
+          driver: docker-container
+          cleanup: false
+          cache-binary: false
+
+      - name: Login to GHCR
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password:  ${{ secrets.GITHUB_TOKEN }}
-      - name: "Build and push"
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
         uses: docker/build-push-action@v7
         with:
+          builder: ${{ steps.buildx.outputs.name }}
           platforms: linux/amd64,linux/arm64
           context: .
           push: true
