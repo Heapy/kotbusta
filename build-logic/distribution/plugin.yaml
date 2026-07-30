@@ -8,14 +8,14 @@ tasks:
       mainClass: ${module.settings.jvm.mainClass}
       optsEnvironmentVariable: ${pluginSettings.optsEnvironmentVariable}
       defaultJvmArgs: ${pluginSettings.defaultJvmArgs}
-      installDirectory: ${project.rootDir}/build/install/${pluginSettings.applicationName}
+      installDirectory: ${module.rootDir}/build/install/${pluginSettings.applicationName}
 
   distTar:
     action: !io.heapy.toolchain.distribution.distTar
       installDirectory: ${tasks.installDist.action.installDirectory}
       applicationName: ${pluginSettings.applicationName}
       archiveFileName: ${pluginSettings.archiveFileName}
-      archiveFile: ${project.rootDir}/build/distributions/${pluginSettings.archiveFileName}
+      archiveFile: ${module.rootDir}/build/distributions/${pluginSettings.archiveFileName}
 
 commands:
   - installDist

@@ -95,6 +95,7 @@ internal fun installDistributionFiles(
     validateSafeVersion(applicationVersion)
     validateMainClass(mainClass)
     defaultJvmArgs.forEach(::validateJvmArgument)
+    defaultJvmArgs.forEach(::validateWindowsJvmArgument)
 
     val effectiveOptsEnvironmentVariable = optsEnvironmentVariable
         ?: defaultOptsEnvironmentVariable(applicationName)
@@ -139,6 +140,21 @@ internal fun installDistributionFiles(
         StandardOpenOption.WRITE,
     )
     setPosixPermissions(launcher, EXECUTABLE_PERMISSIONS)
+
+    val windowsLauncher = binDirectory.resolve("$applicationName.bat")
+    Files.writeString(
+        windowsLauncher,
+        renderWindowsLauncher(
+            applicationName = applicationName,
+            mainClass = mainClass,
+            jarNames = files.map(DistributionFile::targetName),
+            optsEnvironmentVariable = effectiveOptsEnvironmentVariable,
+            defaultJvmArgs = defaultJvmArgs,
+        ),
+        StandardOpenOption.CREATE_NEW,
+        StandardOpenOption.WRITE,
+    )
+    setPosixPermissions(windowsLauncher, EXECUTABLE_PERMISSIONS)
 }
 
 internal fun planDistributionFiles(
@@ -214,7 +230,15 @@ internal fun writeReproducibleJar(
             .use { input ->
                 val entries = input.entries
                     .asSequence()
-                    .sortedBy(ZipArchiveEntry::getName)
+                    .sortedWith(
+                        compareBy<ZipArchiveEntry> { entry ->
+                            when (entry.name) {
+                                META_INF_DIRECTORY_ENTRY_NAME -> 0
+                                MANIFEST_ENTRY_NAME -> 1
+                                else -> 2
+                            }
+                        }.thenBy(ZipArchiveEntry::getName),
+                    )
                     .toList()
                 val duplicateNames = entries
                     .groupingBy(ZipArchiveEntry::getName)
@@ -250,16 +274,33 @@ internal fun writeReproducibleJar(
             }
 
         try {
-            Files.move(
-                temporaryJar,
-                target,
-                StandardCopyOption.ATOMIC_MOVE,
-            )
+            moveJarIntoPlace(temporaryJar, target)
         } catch (_: AtomicMoveNotSupportedException) {
-            Files.move(temporaryJar, target)
+            moveJarIntoPlace(temporaryJar, target, atomic = false)
         }
     } finally {
         Files.deleteIfExists(temporaryJar)
+    }
+}
+
+internal fun moveJarIntoPlace(
+    source: Path,
+    target: Path,
+    atomic: Boolean = true,
+) {
+    if (atomic) {
+        Files.move(
+            source,
+            target,
+            StandardCopyOption.ATOMIC_MOVE,
+            StandardCopyOption.REPLACE_EXISTING,
+        )
+    } else {
+        Files.move(
+            source,
+            target,
+            StandardCopyOption.REPLACE_EXISTING,
+        )
     }
 }
 
@@ -272,12 +313,17 @@ internal fun distributionJarName(fileName: String): String =
 
 internal fun defaultOptsEnvironmentVariable(applicationName: String): String {
     validateSafeApplicationName(applicationName)
-    return applicationName
+    val environmentVariable = applicationName
         .uppercase()
         .map { character ->
             if (character.isLetterOrDigit()) character else '_'
         }
         .joinToString(separator = "") + "_OPTS"
+    return if (environmentVariable.first().isDigit()) {
+        "_$environmentVariable"
+    } else {
+        environmentVariable
+    }
 }
 
 internal fun renderUnixLauncher(
@@ -360,7 +406,7 @@ internal fun renderUnixLauncher(
         appendLine("JAVA_OPTS_VALUE=\${JAVA_OPTS:-}")
         appendLine("APP_OPTS_VALUE=\${$optsEnvironmentVariable:-}")
         appendLine()
-        appendLine("set -- -classpath \"\$CLASSPATH\" $mainClass \"\$@\"")
+        appendLine("set -- -classpath \"\$CLASSPATH\" '$mainClass' \"\$@\"")
         appendLine()
         appendLine("command -v xargs >/dev/null 2>&1 || die \"ERROR: xargs is required to parse JVM options.\"")
         appendLine("eval \"set -- \$(")
@@ -372,6 +418,102 @@ internal fun renderUnixLauncher(
         appendLine()
         appendLine("exec \"\$JAVACMD\" \"\$@\"")
     }
+}
+
+internal fun renderWindowsLauncher(
+    applicationName: String,
+    mainClass: String,
+    jarNames: List<String>,
+    optsEnvironmentVariable: String,
+    defaultJvmArgs: List<String>,
+): String {
+    validateSafeApplicationName(applicationName)
+    validateMainClass(mainClass)
+    validateEnvironmentVariable(optsEnvironmentVariable)
+    require(jarNames.isNotEmpty()) {
+        "A distribution launcher requires at least one JAR."
+    }
+    jarNames.forEach(::validateJarName)
+    defaultJvmArgs.forEach { argument ->
+        validateJvmArgument(argument)
+        validateWindowsJvmArgument(argument)
+    }
+
+    val classpath = jarNames.joinToString(separator = ";") { jarName ->
+        "%APP_HOME%\\lib\\$jarName"
+    }
+    val defaultOptions = defaultJvmArgs.joinToString(separator = " ") { argument ->
+        "\"$argument\""
+    }
+
+    return listOf(
+        "@rem",
+        "@rem Copyright © 2015 the original Gradle authors.",
+        "@rem",
+        "@rem Licensed under the Apache License, Version 2.0 (the \"License\");",
+        "@rem you may not use this file except in compliance with the License.",
+        "@rem You may obtain a copy of the License at",
+        "@rem",
+        "@rem      https://www.apache.org/licenses/LICENSE-2.0",
+        "@rem",
+        "@rem Unless required by applicable law or agreed to in writing, software",
+        "@rem distributed under the License is distributed on an \"AS IS\" BASIS,",
+        "@rem WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.",
+        "@rem See the License for the specific language governing permissions and",
+        "@rem limitations under the License.",
+        "@rem",
+        "@rem SPDX-License-Identifier: Apache-2.0",
+        "@rem",
+        "@rem Adapted from Gradle's Windows start-script template:",
+        "@rem https://github.com/gradle/gradle/blob/3d91ce3b8caaf77ad09f381f43615b715b53f72c/platforms/jvm/plugins-application/src/main/resources/org/gradle/api/internal/plugins/windowsStartScript.txt",
+        "",
+        "@if \"%DEBUG%\"==\"\" @echo off",
+        "",
+        "setlocal DisableDelayedExpansion",
+        "set \"APP_HOME=%~dp0..\"",
+        "for %%i in (\"%APP_HOME%\") do set \"APP_HOME=%%~fi\"",
+        "",
+        "set DEFAULT_JVM_OPTS=$defaultOptions",
+        "",
+        "if defined JAVA_HOME goto findJavaFromJavaHome",
+        "",
+        "set \"JAVA_EXE=java.exe\"",
+        "\"%JAVA_EXE%\" -version >NUL 2>&1",
+        "if %ERRORLEVEL% equ 0 goto execute",
+        "",
+        "echo. 1>&2",
+        "echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH. 1>&2",
+        "echo. 1>&2",
+        "goto fail",
+        "",
+        ":findJavaFromJavaHome",
+        "set \"JAVA_HOME=%JAVA_HOME:\"=%\"",
+        "set \"JAVA_EXE=%JAVA_HOME%\\bin\\java.exe\"",
+        "",
+        "if exist \"%JAVA_EXE%\" goto execute",
+        "",
+        "echo. 1>&2",
+        "echo ERROR: JAVA_HOME does not contain bin\\java.exe: \"%JAVA_HOME%\" 1>&2",
+        "echo. 1>&2",
+        "goto fail",
+        "",
+        ":execute",
+        "set \"CLASSPATH=$classpath\"",
+        "",
+        "\"%JAVA_EXE%\" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %$optsEnvironmentVariable% " +
+            "-classpath \"%CLASSPATH%\" $mainClass %*",
+        "set EXIT_CODE=%ERRORLEVEL%",
+        "goto end",
+        "",
+        ":fail",
+        "set EXIT_CODE=1",
+        "",
+        ":end",
+        "endlocal & exit /b %EXIT_CODE%",
+    ).joinToString(
+        separator = "\r\n",
+        postfix = "\r\n",
+    )
 }
 
 internal fun createReproducibleTar(
@@ -425,7 +567,11 @@ internal fun createReproducibleTar(
                     }
                 }
                 val entry = TarArchiveEntry(entryName).apply {
-                    mode = if (isDirectory || relativeName == "bin/$applicationName") {
+                    mode = if (
+                        isDirectory ||
+                        relativeName == "bin/$applicationName" ||
+                        relativeName == "bin/$applicationName.bat"
+                    ) {
                         EXECUTABLE_MODE
                     } else {
                         FILE_MODE
@@ -563,6 +709,13 @@ private fun validateJvmArgument(argument: String) {
     }
 }
 
+private fun validateWindowsJvmArgument(argument: String) {
+    require(argument.none { character -> character in WINDOWS_JVM_ARGUMENT_METACHARACTERS }) {
+        "Windows launcher JVM arguments cannot contain cmd.exe metacharacters: " +
+            "%, &, ^, <, >, |, or \"."
+    }
+}
+
 private fun xargsEscape(value: String): String =
     buildString {
         value.forEach { character ->
@@ -585,10 +738,13 @@ private val SAFE_ENVIRONMENT_VARIABLE = Regex("[A-Za-z_][A-Za-z0-9_]*")
 private val SAFE_MAIN_CLASS = Regex("[A-Za-z_$][A-Za-z0-9_$]*(\\.[A-Za-z_$][A-Za-z0-9_$]*)*")
 private val SAFE_JAR_NAME = Regex("[A-Za-z0-9][A-Za-z0-9._+-]*\\.jar")
 
+private const val META_INF_DIRECTORY_ENTRY_NAME = "META-INF/"
+private const val MANIFEST_ENTRY_NAME = "META-INF/MANIFEST.MF"
 private const val EXECUTABLE_MODE = 0b111101101
 private const val FILE_MODE = 0b110100100
 private const val EXECUTABLE_PERMISSIONS = "rwxr-xr-x"
 private const val FILE_PERMISSIONS = "rw-r--r--"
 private const val FIXED_TIMESTAMP_MILLIS = 0L
 private const val XARGS_SAFE_CHARACTERS = "-+,./:=@_"
+private const val WINDOWS_JVM_ARGUMENT_METACHARACTERS = "%&^<>|\""
 private val FIXED_ZIP_TIMESTAMP: LocalDateTime = LocalDateTime.of(1980, 1, 1, 0, 0)
