@@ -238,7 +238,7 @@ The application uses SQLite with the following main tables:
 
 ```
 kotbusta/
-├── kotlin                       # Kotlin Toolchain 0.12.0 wrapper
+├── kotlin                       # Kotlin Toolchain 0.12.1 wrapper
 ├── project.yaml                 # Project modules and local plugins
 ├── module.yaml                  # Application module
 ├── libs.versions.toml           # Shared dependency catalog
