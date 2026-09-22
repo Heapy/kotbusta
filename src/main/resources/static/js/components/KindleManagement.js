@@ -6,6 +6,25 @@ const AMAZON_KINDLE_SETTINGS_URL = 'https://www.amazon.com/mycd';
 const AMAZON_KINDLE_HELP_URL =
   'https://digprjsurvey.amazon.com/csad/help/node/GX9XLEVV8G4DB28H';
 
+const UPLOAD_ACCEPT = '.epub,.pdf,.fb2';
+
+function megabytes(bytes) {
+  return (bytes / 1024 / 1024).toFixed(1);
+}
+
+function sourceLabel(source) {
+  return source === 'UPLOAD' ? 'uploaded file' : 'catalog';
+}
+
+// The API reports failures as a JSON body, which fetch hands back as raw text.
+function errorMessage(err) {
+  try {
+    return JSON.parse(err.body).message || err.message;
+  } catch (parseErr) {
+    return err.message;
+  }
+}
+
 function statusClass(status) {
   if (status === 'COMPLETED') return 'status-badge success';
   if (status === 'FAILED') return 'status-badge danger';
@@ -17,6 +36,14 @@ export function KindleManagement() {
   const [devices, setDevices] = useState([]);
   const [sendHistory, setSendHistory] = useState([]);
   const [senderEmail, setSenderEmail] = useState(null);
+  const [uploadEnabled, setUploadEnabled] = useState(false);
+  const [uploadMaxBytes, setUploadMaxBytes] = useState(0);
+  const [uploadDeviceId, setUploadDeviceId] = useState('');
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [uploadDone, setUploadDone] = useState(false);
+  const uploadFileInput = useRef(null);
   const [emailCopied, setEmailCopied] = useState(false);
   const [showAddDevice, setShowAddDevice] = useState(false);
   const [newDevice, setNewDevice] = useState({ email: '', name: '' });
@@ -34,9 +61,17 @@ export function KindleManagement() {
         api.get('/api/kindle/sends?limit=20'),
         api.get('/api/kindle/config')
       ]);
-      setDevices(devicesRes.data || []);
+      const loadedDevices = devicesRes.data || [];
+      setDevices(loadedDevices);
+      // A deleted device would stay selected: the select shows nothing while the
+      // stale id is still submitted.
+      setUploadDeviceId((selected) =>
+        loadedDevices.some((device) => String(device.id) === String(selected)) ? selected : ''
+      );
       setSendHistory(historyRes.data.items || []);
       setSenderEmail(configRes.data.senderEmail || null);
+      setUploadEnabled(configRes.data.uploadEnabled === true);
+      setUploadMaxBytes(configRes.data.uploadMaxBytes || 0);
       setEmailCopied(false);
     } catch (err) {
       console.error('Failed to load Kindle data:', err);
@@ -59,6 +94,39 @@ export function KindleManagement() {
       } catch (fallbackErr) {
         setEmailCopied(false);
       }
+    }
+  };
+
+  const sendUpload = async (event) => {
+    event.preventDefault();
+    setUploadError(null);
+    setUploadDone(false);
+
+    if (!uploadFile) {
+      setUploadError('Choose a file first.');
+      return;
+    }
+    if (uploadMaxBytes > 0 && uploadFile.size > uploadMaxBytes) {
+      setUploadError(
+        `File is ${megabytes(uploadFile.size)} MB, over the ${megabytes(uploadMaxBytes)} MB limit.`
+      );
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', uploadFile);
+
+    setUploading(true);
+    try {
+      await api.upload(`/api/kindle/uploads?deviceId=${uploadDeviceId}`, formData);
+      setUploadFile(null);
+      setUploadDone(true);
+      if (uploadFileInput.current) uploadFileInput.current.value = '';
+      await loadData();
+    } catch (err) {
+      setUploadError(errorMessage(err) || 'Upload failed.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -209,18 +277,61 @@ export function KindleManagement() {
       }, 'No devices yet.')
     ),
 
+    uploadEnabled && devices.length > 0 && h('section', { className: 'section' },
+      h('div', { className: 'section-header' },
+        h('h3', { className: 'section-title' }, 'Send a File')
+      ),
+      h('form', { className: 'form-panel', onSubmit: sendUpload },
+        h('div', { className: 'item-subtitle' },
+          `EPUB, PDF or FB2, up to ${megabytes(uploadMaxBytes)} MB. FB2 is converted to EPUB.`
+        ),
+        h('input', {
+          ref: uploadFileInput,
+          className: 'input',
+          type: 'file',
+          accept: UPLOAD_ACCEPT,
+          required: true,
+          onChange: (event) => {
+            setUploadFile(event.target.files && event.target.files[0]);
+            setUploadError(null);
+            setUploadDone(false);
+          }
+        }),
+        h('select', {
+          className: 'input',
+          value: uploadDeviceId,
+          required: true,
+          onChange: (event) => setUploadDeviceId(event.target.value)
+        },
+          h('option', { value: '' }, 'Choose a device'),
+          devices.map(device =>
+            h('option', { key: device.id, value: device.id }, `${device.name} (${device.email})`)
+          )
+        ),
+        h('div', { className: 'form-actions' },
+          h('button', {
+            className: 'button success',
+            type: 'submit',
+            disabled: uploading || !uploadFile || !uploadDeviceId
+          }, uploading ? 'Sending...' : 'Send to Kindle')
+        ),
+        uploadError && h('div', { className: 'error-text' }, uploadError),
+        uploadDone && h('div', { className: 'item-note' }, 'Queued. Check the history below.')
+      )
+    ),
+
     h('section', { className: 'section' },
       h('div', { className: 'section-header' },
         h('h3', { className: 'section-title' }, 'Send History')
       ),
       h('div', { className: 'list-stack' },
         sendHistory.map(item =>
-          h('div', { key: item.id, className: 'list-item history-row' },
+          h('div', { key: `${item.source}-${item.id}`, className: 'list-item history-row' },
             h('div', { className: 'history-topline' },
               h('div', null,
                 h('div', { className: 'item-title' }, item.bookTitle),
                 h('div', { className: 'item-subtitle' },
-                  `to ${item.deviceName} - ${item.format}`
+                  `to ${item.deviceName} - ${item.format} - ${sourceLabel(item.source)}`
                 ),
                 h('div', { className: 'item-note' },
                   new Date(item.createdAt).toLocaleString()

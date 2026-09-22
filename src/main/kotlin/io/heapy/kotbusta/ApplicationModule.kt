@@ -24,13 +24,18 @@ import io.heapy.kotbusta.service.EmbeddingService
 import io.heapy.kotbusta.service.SesEmailService
 import io.heapy.kotbusta.service.ImportJobService
 import io.heapy.kotbusta.service.KindleService
+import io.heapy.kotbusta.service.KindleUploadStorage
+import io.heapy.kotbusta.service.MAX_EMAILABLE_ATTACHMENT_BYTES
 import io.heapy.kotbusta.service.LuceneBookSearchService
 import io.heapy.kotbusta.service.PandocConversionService
 import io.heapy.kotbusta.service.TimeService
 import io.heapy.kotbusta.service.ZipBookFileService
 import io.heapy.kotbusta.worker.BookEnrichmentWorker
 import io.heapy.kotbusta.worker.FeaturedBooksWorker
+import io.heapy.kotbusta.worker.CatalogKindleQueue
 import io.heapy.kotbusta.worker.KindleSendWorker
+import io.heapy.kotbusta.worker.KindleUploadSweeper
+import io.heapy.kotbusta.worker.UploadKindleQueue
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -52,6 +57,10 @@ import kotlin.io.path.Path
 
 class ApplicationModule {
     private val workerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // `Application.module` runs initialize() before configureRouting(), so this is
+    // already settled when the upload route reads `kindleUploadEnabled`.
+    private var uploadDirectoryUsable = true
 
     val staticFilesConfig by bean {
         val staticFilesPath = env["KOTBUSTA_STATIC_FILES_PATH"]
@@ -267,6 +276,56 @@ class ApplicationModule {
         env["KOTBUSTA_KINDLE_WORKER_INTERVAL_MS"]?.toLongOrNull() ?: 30_000L
     }
 
+    val kindleUploadPath by bean {
+        env["KOTBUSTA_KINDLE_UPLOAD_PATH"]
+            ?.let(::Path)
+            ?: (dbPath.value.parent ?: Path(".")).resolve("kindle-uploads")
+    }
+
+    /**
+     * A larger upload could be stored but never emailed, so the cap cannot exceed
+     * [MAX_EMAILABLE_ATTACHMENT_BYTES]. An unusable value falls back to the default
+     * instead of failing startup: nothing else in the application needs uploads.
+     */
+    val kindleUploadMaxBytes by bean {
+        val configured = env["KOTBUSTA_KINDLE_UPLOAD_MAX_BYTES"]?.toLongOrNull()
+        when {
+            configured == null -> DEFAULT_KINDLE_UPLOAD_MAX_BYTES
+            configured in 1..MAX_EMAILABLE_ATTACHMENT_BYTES -> configured
+            else -> {
+                log.warn(
+                    "Ignoring KOTBUSTA_KINDLE_UPLOAD_MAX_BYTES=$configured: " +
+                        "it must be between 1 and $MAX_EMAILABLE_ATTACHMENT_BYTES",
+                )
+                DEFAULT_KINDLE_UPLOAD_MAX_BYTES
+            }
+        }
+    }
+
+    val kindleUploadStorage by bean {
+        KindleUploadStorage(
+            uploadPath = kindleUploadPath.value,
+            maxUploadBytes = kindleUploadMaxBytes.value,
+        )
+    }
+
+    /**
+     * Uploads are only accepted when the send worker actually drains them,
+     * otherwise stored files would pile up with nothing to deliver them.
+     */
+    val kindleUploadEnabled by bean {
+        !kindleSenderEmail.value.isNullOrBlank() &&
+            kindleWorkerIntervalMs.value > 0L &&
+            uploadDirectoryUsable
+    }
+
+    val kindleUploadSweeper by bean {
+        KindleUploadSweeper(
+            transactionProvider = transactionProvider.value,
+            storage = kindleUploadStorage.value,
+        )
+    }
+
     val enrichBatchSize by bean {
         env["KOTBUSTA_ENRICH_BATCH_SIZE"]?.toIntOrNull() ?: 32
     }
@@ -301,7 +360,15 @@ class ApplicationModule {
         KindleSendWorker(
             emailService = emailService.value,
             transactionProvider = transactionProvider.value,
-            bookFileService = bookFileService.value,
+            queues = [
+                CatalogKindleQueue(
+                    bookFileService = bookFileService.value,
+                ),
+                UploadKindleQueue(
+                    storage = kindleUploadStorage.value,
+                    conversionService = conversionService.value,
+                ),
+            ],
             batchSize = kindleWorkerBatchSize.value,
             maxRetries = kindleWorkerMaxRetries.value,
             meterRegistry = prometheusRegistry.value,
@@ -413,12 +480,30 @@ class ApplicationModule {
             senderEmail.isNullOrBlank() ->
                 log.info("Kindle send worker disabled because KOTBUSTA_SES_SENDER_EMAIL is not configured")
 
-            else ->
+            else -> {
+                startKindleUploadSweeper()
                 kindleSendWorker.value.start(
                     scope = workerScope,
                     intervalMillis = kindleWorkerIntervalMs.value,
                 )
+            }
         }
+    }
+
+    /**
+     * An unusable upload directory disables uploads only: sending books from the
+     * catalog, searching and downloading do not need it, so it must not stop the
+     * application from starting.
+     */
+    private fun startKindleUploadSweeper() {
+        try {
+            kindleUploadStorage.value.initialize()
+        } catch (e: Exception) {
+            log.error("Kindle uploads unavailable: cannot use ${kindleUploadPath.value}", e)
+            uploadDirectoryUsable = false
+            return
+        }
+        kindleUploadSweeper.value.start(scope = workerScope)
     }
 
     fun initializeBookEnrichmentWorker() {
@@ -458,6 +543,9 @@ class ApplicationModule {
         }
         if (kindleSendWorker.isInitialized) {
             kindleSendWorker.value.stop()
+        }
+        if (kindleUploadSweeper.isInitialized) {
+            kindleUploadSweeper.value.stop()
         }
         if (featuredBooksWorker.isInitialized) {
             featuredBooksWorker.value.stop()
@@ -519,5 +607,7 @@ class ApplicationModule {
         initializeShutdownHook()
     }
 
-    private companion object : Logger()
+    private companion object : Logger() {
+        private const val DEFAULT_KINDLE_UPLOAD_MAX_BYTES = 25L * 1024 * 1024
+    }
 }

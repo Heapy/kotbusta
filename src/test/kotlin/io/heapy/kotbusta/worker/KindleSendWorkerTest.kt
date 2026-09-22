@@ -4,6 +4,7 @@ import io.heapy.kotbusta.ApplicationModule
 import io.heapy.kotbusta.dao.createKindleDevice
 import io.heapy.kotbusta.dao.createQueueItem
 import io.heapy.kotbusta.dao.findQueueItemById
+import io.heapy.kotbusta.database.TransactionContext
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.io.File
 import java.nio.file.Files
 import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.time.Duration.Companion.hours
 
 @ExtendWith(DatabaseExtension::class)
@@ -110,6 +112,47 @@ class KindleSendWorkerTest {
         assertEquals(KindleSendStatus.PENDING.name, status(tx, queueId))
     }
 
+    @Test
+    fun `an unexpected error retries the item instead of failing it`(
+        applicationModule: ApplicationModule,
+    ) = runBlocking {
+        val tx = applicationModule.transactionProvider.value
+        val queue = ExplodingQueue()
+
+        KindleSendWorker(
+            emailService = FakeEmailService(EmailResult.Success("unused")),
+            transactionProvider = tx,
+            queues = [queue],
+            batchSize = 10,
+            maxRetries = 5,
+        ).processQueue()
+
+        assertEquals(1, queue.retries)
+        assertEquals(0, queue.terminals)
+    }
+
+    @Test
+    fun `an item that was sent is never re-queued when its status write fails`(
+        applicationModule: ApplicationModule,
+    ) = runBlocking {
+        val tx = applicationModule.transactionProvider.value
+        val queue = FlakyTerminalQueue()
+        val email = FakeEmailService(EmailResult.Success("msg-sent"))
+
+        KindleSendWorker(
+            emailService = email,
+            transactionProvider = tx,
+            queues = [queue],
+            batchSize = 10,
+            maxRetries = 5,
+        ).processQueue()
+
+        // A retry here would deliver the same book to the device twice.
+        assertEquals(1, email.calls)
+        assertEquals(0, queue.retries)
+        assertEquals(3, queue.terminalAttempts)
+    }
+
     // --- helpers ---
 
     private fun worker(
@@ -119,7 +162,7 @@ class KindleSendWorkerTest {
     ) = KindleSendWorker(
         emailService = email,
         transactionProvider = tx,
-        bookFileService = FakeBookFileService(),
+        queues = [CatalogKindleQueue(bookFileService = FakeBookFileService())],
         batchSize = 10,
         maxRetries = maxRetries,
     )
@@ -169,6 +212,98 @@ class KindleSendWorkerTest {
 
     private suspend fun status(tx: TransactionProvider, queueId: Int) = item(tx, queueId).status
 
+    /** Stands in for a queue whose status write fails after the mail is out. */
+    private class FlakyTerminalQueue : KindleQueue {
+        var retries = 0
+        var terminalAttempts = 0
+
+        override val name = "flaky"
+
+        context(_: TransactionContext)
+        override fun resetStuckItems(cutoff: Instant) = 0
+
+        context(_: TransactionContext)
+        override fun claimPending(batchSize: Int) =
+            listOf(ClaimedKindleItem(id = 9, attempts = 0))
+
+        context(_: TransactionContext)
+        override fun loadJob(id: Int): KindleJobLoad =
+            KindleJobLoad.Ready(
+                KindleSendJob(
+                    id = id,
+                    attempts = 0,
+                    title = "Flaky Book",
+                    recipientEmail = "flaky@kindle.com",
+                    materialize = {
+                        val dir = Files.createTempDirectory("flaky-send-").toFile()
+                        MaterializedBook(
+                            file = File(dir, "book.epub").apply { writeText("book") },
+                            fileName = "book.epub",
+                            format = "epub",
+                            tempDir = dir,
+                        )
+                    },
+                ),
+            )
+
+        context(_: TransactionContext)
+        override fun recordTerminal(
+            id: Int,
+            outcome: KindleSendOutcome,
+        ): (() -> Unit)? {
+            terminalAttempts++
+            error("database is busy")
+        }
+
+        context(_: TransactionContext)
+        override fun recordRetry(
+            id: Int,
+            attempt: Int,
+            nextRunAt: Instant,
+            error: String,
+        ) {
+            retries++
+        }
+    }
+
+    /** Stands in for a queue whose database read fails, not for a broken item. */
+    private class ExplodingQueue : KindleQueue {
+        var retries = 0
+        var terminals = 0
+
+        override val name = "exploding"
+
+        context(_: TransactionContext)
+        override fun resetStuckItems(cutoff: Instant) = 0
+
+        context(_: TransactionContext)
+        override fun claimPending(batchSize: Int) =
+            listOf(ClaimedKindleItem(id = 7, attempts = 0))
+
+        context(_: TransactionContext)
+        override fun loadJob(id: Int): KindleJobLoad =
+            error("database is busy")
+
+        context(_: TransactionContext)
+        override fun recordTerminal(
+            id: Int,
+            outcome: KindleSendOutcome,
+        ): (() -> Unit)? {
+            terminals++
+            return null
+        }
+
+        context(_: TransactionContext)
+        override fun recordRetry(
+            id: Int,
+            attempt: Int,
+            nextRunAt: Instant,
+            error: String,
+        ) {
+            retries++
+        }
+    }
+
     private class FakeEmailService(private val result: EmailResult) : EmailService {
         var calls = 0
         var lastAttachmentFileName: String? = null
@@ -178,7 +313,6 @@ class KindleSendWorkerTest {
             bookFile: File,
             bookTitle: String,
             attachmentFileName: String,
-            format: String,
         ): EmailResult {
             calls++
             lastAttachmentFileName = attachmentFileName

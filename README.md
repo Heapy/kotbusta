@@ -11,6 +11,7 @@ A modern web application for browsing, searching, and downloading books that usi
 - 🧠 **Semantic Search**: Optional local ONNX embeddings for KNN search and similar-book recommendations
 - 📥 **Format Conversion**: Download books as the original FB2 or convert to EPUB (via Pandoc)
 - 📤 **Send to Kindle**: Queue EPUB deliveries to registered Kindle devices
+- 📎 **Upload to Kindle**: Send your own EPUB, PDF or FB2 file to a Kindle device without adding it to the library
 - 🔐 **Google OAuth**: Secure authentication with Google accounts
 - 📈 **Operations**: Health and Prometheus metrics endpoints
 - 📱 **Responsive Design**: Works on desktop and mobile devices
@@ -68,6 +69,10 @@ A modern web application for browsing, searching, and downloading books that usi
    - `KOTBUSTA_DB_PATH` - Path to SQLite database file (required; e.g. `/data/db/kotbusta.db`)
    - `KOTBUSTA_LUCENE_INDEX_PATH` - Path to the Lucene search index (required; must be writable. In the prod compose it is set to `/data/db/lucene`)
    - `KOTBUSTA_BOOKS_DATA_PATH_LOCAL` - Local path to your Flibusta book archives
+
+   Optional, for uploading your own files to Kindle:
+   - `KOTBUSTA_KINDLE_UPLOAD_PATH` - Writable directory holding uploaded files until they are sent (defaults to a sibling of `KOTBUSTA_DB_PATH`)
+   - `KOTBUSTA_KINDLE_UPLOAD_MAX_BYTES` - Largest accepted upload (default 25 MiB; SES cannot email more)
 
 3. **Prepare your Flibusta data**
    ```bash
@@ -156,7 +161,10 @@ A modern web application for browsing, searching, and downloading books that usi
 - `GET /callback` - Google OAuth callback
 - `GET /logout` - Logout clearing session data
 - `GET /health` - Service health and search-index state
-- `GET /metrics` - Prometheus metrics, optionally protected by `KOTBUSTA_METRICS_TOKEN`
+- `GET /metrics` - Prometheus metrics, optionally protected by `KOTBUSTA_METRICS_TOKEN`.
+  `kotbusta_kindle_send_total` carries a `queue` label (`catalog` for library books,
+  `upload` for user files), so queries that expect one series per `outcome` must
+  aggregate over it.
 
 ### Authenticated Endpoints
 - `GET /api/me` - Get current user information
@@ -171,7 +179,9 @@ A modern web application for browsing, searching, and downloading books that usi
 - `PUT /api/kindle/devices/{id}` - Update a Kindle device
 - `DELETE /api/kindle/devices/{id}` - Delete a Kindle device
 - `POST /api/books/{id}/send-to-kindle` - Queue an EPUB delivery
-- `GET /api/kindle/sends` - List Kindle send history
+- `POST /api/kindle/uploads?deviceId={id}` - Upload your own EPUB, PDF or FB2 file (multipart part `file`) and queue it
+- `GET /api/kindle/sends` - List Kindle send history. Catalog sends and uploads share
+  the list but keep separate id sequences, so an item is identified by `source` plus `id`
 
 ### Admin Endpoints
 - `GET /api/admin/status` - Check admin rights status
@@ -233,6 +243,7 @@ The application uses SQLite with the following main tables:
 - `kindle_devices` - User Kindle addresses
 - `kindle_send_queue` - Pending and historical Kindle deliveries
 - `kindle_send_events` - Delivery event history
+- `kindle_upload_queue` - Uploaded files queued for Kindle delivery
 
 ### File Structure
 

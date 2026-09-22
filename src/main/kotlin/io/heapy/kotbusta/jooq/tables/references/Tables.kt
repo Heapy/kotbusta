@@ -15,6 +15,7 @@ import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
+import io.heapy.kotbusta.jooq.tables.KindleUploadQueue
 import io.heapy.kotbusta.jooq.tables.Series
 import io.heapy.kotbusta.jooq.tables.Users
 
@@ -69,6 +70,11 @@ val KINDLE_SEND_EVENTS: KindleSendEvents = KindleSendEvents.KINDLE_SEND_EVENTS
  * The table <code>KINDLE_SEND_QUEUE</code>.
  */
 val KINDLE_SEND_QUEUE: KindleSendQueue = KindleSendQueue.KINDLE_SEND_QUEUE
+
+/**
+ * The table <code>KINDLE_UPLOAD_QUEUE</code>.
+ */
+val KINDLE_UPLOAD_QUEUE: KindleUploadQueue = KindleUploadQueue.KINDLE_UPLOAD_QUEUE
 
 /**
  * The table <code>SERIES</code>.

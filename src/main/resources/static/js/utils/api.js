@@ -30,6 +30,13 @@ export const api = {
       body: JSON.stringify(data)
     }));
   },
+  async upload(url, formData) {
+    // No Content-Type header: the browser has to set the multipart boundary.
+    return parseResponse(await fetch(url, {
+      method: 'POST',
+      body: formData
+    }));
+  },
   async put(url, data) {
     return parseResponse(await fetch(url, {
       method: 'PUT',

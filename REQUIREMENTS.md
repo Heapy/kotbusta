@@ -49,6 +49,7 @@
        - Native FB2 format
        - EPUB converted via Pandoc
    - Send to Kindle - Queue EPUB delivery to a selected Kindle device
+   - Upload to Kindle - Queue a user-provided EPUB, PDF or FB2 file for delivery; FB2 is converted to EPUB, the stored file is deleted once the send reaches a terminal status, and uploads share the daily send quota with catalog sends
 4. Enrichment
    - Extract annotation text from FB2 files
    - Store annotations and embeddings in `BOOK_ENRICHMENT`
@@ -62,6 +63,7 @@
 6. Kindle Setup
    - Add/Update Kindle devices - Manage your Kindle devices (email + name)
    - Instructions to add kotbusta@heapyhop.com to allowed Kindle Emails
+   - Upload a file from the Kindle page and send it to a chosen device
 7. Administrative Functions
    - Import books - Bulk import from INPX archives and Cover Extract
    - View import jobs - Monitor background import tasks, see history of imports and stats

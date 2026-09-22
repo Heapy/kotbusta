@@ -14,6 +14,7 @@ import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
+import io.heapy.kotbusta.jooq.tables.KindleUploadQueue
 import io.heapy.kotbusta.jooq.tables.Series
 import io.heapy.kotbusta.jooq.tables.Users
 
@@ -89,6 +90,11 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
     val KINDLE_SEND_QUEUE: KindleSendQueue get() = KindleSendQueue.KINDLE_SEND_QUEUE
 
     /**
+     * The table <code>KINDLE_UPLOAD_QUEUE</code>.
+     */
+    val KINDLE_UPLOAD_QUEUE: KindleUploadQueue get() = KindleUploadQueue.KINDLE_UPLOAD_QUEUE
+
+    /**
      * The table <code>SERIES</code>.
      */
     val SERIES: Series get() = Series.SERIES
@@ -111,6 +117,7 @@ open class DefaultSchema : SchemaImpl(DSL.name(""), DefaultCatalog.DEFAULT_CATAL
         KindleDevices.KINDLE_DEVICES,
         KindleSendEvents.KINDLE_SEND_EVENTS,
         KindleSendQueue.KINDLE_SEND_QUEUE,
+        KindleUploadQueue.KINDLE_UPLOAD_QUEUE,
         Series.SERIES,
         Users.USERS
     )

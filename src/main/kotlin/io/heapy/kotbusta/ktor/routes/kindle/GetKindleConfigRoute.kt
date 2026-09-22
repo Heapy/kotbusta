@@ -11,6 +11,8 @@ context(applicationModule: ApplicationModule)
 fun Route.getKindleConfigRoute() {
     val config = KindleConfigResponse(
         senderEmail = applicationModule.kindleSenderEmail.value,
+        uploadEnabled = applicationModule.kindleUploadEnabled.value,
+        uploadMaxBytes = applicationModule.kindleUploadMaxBytes.value,
     )
 
     get("/kindle/config") {

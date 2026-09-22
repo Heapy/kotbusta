@@ -14,7 +14,6 @@ import io.heapy.kotbusta.model.KindleFormat
 import io.heapy.kotbusta.model.KindleSendStatus
 import io.heapy.kotbusta.model.KindleSendStatus.PENDING
 import io.heapy.kotbusta.model.KindleSendStatus.PROCESSING
-import io.heapy.kotbusta.model.SendHistoryResponse
 import kotlin.time.Clock
 import kotlin.time.Instant
 
@@ -158,42 +157,6 @@ fun findQueueItemById(id: Int): KindleSendQueueRecord? = useTx { dslContext ->
         .selectFrom(KINDLE_SEND_QUEUE)
         .where(KINDLE_SEND_QUEUE.ID.eq(id))
         .fetchOne()
-}
-
-context(_: TransactionContext)
-fun findQueueItemsByUserId(
-    userId: Int,
-    limit: Int,
-    offset: Int,
-): List<SendHistoryResponse> = useTx { dslContext ->
-    dslContext
-        .select(
-            KINDLE_SEND_QUEUE.ID,
-            KINDLE_DEVICES.NAME,
-            KINDLE_SEND_QUEUE.BOOK_TITLE,
-            KINDLE_SEND_QUEUE.FORMAT,
-            KINDLE_SEND_QUEUE.STATUS,
-            KINDLE_SEND_QUEUE.CREATED_AT,
-            KINDLE_SEND_QUEUE.LAST_ERROR,
-        )
-        .from(KINDLE_SEND_QUEUE)
-        .join(KINDLE_DEVICES)
-        .on(KINDLE_SEND_QUEUE.DEVICE_ID.eq(KINDLE_DEVICES.ID))
-        .where(KINDLE_SEND_QUEUE.USER_ID.eq(userId))
-        .orderBy(KINDLE_SEND_QUEUE.CREATED_AT.desc())
-        .limit(limit)
-        .offset(offset)
-        .fetch().map { record ->
-            SendHistoryResponse(
-                id = record.get(KINDLE_SEND_QUEUE.ID)!!,
-                deviceName = record.get(KINDLE_DEVICES.NAME)!!,
-                bookTitle = record.get(KINDLE_SEND_QUEUE.BOOK_TITLE)!!,
-                format = record.get(KINDLE_SEND_QUEUE.FORMAT)!! mapUsing KindleFormatMapper,
-                status = record.get(KINDLE_SEND_QUEUE.STATUS)!! mapUsing KindleSendStatusMapper,
-                createdAt = record.get(KINDLE_SEND_QUEUE.CREATED_AT)!!,
-                lastError = record.get(KINDLE_SEND_QUEUE.LAST_ERROR),
-            )
-        }
 }
 
 context(_: TransactionContext)

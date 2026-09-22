@@ -177,8 +177,27 @@ enum class UserStatus {
 
 @Serializable
 enum class KindleFormat {
-    // Only EPUB: modern "Send to Kindle" accepts EPUB directly.
+    // Catalog books are always converted to EPUB. PDF exists only for uploaded
+    // files, which Amazon accepts as-is; the catalog queue's CHECK constraint
+    // still allows EPUB alone.
     EPUB,
+    PDF,
+}
+
+@Serializable
+enum class KindleUploadSourceFormat(
+    val extension: String,
+    val sendFormat: KindleFormat,
+) {
+    EPUB("epub", KindleFormat.EPUB),
+    PDF("pdf", KindleFormat.PDF),
+    FB2("fb2", KindleFormat.EPUB),
+}
+
+@Serializable
+enum class KindleSendSource {
+    CATALOG,
+    UPLOAD,
 }
 
 @Serializable
@@ -213,6 +232,8 @@ data class UpdateDeviceRequest(
 @Serializable
 data class KindleConfigResponse(
     val senderEmail: String?,
+    val uploadEnabled: Boolean,
+    val uploadMaxBytes: Long,
 )
 
 @Serializable
@@ -232,6 +253,7 @@ data class DeviceResponse(
 @Serializable
 data class SendHistoryResponse(
     val id: Int,
+    val source: KindleSendSource,
     val deviceName: String,
     val bookTitle: String,
     val format: KindleFormat,

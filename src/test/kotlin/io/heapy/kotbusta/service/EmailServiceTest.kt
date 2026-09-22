@@ -3,6 +3,7 @@ package io.heapy.kotbusta.service
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -28,6 +29,31 @@ class EmailServiceTest {
                 "line exceeds RFC 5322 998-octet limit (${line.length} chars): ${line.take(80)}...",
             )
         }
+    }
+
+    @Test
+    fun `only a pdf is sent without the zip wrapper`() {
+        assertFalse(zipForKindle("book.pdf"))
+        assertFalse(zipForKindle("BOOK.PDF"))
+        assertTrue(zipForKindle("book.epub"))
+        assertTrue(zipForKindle("book.pdf.epub"))
+    }
+
+    @Test
+    fun `a file that cannot fit in a message is refused before it is read`() {
+        // 35 MiB fits in the 40 MiB message but not once base64 grows it.
+        assertNotNull(
+            oversizedFileError(
+                fileBytes = 35L * 1024 * 1024,
+                maxAttachmentBytes = MAX_EMAILABLE_ATTACHMENT_BYTES,
+            ),
+        )
+        assertNull(
+            oversizedFileError(
+                fileBytes = 10L * 1024 * 1024,
+                maxAttachmentBytes = MAX_EMAILABLE_ATTACHMENT_BYTES,
+            ),
+        )
     }
 
     @Test
@@ -235,21 +261,21 @@ class EmailServiceTest {
     @Test
     fun `message at or below the limit is not flagged as oversized`() {
         val limit = 4L * 1024 * 1024
-        assertNull(oversizedBookError(compressedBytes = 1, rawMessageBytes = (limit - 1).toInt(), maxRawMessageBytes = limit))
-        assertNull(oversizedBookError(compressedBytes = 1, rawMessageBytes = limit.toInt(), maxRawMessageBytes = limit))
+        assertNull(oversizedBookError(attachmentBytes = 1, rawMessageBytes = (limit - 1).toInt(), maxRawMessageBytes = limit))
+        assertNull(oversizedBookError(attachmentBytes = 1, rawMessageBytes = limit.toInt(), maxRawMessageBytes = limit))
     }
 
     @Test
     fun `message over the limit yields an actionable error in book-size terms`() {
         val limit = 40L * 1024 * 1024
         val error = oversizedBookError(
-            compressedBytes = 35 * 1024 * 1024,
+            attachmentBytes = 35 * 1024 * 1024,
             rawMessageBytes = 48 * 1024 * 1024,
             maxRawMessageBytes = limit,
         )
         // 40 MiB / 1.37 ~= 29.2 MiB is the largest book that fits the message ceiling.
         assertEquals(
-            "Book is too large to send to Kindle by email: it is 35.0 MB compressed, " +
+            "Book is too large to send to Kindle by email: it is 35.0 MB as sent, " +
                 "over the ~29.2 MB limit for email delivery.",
             error,
         )

@@ -1,43 +1,38 @@
 package io.heapy.kotbusta.worker
 
 import io.heapy.komok.tech.logging.Logger
-import io.heapy.kotbusta.dao.createKindleSendEvent
-import io.heapy.kotbusta.dao.findKindleDeviceByIdAndUserId
-import io.heapy.kotbusta.dao.findPendingQueueItems
-import io.heapy.kotbusta.dao.findQueueItemById
-import io.heapy.kotbusta.dao.getBookById
-import io.heapy.kotbusta.dao.incrementQueueItemAttempts
-import io.heapy.kotbusta.dao.markQueueItemAsProcessing
-import io.heapy.kotbusta.dao.resetStuckProcessingItems
-import io.heapy.kotbusta.dao.updateQueueItemStatus
 import io.heapy.kotbusta.database.TransactionProvider
 import io.heapy.kotbusta.database.TransactionType.READ_ONLY
 import io.heapy.kotbusta.database.TransactionType.READ_WRITE
-import io.heapy.kotbusta.jooq.tables.records.KindleDevicesRecord
-import io.heapy.kotbusta.jooq.tables.records.KindleSendQueueRecord
-import io.heapy.kotbusta.model.Book
 import io.heapy.kotbusta.model.KindleSendStatus
-import io.heapy.kotbusta.service.BookFileService
+import io.heapy.kotbusta.model.KindleSendStatus.COMPLETED
+import io.heapy.kotbusta.model.KindleSendStatus.FAILED
 import io.heapy.kotbusta.service.EmailResult
 import io.heapy.kotbusta.service.EmailService
+import io.heapy.kotbusta.worker.KindleJobLoad.Broken
+import io.heapy.kotbusta.worker.KindleJobLoad.Deferred
+import io.heapy.kotbusta.worker.KindleJobLoad.Ready
+import io.heapy.kotbusta.worker.KindleJobLoad.Vanished
+import io.heapy.kotbusta.worker.KindleSendOutcome.Failed
+import io.heapy.kotbusta.worker.KindleSendOutcome.Sent
 import io.micrometer.core.instrument.MeterRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Instant
 
 /**
- * Drains the Kindle send queue. Each tick claims a batch (a short RW transaction
- * that flips items PENDING -> PROCESSING), then for each claimed item does the
- * slow work — materialize the book file and call SES — **outside** any
+ * Drains every [KindleQueue]. Each tick claims a batch per queue (a short RW
+ * transaction that flips items PENDING -> PROCESSING), then for each claimed item
+ * does the slow work — materialize the attachment and call SES — **outside** any
  * transaction, and finally records the outcome in another short RW transaction.
  *
  * This keeps the single writer connection free during network I/O and makes each
@@ -48,7 +43,7 @@ import kotlin.time.Instant
 class KindleSendWorker(
     private val emailService: EmailService,
     private val transactionProvider: TransactionProvider,
-    private val bookFileService: BookFileService,
+    private val queues: List<KindleQueue>,
     private val batchSize: Int,
     private val maxRetries: Int,
     private val stuckProcessingTimeout: Duration = 15.minutes,
@@ -81,11 +76,13 @@ class KindleSendWorker(
 
     suspend fun recoverStuckItems() {
         val cutoff = Clock.System.now() - stuckProcessingTimeout
-        val reset = transactionProvider.transaction(READ_WRITE) {
-            resetStuckProcessingItems(cutoff)
-        }
-        if (reset > 0) {
-            log.warn("Recovered $reset Kindle queue item(s) stuck in PROCESSING back to PENDING")
+        queues.forEach { queue ->
+            val reset = transactionProvider.transaction(READ_WRITE) {
+                queue.resetStuckItems(cutoff)
+            }
+            if (reset > 0) {
+                log.warn("Recovered $reset ${queue.name} queue item(s) stuck in PROCESSING back to PENDING")
+            }
         }
     }
 
@@ -94,100 +91,113 @@ class KindleSendWorker(
         // enough to strand an item between claim and outcome.
         recoverStuckItems()
 
+        queues.forEach { queue -> drain(queue) }
+    }
+
+    private suspend fun drain(queue: KindleQueue) {
         // 1) Claim a batch atomically. No suspending work happens in this tx.
-        val claimedIds = transactionProvider.transaction(READ_WRITE) {
-            findPendingQueueItems(batchSize).mapNotNull { item ->
-                val id = item.id!!
-                if (markQueueItemAsProcessing(id)) {
-                    val _ = createKindleSendEvent(id, KindleSendStatus.PROCESSING.name)
-                    id
-                } else {
-                    null
-                }
-            }
+        val claimed = transactionProvider.transaction(READ_WRITE) {
+            queue.claimPending(batchSize)
         }
 
-        if (claimedIds.isEmpty()) {
-            log.debug("No pending items in Kindle send queue")
+        if (claimed.isEmpty()) {
+            log.debug("No pending items in ${queue.name} Kindle queue")
             return
         }
-        log.info("Processing ${claimedIds.size} claimed Kindle send item(s)")
+        log.info("Processing ${claimed.size} claimed ${queue.name} Kindle item(s)")
 
         // 2) Process each claimed item outside of any DB transaction.
-        for (queueId in claimedIds) {
+        for (item in claimed) {
             try {
-                processClaimedItem(queueId)
+                processClaimedItem(queue, item.id)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                log.error("Failed to process queue item $queueId", e)
-                recordOutcome(
-                    queueId,
-                    KindleSendStatus.FAILED,
-                    "Unexpected error: ${e.message}",
-                    Json.encodeToString(FailedEventDetails(reason = "Unexpected error", error = e.message)),
-                )
+                // An error here says nothing about the item itself — a busy
+                // database looks the same as a bug — and failing an item can
+                // delete a user's uploaded file, so this is a retry.
+                log.error("Failed to process ${queue.name} queue item ${item.id}", e)
+                try {
+                    handleRetryableFailure(
+                        queue,
+                        item.id,
+                        item.attempts,
+                        "Unexpected error: ${e.message}",
+                    )
+                } catch (secondary: Exception) {
+                    // Recording the retry needs the database too, and the error
+                    // above is often the database itself. Leaving the item in
+                    // PROCESSING is safe — recoverStuckItems returns it to
+                    // PENDING — and the rest of the batch still gets its turn.
+                    log.error("Could not record a retry for ${queue.name} queue item ${item.id}", secondary)
+                }
             }
         }
     }
 
-    private suspend fun processClaimedItem(queueId: Int) {
-        // Load everything we need in one short read transaction.
-        val work = transactionProvider.transaction(READ_ONLY) {
-            val item = findQueueItemById(queueId) ?: return@transaction null
-            val device = findKindleDeviceByIdAndUserId(item.deviceId, item.userId)
-            val book = getBookById(item.bookId)
-            ClaimedWork(item, device, book)
+    private suspend fun processClaimedItem(
+        queue: KindleQueue,
+        queueId: Int,
+    ) {
+        val load = transactionProvider.transaction(READ_ONLY) {
+            queue.loadJob(queueId)
         }
 
-        if (work == null) {
-            log.warn("Queue item $queueId not found after claiming")
-            return
+        when (load) {
+            is Vanished ->
+                log.warn("${queue.name} queue item $queueId not found after claiming")
+
+            is Broken -> {
+                log.warn("${queue.name} queue item $queueId cannot be sent: ${load.failure.reason}")
+                recordTerminal(queue, queueId, load.failure)
+            }
+
+            is Deferred ->
+                handleRetryableFailure(queue, queueId, load.attempts, load.error)
+
+            is Ready -> send(queue, load.job)
         }
+    }
 
-        val (item, device, book) = work
-
-        if (device == null) {
-            log.warn("Device ${item.deviceId} not found for queue item $queueId")
-            recordOutcome(
-                queueId,
-                KindleSendStatus.FAILED,
-                "Device not found",
-                Json.encodeToString(FailedEventDetails(reason = "Device not found")),
-            )
-            return
-        }
-
-        if (book == null) {
-            log.warn("Book ${item.bookId} not available for queue item $queueId")
-            recordOutcome(
-                queueId,
-                KindleSendStatus.FAILED,
-                "Book not available",
-                Json.encodeToString(FailedEventDetails(reason = "Book not found or no longer available")),
-            )
-            return
-        }
-
-        // Materialize the book file and send it via SES — both outside any tx.
+    private suspend fun send(
+        queue: KindleQueue,
+        job: KindleSendJob,
+    ) {
         val materialized = try {
-            bookFileService.materialize(book, item.format)
+            job.materialize()
+        } catch (e: CancellationException) {
+            // Shutdown. Leaving the item in PROCESSING lets recoverStuckItems
+            // return it to PENDING; failing it here would delete an upload.
+            throw e
+        } catch (e: TransientMaterializeException) {
+            log.warn("Could not prepare ${queue.name} queue item ${job.id} yet", e)
+            handleRetryableFailure(
+                queue,
+                job.id,
+                job.attempts,
+                e.message ?: "Failed to prepare book file",
+            )
+            return
         } catch (e: Exception) {
-            log.error("Failed to prepare book file for queue item $queueId", e)
-            recordOutcome(
-                queueId,
-                KindleSendStatus.FAILED,
-                "Failed to prepare book file: ${e.message}",
-                Json.encodeToString(FailedEventDetails(reason = "Book file not available", error = e.message)),
+            log.error("Failed to prepare file for ${queue.name} queue item ${job.id}", e)
+            recordTerminal(
+                queue,
+                job.id,
+                Failed(
+                    statusError = "Failed to prepare book file: ${e.message}",
+                    reason = "Book file not available",
+                    error = e.message,
+                ),
             )
             return
         }
 
         val result = try {
             emailService.sendBookToKindle(
-                recipientEmail = device.email,
+                recipientEmail = job.recipientEmail,
                 bookFile = materialized.file,
-                bookTitle = book.title,
+                bookTitle = job.title,
                 attachmentFileName = materialized.fileName,
-                format = materialized.format,
             )
         } finally {
             materialized.cleanup()
@@ -195,81 +205,121 @@ class KindleSendWorker(
 
         when (result) {
             is EmailResult.Success -> {
-                recordOutcome(
-                    queueId,
-                    KindleSendStatus.COMPLETED,
-                    null,
-                    Json.encodeToString(SentEventDetails(messageId = result.messageId)),
-                )
-                log.info("Successfully sent book ${book.id} to device ${device.id}")
+                recordSent(queue, job, result.messageId)
+                log.info("Successfully sent ${queue.name} queue item ${job.id}")
             }
 
             is EmailResult.RetryableFailure ->
-                handleRetryableFailure(queueId, item.attempts, result.error)
+                handleRetryableFailure(queue, job.id, job.attempts, result.error)
 
             is EmailResult.PermanentFailure -> {
-                recordOutcome(
-                    queueId,
-                    KindleSendStatus.FAILED,
-                    result.error,
-                    Json.encodeToString(FailedEventDetails(reason = "Permanent failure", error = result.error)),
+                recordTerminal(
+                    queue,
+                    job.id,
+                    Failed(
+                        statusError = result.error,
+                        reason = "Permanent failure",
+                        error = result.error,
+                    ),
                 )
-                log.error("Permanent failure for queue item $queueId: ${result.error}")
+                log.error("Permanent failure for ${queue.name} queue item ${job.id}: ${result.error}")
+            }
+        }
+    }
+
+    /**
+     * Writes the outcome of a send that already left for SES. The failure of that
+     * write must not reach the retry path, because re-queuing the item would
+     * deliver the same book again, so it is retried here instead.
+     *
+     * If every attempt fails the item stays in PROCESSING and [recoverStuckItems]
+     * returns it to PENDING after [stuckProcessingTimeout], which does send the
+     * book a second time. That window is the price of SES having no de-duplication
+     * and the send status living in the database that just failed.
+     */
+    private suspend fun recordSent(
+        queue: KindleQueue,
+        job: KindleSendJob,
+        messageId: String,
+    ) {
+        repeat(TERMINAL_WRITE_ATTEMPTS) { attempt ->
+            try {
+                recordTerminal(queue, job.id, Sent(messageId = messageId))
+                return
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.error(
+                    "Sent ${queue.name} queue item ${job.id} (messageId $messageId) " +
+                        "but could not record it, attempt ${attempt + 1}",
+                    e,
+                )
+                if (attempt < TERMINAL_WRITE_ATTEMPTS - 1) {
+                    delay(TERMINAL_WRITE_RETRY_DELAY_MS)
+                }
             }
         }
     }
 
     private suspend fun handleRetryableFailure(
+        queue: KindleQueue,
         queueId: Int,
         currentAttempts: Int,
         error: String,
     ) {
         val attempts = currentAttempts + 1
-        transactionProvider.transaction(READ_WRITE) {
-            if (attempts < maxRetries) {
-                val nextRunAt = calculateNextRunTime(attempts)
-                val _ = incrementQueueItemAttempts(queueId, nextRunAt)
-                val _ = updateQueueItemStatus(queueId, KindleSendStatus.PENDING, error)
-                val _ = createKindleSendEvent(
-                    queueId,
-                    KindleSendStatus.PENDING.name,
-                    Json.encodeToString(
-                        RetryEventDetails(
-                            attempt = attempts,
-                            nextRunAt = nextRunAt.toString(),
-                            error = error,
-                        ),
-                    ),
-                )
-            } else {
-                val _ = updateQueueItemStatus(queueId, KindleSendStatus.FAILED, "Max retries exceeded: $error")
-                val _ = createKindleSendEvent(
-                    queueId,
-                    KindleSendStatus.FAILED.name,
-                    Json.encodeToString(FailedEventDetails(reason = "Max retries exceeded", error = error)),
-                )
-            }
-        }
         if (attempts < maxRetries) {
-            log.warn("Retryable failure for queue item $queueId, attempt $attempts: $error")
+            val nextRunAt = calculateNextRunTime(attempts)
+            transactionProvider.transaction(READ_WRITE) {
+                queue.recordRetry(queueId, attempts, nextRunAt, error)
+            }
+            log.warn("Retryable failure for ${queue.name} queue item $queueId, attempt $attempts: $error")
         } else {
-            log.error("Max retries exceeded for queue item $queueId: $error")
+            recordTerminal(
+                queue,
+                queueId,
+                Failed(
+                    statusError = "Max retries exceeded: $error",
+                    reason = "Max retries exceeded",
+                    error = error,
+                ),
+            )
+            log.error("Max retries exceeded for ${queue.name} queue item $queueId: $error")
         }
     }
 
-    private suspend fun recordOutcome(
+    private suspend fun recordTerminal(
+        queue: KindleQueue,
         queueId: Int,
+        outcome: KindleSendOutcome,
+    ) {
+        val status = when (outcome) {
+            is Sent -> COMPLETED
+            is Failed -> FAILED
+        }
+
+        // Counted only once the status is committed: a failed write is retried by
+        // the caller, which would otherwise count the same item twice.
+        val afterCommit = transactionProvider.transaction(READ_WRITE) {
+            queue.recordTerminal(queueId, outcome)
+        }
+        countOutcome(queue, status)
+        afterCommit?.invoke()
+    }
+
+    private fun countOutcome(
+        queue: KindleQueue,
         status: KindleSendStatus,
-        error: String?,
-        detailsJson: String?,
     ) {
         meterRegistry
-            ?.counter("kotbusta_kindle_send_total", "outcome", status.name.lowercase())
+            ?.counter(
+                "kotbusta_kindle_send_total",
+                "outcome",
+                status.name.lowercase(),
+                "queue",
+                queue.name,
+            )
             ?.increment()
-        transactionProvider.transaction(READ_WRITE) {
-            val _ = updateQueueItemStatus(queueId, status, error)
-            val _ = createKindleSendEvent(queueId, status.name, detailsJson)
-        }
     }
 
     private fun calculateNextRunTime(attempts: Int): Instant {
@@ -280,11 +330,10 @@ class KindleSendWorker(
         return Clock.System.now() + delayMinutes.minutes
     }
 
-    private data class ClaimedWork(
-        val item: KindleSendQueueRecord,
-        val device: KindleDevicesRecord?,
-        val book: Book?,
-    )
-
-    private companion object : Logger()
+    private companion object : Logger() {
+        // The write only has to outlast a busy writer lock, which the JDBC
+        // busy_timeout already caps at 5 seconds.
+        private const val TERMINAL_WRITE_ATTEMPTS = 3
+        private const val TERMINAL_WRITE_RETRY_DELAY_MS = 2_000L
+    }
 }

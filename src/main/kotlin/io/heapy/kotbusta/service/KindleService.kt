@@ -3,14 +3,17 @@ package io.heapy.kotbusta.service
 import io.heapy.komok.tech.logging.Logger
 import io.heapy.kotbusta.dao.countQueueItemsByUserId
 import io.heapy.kotbusta.dao.countTodayQueueItemsByUserId
+import io.heapy.kotbusta.dao.countTodayUploadItemsByUserId
+import io.heapy.kotbusta.dao.countUploadItemsByUserId
 import io.heapy.kotbusta.dao.createKindleDevice
 import io.heapy.kotbusta.dao.createKindleSendEvent
 import io.heapy.kotbusta.dao.createQueueItem
+import io.heapy.kotbusta.dao.createUploadItem
 import io.heapy.kotbusta.dao.deleteKindleDevice
 import io.heapy.kotbusta.dao.findKindleDeviceByIdAndUserId
 import io.heapy.kotbusta.dao.findKindleDeviceByUserIdAndEmail
 import io.heapy.kotbusta.dao.findKindleDevicesByUserId
-import io.heapy.kotbusta.dao.findQueueItemsByUserId
+import io.heapy.kotbusta.dao.findSendHistoryByUserId
 import io.heapy.kotbusta.dao.getBookById
 import io.heapy.kotbusta.dao.updateKindleDevice
 import io.heapy.kotbusta.database.TransactionContext
@@ -19,6 +22,7 @@ import io.heapy.kotbusta.model.CreateDeviceRequest
 import io.heapy.kotbusta.model.DeviceResponse
 import io.heapy.kotbusta.model.EnqueueResponse
 import io.heapy.kotbusta.model.KindleFormat
+import io.heapy.kotbusta.model.KindleUploadSourceFormat
 import io.heapy.kotbusta.model.SendHistoryResult
 import io.heapy.kotbusta.model.SendToKindleRequest
 import io.heapy.kotbusta.model.UpdateDeviceRequest
@@ -139,6 +143,13 @@ class KindleService(
         bookId: Int,
         request: SendToKindleRequest,
     ): EnqueueResponse {
+        // Catalog books are stored as FB2 and converted on the fly; the catalog
+        // queue's CHECK constraint accepts EPUB alone, so reject anything else
+        // before it reaches the insert.
+        if (request.format != KindleFormat.EPUB) {
+            throw IllegalArgumentException("Books from the catalog can only be sent as EPUB")
+        }
+
         // Verify device ownership
         val device = findKindleDeviceByIdAndUserId(
             request.deviceId,
@@ -150,11 +161,7 @@ class KindleService(
         val book = getBookById(bookId)
             ?: throw NoSuchElementException("Book not found")
 
-        val startOfDay = startOfToday()
-        val todayCount = countTodayQueueItemsByUserId(userSession.userId, startOfDay)
-        if (todayCount >= dailyQuotaLimit) {
-            throw QuotaExceededException("Daily send limit of $dailyQuotaLimit reached")
-        }
+        requireQuota()
 
         // Create queue entry
         val queueItem = createQueueItem(
@@ -185,25 +192,73 @@ class KindleService(
     }
 
     context(_: TransactionContext, userSession: UserSession)
+    fun enqueueUpload(
+        deviceId: Int,
+        fileName: String,
+        storedPath: String,
+        sizeBytes: Int,
+        sourceFormat: KindleUploadSourceFormat,
+    ): EnqueueResponse {
+        val _ = findKindleDeviceByIdAndUserId(deviceId, userSession.userId)
+            ?: throw NoSuchElementException("Device not found or does not belong to user")
+
+        requireQuota()
+
+        val item = createUploadItem(
+            userId = userSession.userId,
+            deviceId = deviceId,
+            fileName = fileName,
+            storedPath = storedPath,
+            sizeBytes = sizeBytes,
+            sourceFormat = sourceFormat,
+        )
+
+        log.info("Enqueued upload '$fileName' to be sent to device $deviceId for user ${userSession.userId}")
+
+        return EnqueueResponse(queueId = item.id!!)
+    }
+
+    /**
+     * Rejects an upload before its bytes are read, so a user over quota or naming
+     * an unknown device never gets a file written to disk.
+     */
+    context(_: TransactionContext, userSession: UserSession)
+    fun checkUploadAllowed(deviceId: Int) {
+        val _ = findKindleDeviceByIdAndUserId(deviceId, userSession.userId)
+            ?: throw NoSuchElementException("Device not found or does not belong to user")
+        requireQuota()
+    }
+
+    context(_: TransactionContext, userSession: UserSession)
     fun getSendHistory(limit: Int = 20, offset: Int = 0): SendHistoryResult {
         val limitCapped = limit.coerceIn(1, 100)
-        val offsetCapped = offset.coerceAtLeast(0)
+        val offsetSafe = offset.coerceAtLeast(0)
 
-        val items = findQueueItemsByUserId(
+        val items = findSendHistoryByUserId(
             userId = userSession.userId,
             limit = limitCapped + 1, // Fetch one extra to check for more
-            offset = offsetCapped,
+            offset = offsetSafe,
         )
 
         val hasMore = items.size > limitCapped
-        val resultItems = if (hasMore) items.dropLast(1) else items
-        val total = countQueueItemsByUserId(userSession.userId)
+        val total = countQueueItemsByUserId(userSession.userId) +
+            countUploadItemsByUserId(userSession.userId)
 
         return SendHistoryResult(
-            items = resultItems,
+            items = if (hasMore) items.dropLast(1) else items,
             total = total,
             hasMore = hasMore,
         )
+    }
+
+    context(_: TransactionContext, userSession: UserSession)
+    private fun requireQuota() {
+        val startOfDay = startOfToday()
+        val todayCount = countTodayQueueItemsByUserId(userSession.userId, startOfDay) +
+            countTodayUploadItemsByUserId(userSession.userId, startOfDay)
+        if (todayCount >= dailyQuotaLimit) {
+            throw QuotaExceededException("Daily send limit of $dailyQuotaLimit reached")
+        }
     }
 
     private fun startOfToday(): Instant =

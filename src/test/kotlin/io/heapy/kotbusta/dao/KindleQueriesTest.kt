@@ -6,6 +6,7 @@ import io.heapy.kotbusta.database.useTx
 import io.heapy.kotbusta.jooq.tables.references.BOOKS
 import io.heapy.kotbusta.jooq.tables.references.KINDLE_SEND_EVENTS
 import io.heapy.kotbusta.model.KindleFormat
+import io.heapy.kotbusta.model.KindleSendSource.CATALOG
 import io.heapy.kotbusta.model.KindleSendStatus
 import io.heapy.kotbusta.test.DatabaseExtension
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -244,10 +245,10 @@ class KindleQueriesTest {
 
     @Test
     context(_: TransactionProvider)
-    fun `findQueueItemsByUserId should return send history with pagination`() = transaction {
+    fun `findSendHistoryByUserId should return send history with pagination`() = transaction {
         // Given: User 1 has 3 queue items in fixtures
         // When: Finding queue items for user 1 with pagination
-        val history = findQueueItemsByUserId(
+        val history = findSendHistoryByUserId(
             userId = 1,
             limit = 10,
             offset = 0,
@@ -267,7 +268,7 @@ class KindleQueriesTest {
 
     @Test
     context(_: TransactionProvider)
-    fun `findQueueItemsByUserId should keep queued title after book is removed`() = transaction {
+    fun `findSendHistoryByUserId should keep queued title after book is removed`() = transaction {
         val _ = useTx { dslContext ->
             dslContext
                 .deleteFrom(BOOKS)
@@ -275,13 +276,13 @@ class KindleQueriesTest {
                 .execute()
         }
 
-        val history = findQueueItemsByUserId(
+        val history = findSendHistoryByUserId(
             userId = 1,
             limit = 10,
             offset = 0,
         )
 
-        val deletedBookHistory = history.single { it.id == 1 }
+        val deletedBookHistory = history.single { it.source == CATALOG && it.id == 1 }
         assertEquals("Harry Potter and the Philosopher's Stone", deletedBookHistory.bookTitle)
     }
 

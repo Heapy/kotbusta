@@ -29,7 +29,6 @@ interface EmailService {
         bookFile: File,
         bookTitle: String,
         attachmentFileName: String,
-        format: String,
     ): EmailResult
 }
 
@@ -38,30 +37,45 @@ class SesEmailService(
     private val senderEmail: String,
     private val maxRawMessageBytes: Long = SES_MAX_RAW_MESSAGE_BYTES,
 ) : EmailService {
+    private val maxAttachmentBytes = (maxRawMessageBytes / BASE64_MESSAGE_INFLATION).toLong()
+
     override suspend fun sendBookToKindle(
         recipientEmail: String,
         bookFile: File,
         bookTitle: String,
         attachmentFileName: String,
-        format: String,
     ): EmailResult {
         return try {
+            // The whole message is built in memory (file bytes, zip, base64), so a
+            // file that cannot fit under any compression is refused before it is
+            // read at all.
+            oversizedFileError(bookFile.length(), maxAttachmentBytes)?.let { error ->
+                log.warn("Skipping oversized file for $recipientEmail: $error")
+                return EmailResult.PermanentFailure(error)
+            }
+
             val title = sanitizeBookTitle(bookTitle)
 
-            // Kindle's email service auto-extracts a .zip and converts the EPUB
-            // inside, so we ship the book zipped. EPUB is already a compressed
-            // container, so this only shaves a little off the wire — but it lets
-            // the size limit be enforced on the exact bytes we send.
-            val zipBytes = zipSingleEntry(entryName = attachmentFileName, content = bookFile.readBytes())
+            // Kindle's email service auto-extracts a .zip and converts the
+            // document inside, which is how EPUB is delivered. A PDF is sent as
+            // itself: Amazon accepts the format directly, it would not compress,
+            // and that keeps the delivery off an assumption about the archive.
+            val zipped = zipForKindle(attachmentFileName)
+            val fileBytes = bookFile.readBytes()
+            val attachmentBytes = if (zipped) {
+                zipSingleEntry(entryName = attachmentFileName, content = fileBytes)
+            } else {
+                fileBytes
+            }
 
             val rawEmail = buildRawEmail(
                 from = senderEmail,
                 to = recipientEmail,
                 subject = "Your book: $title",
                 body = "Please find your requested book attached.",
-                attachmentBytes = zipBytes,
-                attachmentName = "$attachmentFileName.zip",
-                mimeType = "application/zip",
+                attachmentBytes = attachmentBytes,
+                attachmentName = if (zipped) "$attachmentFileName.zip" else attachmentFileName,
+                mimeType = if (zipped) "application/zip" else PDF_MIME_TYPE,
             )
 
             // Reject oversized messages before hitting SES: the API rejects them
@@ -69,7 +83,7 @@ class SesEmailService(
             // whole thing, so catching it here saves the upload and yields a
             // message the user can act on (it flows to the send history as
             // `lastError`).
-            oversizedBookError(zipBytes.size, rawEmail.size, maxRawMessageBytes)?.let { error ->
+            oversizedBookError(attachmentBytes.size, rawEmail.size, maxRawMessageBytes)?.let { error ->
                 log.warn("Skipping oversized email to $recipientEmail: $error")
                 return EmailResult.PermanentFailure(error)
             }
@@ -145,9 +159,27 @@ internal const val SES_MAX_RAW_MESSAGE_BYTES: Long = 40L * 1024 * 1024
 private const val BASE64_MESSAGE_INFLATION = 1.37
 
 /**
+ * Largest attachment that still fits in a SES message once base64-encoded. Books
+ * larger than this can be stored but never delivered, so it also bounds what an
+ * upload may be.
+ */
+internal val MAX_EMAILABLE_ATTACHMENT_BYTES: Long =
+    (SES_MAX_RAW_MESSAGE_BYTES / BASE64_MESSAGE_INFLATION).toLong()
+
+internal const val PDF_MIME_TYPE = "application/pdf"
+
+/**
+ * Whether an attachment is shipped inside a zip archive. Only PDF is sent bare:
+ * Amazon lists it as an accepted personal-document format, so it does not need the
+ * archive that carries EPUB.
+ */
+internal fun zipForKindle(attachmentFileName: String): Boolean =
+    !attachmentFileName.endsWith(".pdf", ignoreCase = true)
+
+/**
  * Zips [content] into a single-entry archive named [entryName], using plain
  * DEFLATE at maximum level (no zopfli). Kindle's email service auto-extracts the
- * archive and converts the EPUB inside.
+ * archive and converts the document inside.
  */
 internal fun zipSingleEntry(entryName: String, content: ByteArray): ByteArray {
     val out = ByteArrayOutputStream()
@@ -163,19 +195,34 @@ internal fun zipSingleEntry(entryName: String, content: ByteArray): ByteArray {
 /**
  * Returns a user-facing error when a message of [rawMessageBytes] would exceed
  * [maxRawMessageBytes] (SES's hard ceiling), or null when it fits. The message is
- * phrased in terms the reader understands — the book's [compressedBytes] size and
- * the largest book that can be emailed — and is surfaced in the send history.
+ * phrased in terms the reader understands — the size of the attachment as it is
+ * sent and the largest book that can be emailed — and reaches the send history.
  */
 internal fun oversizedBookError(
-    compressedBytes: Int,
+    attachmentBytes: Int,
     rawMessageBytes: Int,
     maxRawMessageBytes: Long,
 ): String? {
     if (rawMessageBytes <= maxRawMessageBytes) return null
-    val maxCompressed = (maxRawMessageBytes / BASE64_MESSAGE_INFLATION).toLong()
+    val maxAttachment = (maxRawMessageBytes / BASE64_MESSAGE_INFLATION).toLong()
     return "Book is too large to send to Kindle by email: it is " +
-        "${mebibytes(compressedBytes.toLong())} MB compressed, over the " +
-        "~${mebibytes(maxCompressed)} MB limit for email delivery."
+        "${mebibytes(attachmentBytes.toLong())} MB as sent, over the " +
+        "~${mebibytes(maxAttachment)} MB limit for email delivery."
+}
+
+/**
+ * Returns a user-facing error when a file is already larger than what a SES message
+ * can carry once base64-encoded, or null. Checked before the attachment is read,
+ * unlike [oversizedBookError] which weighs the message that was actually built.
+ */
+internal fun oversizedFileError(
+    fileBytes: Long,
+    maxAttachmentBytes: Long,
+): String? {
+    if (fileBytes <= maxAttachmentBytes) return null
+    return "Book is too large to send to Kindle by email: it is " +
+        "${mebibytes(fileBytes)} MB, over the " +
+        "~${mebibytes(maxAttachmentBytes)} MB limit for email delivery."
 }
 
 private fun mebibytes(bytes: Long): String =

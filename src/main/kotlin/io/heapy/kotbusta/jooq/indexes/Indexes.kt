@@ -15,6 +15,7 @@ import io.heapy.kotbusta.jooq.tables.Genres
 import io.heapy.kotbusta.jooq.tables.KindleDevices
 import io.heapy.kotbusta.jooq.tables.KindleSendEvents
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue
+import io.heapy.kotbusta.jooq.tables.KindleUploadQueue
 
 import org.jooq.Index
 import org.jooq.impl.DSL
@@ -47,3 +48,7 @@ val IDX_KINDLE_SEND_QUEUE_DEVICE: Index = Internal.createIndex(DSL.name("IDX_KIN
 val IDX_KINDLE_SEND_QUEUE_NEXT_RUN: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_NEXT_RUN"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.NEXT_RUN_AT), false)
 val IDX_KINDLE_SEND_QUEUE_STATUS: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_STATUS"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.STATUS), false)
 val IDX_KINDLE_SEND_QUEUE_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_SEND_QUEUE_USER"), KindleSendQueue.KINDLE_SEND_QUEUE, arrayOf(KindleSendQueue.KINDLE_SEND_QUEUE.USER_ID), false)
+val IDX_KINDLE_UPLOAD_QUEUE_DEVICE: Index = Internal.createIndex(DSL.name("IDX_KINDLE_UPLOAD_QUEUE_DEVICE"), KindleUploadQueue.KINDLE_UPLOAD_QUEUE, arrayOf(KindleUploadQueue.KINDLE_UPLOAD_QUEUE.DEVICE_ID), false)
+val IDX_KINDLE_UPLOAD_QUEUE_NEXT_RUN: Index = Internal.createIndex(DSL.name("IDX_KINDLE_UPLOAD_QUEUE_NEXT_RUN"), KindleUploadQueue.KINDLE_UPLOAD_QUEUE, arrayOf(KindleUploadQueue.KINDLE_UPLOAD_QUEUE.NEXT_RUN_AT), false)
+val IDX_KINDLE_UPLOAD_QUEUE_STATUS: Index = Internal.createIndex(DSL.name("IDX_KINDLE_UPLOAD_QUEUE_STATUS"), KindleUploadQueue.KINDLE_UPLOAD_QUEUE, arrayOf(KindleUploadQueue.KINDLE_UPLOAD_QUEUE.STATUS), false)
+val IDX_KINDLE_UPLOAD_QUEUE_USER: Index = Internal.createIndex(DSL.name("IDX_KINDLE_UPLOAD_QUEUE_USER"), KindleUploadQueue.KINDLE_UPLOAD_QUEUE, arrayOf(KindleUploadQueue.KINDLE_UPLOAD_QUEUE.USER_ID), false)

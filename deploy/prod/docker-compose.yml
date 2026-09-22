@@ -27,6 +27,9 @@ services:
       # Send-to-Kindle (optional): the worker only starts when a sender is set.
       # AWS_* are consumed by the AWS SDK to build the SES client.
       KOTBUSTA_SES_SENDER_EMAIL: "${KOTBUSTA_SES_SENDER_EMAIL}"
+      # Uploaded books live in the database volume until they are sent.
+      KOTBUSTA_KINDLE_UPLOAD_PATH: "${KOTBUSTA_KINDLE_UPLOAD_PATH:-/data/db/kindle-uploads}"
+      KOTBUSTA_KINDLE_UPLOAD_MAX_BYTES: "${KOTBUSTA_KINDLE_UPLOAD_MAX_BYTES:-26214400}"
       AWS_REGION: "${AWS_REGION}"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"

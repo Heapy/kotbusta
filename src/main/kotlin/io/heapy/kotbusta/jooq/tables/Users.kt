@@ -8,10 +8,12 @@ import io.heapy.kotbusta.jooq.DefaultSchema
 import io.heapy.kotbusta.jooq.KotlinInstantConverter
 import io.heapy.kotbusta.jooq.keys.KINDLE_DEVICES__FK_KINDLE_DEVICES_PK_USERS
 import io.heapy.kotbusta.jooq.keys.KINDLE_SEND_QUEUE__FK_KINDLE_SEND_QUEUE_PK_USERS
+import io.heapy.kotbusta.jooq.keys.KINDLE_UPLOAD_QUEUE__FK_KINDLE_UPLOAD_QUEUE_PK_USERS
 import io.heapy.kotbusta.jooq.keys.USERS__PK_USERS
 import io.heapy.kotbusta.jooq.keys.USERS__UK_USERS_1_34197334
 import io.heapy.kotbusta.jooq.tables.KindleDevices.KindleDevicesPath
 import io.heapy.kotbusta.jooq.tables.KindleSendQueue.KindleSendQueuePath
+import io.heapy.kotbusta.jooq.tables.KindleUploadQueue.KindleUploadQueuePath
 import io.heapy.kotbusta.jooq.tables.records.UsersRecord
 
 import kotlin.collections.Collection
@@ -187,6 +189,22 @@ open class Users(
 
     val kindleSendQueue: KindleSendQueuePath
         get(): KindleSendQueuePath = kindleSendQueue()
+
+    private lateinit var _kindleUploadQueue: KindleUploadQueuePath
+
+    /**
+     * Get the implicit to-many join path to the
+     * <code>KINDLE_UPLOAD_QUEUE</code> table
+     */
+    fun kindleUploadQueue(): KindleUploadQueuePath {
+        if (!this::_kindleUploadQueue.isInitialized)
+            _kindleUploadQueue = KindleUploadQueuePath(this, null, KINDLE_UPLOAD_QUEUE__FK_KINDLE_UPLOAD_QUEUE_PK_USERS.inverseKey)
+
+        return _kindleUploadQueue;
+    }
+
+    val kindleUploadQueue: KindleUploadQueuePath
+        get(): KindleUploadQueuePath = kindleUploadQueue()
     override fun getChecks(): List<Check<UsersRecord>> = listOf(
         Internal.createCheck(this, DSL.name(""), "STATUS in ('PENDING', 'APPROVED', 'REJECTED', 'DEACTIVATED')", true)
     )
