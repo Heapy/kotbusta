@@ -9,10 +9,10 @@ pluginInfo:
 
 settings:
   kotlin:
-    version: 2.4.10
+    version: 2.4.20
   jvm:
     jdk:
       version: 25
       distributions: [liberica]
     test:
-      junitPlatformVersion: 6.1.0
+      junitPlatformVersion: 6.1.3
